@@ -1,0 +1,66 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+     "outDir": "dist",
+    "strict": true,
+    "noImplicitAny": false,
+    "noFallthroughCasesInSwitch": true,
+    "downlevelIteration": true,
+    "strictFunctionTypes": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "noErrorTruncation": true,
+    "jsx": "react",
+    "target": "es2020",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "removeComments": false,
+    "preserveConstEnums": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "experimentalDecorators": true,
+    "skipLibCheck": true,
+    "typeRoots": [
+      "node_modules/@types"
+    ],
+    "paths": {
+      "@adaas/are/constants/*": ["src/constants/*"],
+      "@adaas/are/defaults/*": ["src/defaults/*"],
+      "@adaas/are/decorators/*": ["src/decorators/*"],
+      "@adaas/are/helpers/*": ["src/helpers/*"],
+      "@adaas/are/examples/*": ["src/examples/*"],
+      "@adaas/are/entities/*": ["src/entities/*"],
+      "@adaas/are/commands/*": ["src/commands/*"],
+      "@adaas/are/channels/*": ["src/channels/*"],
+
+
+      "@adaas/are/context/*": ["src/context/*"],
+      "@adaas/are/components/*": ["src/components/*"],
+      "@adaas/are/containers/*": ["src/containers/*"],
+    },
+    "lib": [
+      "dom",
+      "esnext.asynciterable",
+      "es2015",
+      "es2016",
+      "es2017.object"
+    ]
+  },
+  "include": [
+    "src/**/*",
+    "tests/**/*", 
+    "examples/**/*", 
+  ],
+  "exclude": [
+    "src/index.ts",
+    "node_modules/**/*",
+    "dist/**/*",
+    "node_modules/@types/mocha/index.d.ts"
+  ]
+}
