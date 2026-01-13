@@ -1,10 +1,15 @@
 import { A_Concept, A_CONSTANTS__DEFAULT_ENV_VARIABLES_ARRAY, A_Container, A_Context } from "@adaas/a-concept"
-import { A_Config, A_Logger, A_LOGGER_DEFAULT_LEVEL, A_LOGGER_ENV_KEYS, A_Polyfill, ConfigReader, } from "@adaas/a-utils"
+import { A_Config, A_Logger, A_LOGGER_DEFAULT_LEVEL, A_LOGGER_ENV_KEYS, A_Polyfill, A_SignalBus, ConfigReader, } from "@adaas/a-utils"
 import { SignInComponent } from "./components/SignInComponent.component"
 import { ABtn } from "./components/A-Btn.component";
 import { AInput } from "./components/A-Input.component";
 import { AreApp } from "@adaas/are/containers/AreApp/AreApp.container";
 import { AreBrowserCompiler } from "@adaas/are/components/AreBrowserCompiler/AreBrowserCompiler.component";
+import { AreSlot } from "@adaas/are/components/AreSlot/AreSlot.component";
+import { AreInitSignal } from "src/signals/AreInit.signal";
+import { AreSyntax } from "@adaas/are/context/AreSyntax/AreSyntax.context";
+import { AreRoot } from "@adaas/are/components/AreRoot/AreRoot.component";
+import { AreInterpolation } from "@adaas/are/components/AreInterpolation/AreInterpolation.component";
 
 
 // //  TODO: Fix for build system ---
@@ -31,7 +36,10 @@ import { AreBrowserCompiler } from "@adaas/are/components/AreBrowserCompiler/Are
                 SignInComponent,
                 ABtn,
                 AInput,
-
+                AreSlot,
+                A_SignalBus,
+                AreRoot,
+                AreInterpolation,
                 // ----------------------------------
                 // Addons 
                 // ----------------------------------
@@ -41,6 +49,10 @@ import { AreBrowserCompiler } from "@adaas/are/components/AreBrowserCompiler/Are
                 AreBrowserCompiler,
                 A_Logger
             ],
+            entities: [
+                // ............
+                AreInitSignal,
+            ],
 
             fragments: [
                 new A_Config({
@@ -49,6 +61,7 @@ import { AreBrowserCompiler } from "@adaas/are/components/AreBrowserCompiler/Are
                         [A_LOGGER_ENV_KEYS.LOG_LEVEL]: 'debug',
                     }
                 }),
+                new AreSyntax()
             ]
         });
 

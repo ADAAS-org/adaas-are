@@ -4,7 +4,7 @@ import { AreNode } from "@adaas/are/entities/AreNode/AreNode.entity";
 
 
 export class AreIndex<
-    _MappingType = any
+    _PathType = any
 > extends A_Fragment {
 
     constructor(aseid: string | ASEID) {
@@ -19,18 +19,30 @@ export class AreIndex<
      * The actual type depends on the compiler being used
      */
     protected _index: {
-        ASEID_to_Element: Map<string, _MappingType>,
-        Element_to_ASEID: Map<_MappingType, string>,
-        Node_to_Element: Map<AreNode, _MappingType>,
-        Element_to_Node: Map<_MappingType, AreNode>,
+        ASEID_to_Path: Map<string, _PathType>,
+        Path_to_ASEID: Map<_PathType, string>,
+
+        
+        Node_to_Path: Map<AreNode, _PathType>,
+        Path_to_Node: Map<_PathType, AreNode>,
     } = {
-            ASEID_to_Element: new Map(),
-            Element_to_ASEID: new Map(),
-            Node_to_Element: new Map(),
-            Element_to_Node: new Map(),
+            ASEID_to_Path: new Map(),
+            Path_to_ASEID: new Map(),
+            Node_to_Path: new Map(),
+            Path_to_Node: new Map(),
         }
 
 
+    /**
+     * Unique hash representing the current state of the index
+     * Can be used to identify changes in the index
+     */
+    get state(): string {
+        const entries = Array.from(this._index.ASEID_to_Path.entries())
+            .sort(([aseidA], [aseidB]) => aseidA.localeCompare(aseidB))
+            .map(([aseid, path]) => `${aseid}:${JSON.stringify(path)}`);
+        return entries.join('|');
+    }
 
     get scope(): A_Scope {
         return A_Context.scope(this);
@@ -41,7 +53,15 @@ export class AreIndex<
     }
 
     get size(): number {
-        return this._index.ASEID_to_Element.size;
+        return this._index.ASEID_to_Path.size;
+    }
+
+    get nodes(): Array<AreNode> {
+        return Array.from(this._index.Node_to_Path.keys());
+    }
+
+    get paths(): Array<_PathType> {
+        return Array.from(this._index.Path_to_Node.keys());
     }
 
     protected get depth(): number {
@@ -55,17 +75,18 @@ export class AreIndex<
 
         return depth;
     }
+    
 
     /**
      * Adds a platform-agnostic element to the index
      * @param node - AreNode to index
-     * @param element - Platform-specific element (DOM, PDF, DOCX, etc.)
+     * @param path - Platform-specific element (DOM, PDF, DOCX, etc.)
      */
-    add(node: AreNode, element: _MappingType) {
-        this._index.ASEID_to_Element.set(node.aseid.toString(), element);
-        this._index.Element_to_ASEID.set(element, node.aseid.toString());
-        this._index.Node_to_Element.set(node, element);
-        this._index.Element_to_Node.set(element, node);
+    add(node: AreNode, path: _PathType) {
+        this._index.ASEID_to_Path.set(node.aseid.toString(), path);
+        this._index.Path_to_ASEID.set(path, node.aseid.toString());
+        this._index.Node_to_Path.set(node, path);
+        this._index.Path_to_Node.set(path, node);
     }
 
     /**
@@ -73,8 +94,8 @@ export class AreIndex<
      * @param node - AreNode to look up
      * @returns Platform-specific element or undefined
      */
-    getByNode(node: AreNode): _MappingType | undefined {
-        return this._index.Node_to_Element.get(node);
+    pathOf(node: AreNode): _PathType | undefined {
+        return this._index.Node_to_Path.get(node);
     }
 
     /**
@@ -82,8 +103,8 @@ export class AreIndex<
      * @param element - Platform-specific element to look up
      * @returns AreNode or undefined
      */
-    getByElement(element: _MappingType): AreNode | undefined {
-        return this._index.Element_to_Node.get(element);
+    nodeOf(path: _PathType): AreNode | undefined {
+        return this._index.Path_to_Node.get(path);
     }
 
     /**
@@ -91,36 +112,62 @@ export class AreIndex<
      * @param node - AreNode to remove from index
      */
     removeByNode(node: AreNode) {
-        const element = this._index.Node_to_Element.get(node);
-        if (element) {
-            this._index.ASEID_to_Element.delete(node.aseid.toString());
-            this._index.Element_to_ASEID.delete(element);
-            this._index.Node_to_Element.delete(node);
-            this._index.Element_to_Node.delete(element);
+        const path = this._index.Node_to_Path.get(node);
+        if (path) {
+            this._index.ASEID_to_Path.delete(node.aseid.toString());
+            this._index.Path_to_ASEID.delete(path);
+            this._index.Node_to_Path.delete(node);
+            this._index.Path_to_Node.delete(path);
+        }
+    }
+
+
+    replaceByNode(oldNode: AreNode, newNode: AreNode) {
+        const path = this._index.Node_to_Path.get(oldNode);
+        if (path) {
+            this._index.ASEID_to_Path.delete(oldNode.aseid.toString());
+            this._index.Path_to_ASEID.set(path, newNode.aseid.toString());
+            this._index.Node_to_Path.delete(oldNode);
+            this._index.Node_to_Path.set(newNode, path);
+            this._index.Path_to_Node.set(path, newNode);
+        }
+    }
+
+
+    replaceByElement(oldPath: _PathType, newPath: _PathType) {
+        const aseid = this._index.Path_to_ASEID.get(oldPath);
+        const node = this._index.Path_to_Node.get(oldPath);
+        if (aseid && node) {
+            this._index.ASEID_to_Path.set(aseid, newPath);
+            this._index.Path_to_ASEID.delete(oldPath);
+            this._index.Path_to_ASEID.set(newPath, aseid);
+            this._index.Node_to_Path.set(node, newPath);
+            this._index.Path_to_Node.delete(oldPath);
+            this._index.Path_to_Node.set(newPath, node);
         }
     }
 
     /**
      * Removes index entry by platform-specific element
-     * @param element - Platform-specific element to remove from index
+     * @param path - Platform-specific element to remove from index
      */
-    removeByElement(element: _MappingType) {
-        const aseid = this._index.Element_to_ASEID.get(element);
+    removeByElement(path: _PathType) {
+        const aseid = this._index.Path_to_ASEID.get(path);
         if (aseid) {
-            const node = this._index.Element_to_Node.get(element);
+            const node = this._index.Path_to_Node.get(path);
             if (node) {
-                this._index.ASEID_to_Element.delete(aseid);
-                this._index.Element_to_ASEID.delete(element);
-                this._index.Node_to_Element.delete(node);
-                this._index.Element_to_Node.delete(element);
+                this._index.ASEID_to_Path.delete(aseid);
+                this._index.Path_to_ASEID.delete(path);
+                this._index.Node_to_Path.delete(node);
+                this._index.Path_to_Node.delete(path);
             }
         }
     }
 
     clear() {
-        this._index.ASEID_to_Element.clear();
-        this._index.Element_to_ASEID.clear();
-        this._index.Node_to_Element.clear();
-        this._index.Element_to_Node.clear();
+        this._index.ASEID_to_Path.clear();
+        this._index.Path_to_ASEID.clear();
+        this._index.Node_to_Path.clear();
+        this._index.Path_to_Node.clear();
     }
 }

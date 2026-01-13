@@ -1,16 +1,24 @@
 import { A_Context, A_Entity, A_Error, A_FormatterHelper, A_IdentityHelper, A_Scope, ASEID } from "@adaas/a-concept";
 import { AreNodeNewProps } from "./AreNode.types";
-import { AreStore } from "@adaas/are/context/AreStore/AreStore.context";
-import { AreProps } from "@adaas/are/context/AreProps/AreProps.context";
 import { AreEvent } from "@adaas/are/context/AreEvent/AreEvent.context";
 import { AreNodeFeatures } from "./AreNode.constants";
-import { AreIndex } from "@adaas/are/context/AreIndex/AreIndex.context";
 
 export class AreNode extends A_Entity<AreNodeNewProps> {
 
 
+    /**
+     * Template string defined for the node
+     * Example: `<div>{{name}}</div>`
+     */
     template!: string
+    /**
+     * Markup string defined for the node
+     * Example: `<custom-component :prop="value"> <div>Inner Content</div> </custom-component>`
+     */
     markup!: string
+    /**
+     * Styles string defined for the node
+     */
     styles!: string
 
     /**
@@ -28,6 +36,7 @@ export class AreNode extends A_Entity<AreNodeNewProps> {
 
         return this._scope;
     }
+
 
     fromNew(newEntity: AreNodeNewProps): void {
         this.aseid = new ASEID({
@@ -111,8 +120,33 @@ export class AreNode extends A_Entity<AreNodeNewProps> {
         }
     }
 
+
+    async update(): Promise<void> {
+
+        this.checkScopeInheritance();
+
+        try {
+            await this.call(AreNodeFeatures.onUpdate, this.scope);
+
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async mount(): Promise<void> {
+        this.checkScopeInheritance();
+
+        try {
+
+            await this.call(AreNodeFeatures.onMount, this.scope);
+
+        } catch (error) {
+            throw error;
+        }
+    }
+
     async load(): Promise<any> {
-        return await super.load(this._scope);
+        return await super.load(this.scope);
     }
 
     async destroy(scope?: A_Scope): Promise<any> {
@@ -123,7 +157,7 @@ export class AreNode extends A_Entity<AreNodeNewProps> {
 
             await super.destroy(scope);
 
-            this._scope.destroy();
+            this.scope.destroy();
 
         } catch (error) {
 

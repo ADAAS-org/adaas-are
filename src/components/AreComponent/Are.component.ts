@@ -39,6 +39,25 @@ export class Are<
         }
     }
 
+
+    static get onBeforeCompile() {
+        return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
+            return A_Feature.Extend({
+                name: AreFeatures.onBeforeCompile,
+                scope: [target.constructor],
+            })(target, propertyKey, descriptor);
+        }
+    }
+
+    static get onAfterCompile() {
+        return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
+            return A_Feature.Extend({
+                name: AreFeatures.onAfterCompile,
+                scope: [target.constructor],
+            })(target, propertyKey, descriptor);
+        }
+    }
+
     static get onBeforeMount() {
         return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
             return A_Feature.Extend({

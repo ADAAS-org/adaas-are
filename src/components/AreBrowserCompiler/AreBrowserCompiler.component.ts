@@ -1,15 +1,16 @@
 import { AreNode } from "@adaas/are/entities/AreNode/AreNode.entity";
 import { AreIndex } from "@adaas/are/context/AreIndex/AreIndex.context";
-import { A_Config, A_Logger, A_Polyfill, A_ServiceFeatures } from "@adaas/a-utils";
+import { A_Config, A_Logger, A_Polyfill, A_ServiceFeatures, A_SignalVector, A_SignalVectorFeatures } from "@adaas/a-utils";
 import { A_Caller, A_Component, A_Container, A_Dependency, A_Feature, A_FormatterHelper, A_Inject, A_Scope, A_TYPES__EntityFeatures } from "@adaas/a-concept";
 import { AreNodeFeatures } from "@adaas/are/entities/AreNode/AreNode.constants";
 import { AreStore } from "@adaas/are/context/AreStore/AreStore.context";
 import { AreProps } from "@adaas/are/context/AreProps/AreProps.context";
-import { AreBrowserDom } from "@adaas/are/context/AreBrowserDom/AreBrowserDom.context";
 import { Are } from "../AreComponent/Are.component";
 import { AreCompiler } from "../AreCompiler/AreCompiler.component";
 import { AreScene } from "@adaas/are/context/AreScene/AreScene.context";
 import { AreEvent } from "@adaas/are/context/AreEvent/AreEvent.context";
+import { AreSyntax } from "@adaas/are/context/AreSyntax/AreSyntax.context";
+import { AreInitSignal } from "src/signals/AreInit.signal";
 
 /**
  * Browser DOM specific scene implementation
@@ -22,118 +23,36 @@ export class AreBrowserCompiler extends AreCompiler {
     protected async [A_ServiceFeatures.onBeforeLoad](
         @A_Dependency.Parent()
         @A_Inject(A_Scope) scope: A_Scope,
-        @A_Inject(AreBrowserDom) root?: AreBrowserDom,
-        @A_Inject(AreIndex) index?: AreIndex,
+        @A_Inject(AreScene) root?: AreScene,
         @A_Inject(A_Config) config?: A_Config<any>,
         @A_Inject(A_Logger) logger?: A_Logger,
     ): Promise<void> {
         // 1) Initialize Scene if not present
-        logger?.debug('cyan', `Initializing AreBrowserDom in AreBrowserCompiler...`);
-        const mountPoint = config?.get('ARE_MOUNT_POINT') || 'are-app';
+        logger?.debug('cyan', `Initializing AreScene in AreBrowserCompiler...`);
+        const mountPointID = config?.get('ARE_MOUNT_POINT') || 'are-app';
 
         if (!root) {
+            const mountPointElement = document.getElementById(mountPointID);
 
-            scope.register(new AreBrowserDom(mountPoint));
+            if (!mountPointElement) {
+                throw new Error(`Mount point with id '${mountPointID}' not found in the DOM.`);
+            }
+
+            scope.register(new AreScene(mountPointID, mountPointElement.innerHTML));
+            scope.register(new AreIndex(mountPointID));
+
+
+            await this.buildSceneIndex(scope.resolve<AreScene>(AreScene)!);
         }
 
-        if (!index) {
-            scope.register(new AreIndex(mountPoint));
-        }
     }
 
-    protected STANDARD_HTML_TAGS = new Set([
-        "html", "head", "body", "div", "span", "p", "a", "ul", "ol", "li",
-        "table", "thead", "tbody", "tr", "td", "th", "form", "input", "button",
-        "select", "option", "textarea", "label", "img", "h1", "h2", "h3", "h4",
-        "h5", "h6", "script", "style", "link", "meta", "nav", "footer", "header",
-        "section", "article", "aside", "main", "canvas", "video", "audio", "br",
-        "hr", "strong", "em", "small", "pre", "code", "iframe", "details",
-        "summary", "svg", "path", "circle", "rect", "polygon", "g", "defs"
-    ]);
 
-    /**
-     * Determines if a tag is a custom component or standard HTML
-     * 
-     * @param node 
-     * @returns 
-     */
-    isCustomComponent(node: AreNode): boolean {
-        return !this.STANDARD_HTML_TAGS.has(node.aseid.entity.toLowerCase());
-    }
 
-    *extractInterpolations(template: string): Iterable<string> {
-        const interpolationRegex = /{{\s*([\w.]+)\s*}}/g;
-        let match: RegExpExecArray | null;
-
-        while ((match = interpolationRegex.exec(template)) !== null) {
-            yield match[1];
-        }
-    }
-
-    *extractProps(template: string): Iterable<{ name: string; raw: string; value: string }> {
-        // Extract attributes from the tag
-        const attrRegex = /([a-zA-Z0-9:@][a-zA-Z0-9:._-]+)\s*=\s*"(.*?)"/g;
-        let attrMatch: RegExpExecArray | null;
-
-        while ((attrMatch = attrRegex.exec(template)) !== null) {
-            const raw = attrMatch[0];
-            const name = attrMatch[1];
-            const value = attrMatch[2];
-            yield { name, raw, value };
-        }
-    }
-
-    *extractEvents(template: string): Iterable<{ name: string; raw: string; handler: string }> {
-        // Extract event listeners from the tag
-        const eventRegex = /@([a-zA-Z0-9:_-]+)\s*=\s*"(.*?)"/g;
-        let eventMatch: RegExpExecArray | null;
-
-        while ((eventMatch = eventRegex.exec(template)) !== null) {
-            const raw = eventMatch[0];
-            const name = eventMatch[1];
-            const handler = eventMatch[2];
-            yield { name, raw, handler };
-        }
-    }
 
     // ==================================================================================
     // ========================= COMPONENT METHODS =======================================
     // ==================================================================================
-    @A_Feature.Extend({
-        name: A_TYPES__EntityFeatures.LOAD,
-        scope: [AreNode]
-    })
-    /**
-     * Uses to Load AreNode definitions or other necessary resources
-     */
-    async load(
-        @A_Inject(A_Caller) node: AreNode,
-        @A_Inject(AreScene) scene: AreScene,
-        @A_Inject(A_Scope) scope: A_Scope,
-    ) {
-        this.debugLogger(scene, `Loading component <${node.aseid.entity}> with ${this.constructor.name}`);
-
-        scope.register(new AreBrowserDom(node.aseid.id));
-        await super.load(node, scene, scope,);
-    }
-
-
-    @A_Feature.Extend({
-        name: AreNodeFeatures.onEvent,
-        scope: [AreNode]
-    })
-    async event(
-        @A_Inject(A_Caller) node: AreNode,
-        @A_Inject(AreStore) store: AreStore,
-        @A_Inject(A_Scope) scope: A_Scope,
-        @A_Inject(AreEvent) event: AreEvent
-    ) {
-
-        const component = scope.resolve<Are>(A_FormatterHelper.toPascalCase(node.aseid.entity));
-
-        await component?.call(event.name, scope)
-    }
-
     /**
      * Compiles the AreNode using AreCompiler
      * 
@@ -145,138 +64,173 @@ export class AreBrowserCompiler extends AreCompiler {
         scope: [AreNode]
     })
     async compile(
+        /**
+         * Actual Node no be compiled
+         */
         @A_Inject(A_Caller) node: AreNode,
-        @A_Inject(AreScene) scene: AreScene,
-
-        @A_Dependency.Parent()
-        @A_Inject(AreScene) parentScene: AreScene,
-
-        @A_Dependency.Parent()
-        @A_Inject(AreStore) parentStore: AreStore,
+        /**
+         * Global Syntax Definition for parsing markup
+         */
+        @A_Inject(AreSyntax) syntax: AreSyntax,
+        /**
+         * Scope of the Compilation Feature - actually the AreNode scope
+         */
+        @A_Inject(A_Scope) scope: A_Scope,
 
         @A_Inject(AreProps) props: AreProps,
-
         @A_Inject(AreStore) store: AreStore,
-        @A_Inject(A_Logger) logger: A_Logger,
-    ) {
-        this.debugLogger(scene, `Compiling node with AreBrowserCompiler in Scene <${scene.name}>`);
+        /**
+         * Parent Scene where the node is registered
+         */
+        @A_Dependency.Parent()
+        @A_Inject(AreScene) parentScene: AreScene,
+        @A_Dependency.Parent()
+        @A_Inject(AreStore) parentStore: AreStore,
+        /**
+         * Nodes owned Scene
+         * 
+         * [!] Note, not every node has a scene - e.g. if it's not a custom component
+         */
+        @A_Dependency.Flat()
+        @A_Inject(AreScene) scene?: AreScene,
 
+
+        @A_Inject(A_Logger) logger?: A_Logger,
+    ) {
+
+        this.debug(node, `Compiling node <${node.aseid.entity}> in Scene <${parentScene.name}>`);
+
+        if (!scene)
+            return;
+
+        if (!this.component(node, scope)) {
+            this.debug(node, `Node <${node.aseid.entity}> is not a registered component. Skipping compilation.`);
+            return;
+        }
+
+
+        // 1) first Deal WIth interpolations - replace them with wrapped Nodes 
+        if (node.aseid.entity !== 'are-interpolation')
+            for (const interpolation of syntax.extractInterpolations(node.template)) {
+                node.template = syntax.replaceInterpolation(node.template, interpolation,
+                    `<are-interpolation :value="${interpolation.name}"></are-interpolation>`
+                );
+            }
+
+        /**
+         * Markup is the raw placement with all bindings and events
+         * Example: `<custom-component :prop="value"> <div>Inner Content</div> </custom-component>`
+         * 
+         * Template is target replacement string where all bindings should go in place
+         * Example: `<div> <h2>{{Interpolation}}</h2> <a-slot/> </div>`
+         * 
+         * Styles is the raw styles string with all bindings
+         * Example: `
+         *      h2 {
+         *          color: {{titleColor}};
+         *      }
+         *  `
+         * 
+         * 
+         * Then we need to:
+         */
 
         let template = node.template || '';
         let styles = node.styles || '';
 
-        for (const prop of this.extractProps(node.markup)) {
-
-            switch (true) {
-
-                // 1) Prop is a string binding
-                case prop.name.startsWith(':') && prop.value.startsWith('\'') && prop.value.endsWith('\''):
-                    // String binding
-                    props.set(prop.name.slice(1), prop.value.slice(1, -1));
-                    break;
-
-                case prop.name.startsWith(':') && !(prop.value.startsWith('\'') && prop.value.endsWith('\'')):
-                    // Dynamic binding (for now only string literals are supported)
-                    // In future it should support expressions and data paths
-                    const dynamicValue = parentStore?.get(prop.value);
-
-                    props.set(prop.name.slice(1), dynamicValue);
-
-                    break;
-
-                // // 2) Event listener
-                // case prop.name.startsWith('@'):
-                //     // Event listener
-                //     const eventName = prop.name.slice(1);
-                //     const handlerName = prop.value;
 
 
-                //     console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Adding listener:', eventName, '->', handlerName);
+        if (scene && !scene.rendered) {
+            logger?.debug('red',
+                `${' - '.repeat(scene.depth)}` +
+                `AreCompiler: Building Scene Index for <${scene.name}> during compilation of Node <${node.aseid.entity}>`,
+            );
 
-                //     await scene.addListener(eventName, handlerName, node);
-
-                //     break;
-
-                // 3) Standard property
-
-                default:
-                    props.set(prop.name, prop.value);
-                    break;
-            }
-
-            logger.debug('red', `Setting property '${prop.name}' with value '${prop.value}' in component <${node.aseid.entity}>`);
+            await scene.reset(template);
+            await this.buildSceneIndex(scene);
         }
 
-        // 1) replace all interpolations in the template
+
+        // 1) extract all props from the markup and set them in the props store
+        for (const prop of syntax.extractProps(node.markup)) {
+            const name = syntax.extractPropName(prop);
+            const value = syntax.extractPropValue(prop, parentStore)
+
+            logger?.log('green',
+                `${' - '.repeat(scene ? scene.depth : 0)}` +
+                `[Compile -> ADD -> Prop] '${name}' in component <${node.aseid.entity}> with value = ${value}`
+            );
+
+            props.set(name, value);
+        }
 
 
         // 2) replace all style interpolations in the styles
-        for (const interpolation of this.extractInterpolations(styles)) {
-            const value = store.get(interpolation);
+        for (const interpolation of syntax.extractInterpolations(styles)) {
+            const value = store.get(interpolation.name);
 
-            styles = styles.replace(new RegExp(`{{\\s*${interpolation}\\s*}}`, 'g'), value !== undefined ? String(value) : '');
+            styles = syntax.replaceInterpolation(styles, interpolation, value);
         }
 
-        // 3) Apply styles to the document head
 
-
-        /**
-         * A place in scene where this node is located
-         */
-        await scene.reset(template);
 
         await scene.addStyles(node, styles);
 
-        // await scene.styles(styles);
-        for (const element of scene) {
 
-            const children = await scene.childrenOf(element);
+        // 3) go through ONLY non-custom component nodes and find bindings and events
+        for (const sceneNode of scene.nodes()) {
 
-            //  1) ensure that we only process leaf nodes (no children) and non-custom components
-            if (children.length > 0 || this.isCustomComponent(element))
-                continue;
+            if (syntax.isCustomNode(sceneNode)) {
 
+                const existed = scene.scope.resolveFlat<AreNode>(AreNode, {
+                    query: {
+                        aseid: sceneNode.aseid
+                    }
+                })
 
-            for (const prop of this.extractProps(element.markup)) {
+                if (!existed) {
+                    logger?.debug('green',
+                        `${' - '.repeat(scene.depth)}` +
+                        `[Compile -> ADD -> Component] Attaching custom component <${sceneNode.aseid.entity}> ASEID: ${sceneNode.aseid.toString()} to Scene <${scene.name}>`
+                    );
 
-            }
+                    scene.attach(sceneNode)
 
-            for (const interpolation of this.extractInterpolations(element.markup)) {
-                const [target, property] = interpolation.split('.');
-                let value: any;
-
-                switch (target) {
-                    case 'props':
-                        value = props.get(property);
-                        break;
-                    case 'data':
-                        value = store.get(property);
-                        break;
-                    default:
-                        //  Try props first, then store
-                        value = props.get(interpolation) || store.get(interpolation);
-                        break;
+                    await sceneNode.load();
                 }
 
-                template = element.markup.replace(new RegExp(`{{\\s*${interpolation}\\s*}}`, 'g'), value !== undefined ? String(value) : '');
+                await sceneNode.compile();
 
-                template = template.replace(element.markup, template);
+                continue;
             }
 
 
+            for (const interpolation of syntax.extractInterpolations(sceneNode.markup)) {
+                const value = store.get(interpolation.name) || props.get(interpolation.name);
 
-            for (const listeners of this.extractEvents(element.markup)) {
+                await scene.bind(sceneNode, interpolation.name, value);
 
-                await scene.addListener(listeners.name, listeners.handler, node, element);
+                logger?.debug('green',
+                    `${' - '.repeat(scene.depth)}` +
+                    `[Compile -> ADD -> Binding] '${interpolation.name}' with value '${value}' in component <${node.aseid.entity}> for element <${sceneNode.aseid.entity}> ASEID : ${sceneNode.aseid.toString()}; hashes:[${scene.computeHash(sceneNode)}::${scene.getHash(sceneNode)}]`);
+            }
 
-                this.debugLogger(scene, `[Compile -> ADD -> Listener] '${listeners.name}' with handler '${listeners.handler}' in component <${node.aseid.entity}> for element <${element.aseid.entity}> ASEID '${element.aseid.toString()}'`);
+            // 3b) extract all listeners and register them in the scene
+
+
+            for (const listeners of syntax.extractListeners(sceneNode.markup)) {
+
+                await scene.addListener(listeners.name, listeners.handler, node, sceneNode);
+
+                // this.debug(sceneNode, `[Compile -> ADD -> Listener] '${listeners.name}' with handler '${listeners.handler}' in component <${node.aseid.entity}> for element <${sceneNode.aseid.entity}> ASEID '${sceneNode.aseid.toString()}'`);
             }
 
         }
 
 
 
-        this.debugLogger(scene, `Node <${node.aseid.entity}> compiled successfully.`);
+
+        this.debug(node, `Node <${node.aseid.entity}> compiled successfully.`);
     }
 
 
@@ -288,9 +242,38 @@ export class AreBrowserCompiler extends AreCompiler {
         name: AreNodeFeatures.onUpdate,
         scope: [AreNode]
     })
-    async update() {
+    async update(
+        @A_Inject(A_Caller) node: AreNode,
+        @A_Inject(AreScene) scene: AreScene,
 
+        @A_Inject(A_Logger) logger?: A_Logger,
+    ) {
+        logger?.debug('red',
+            ' ',
+            `AreBrowserCompiler: Updating Node <${node.aseid.entity}> in Scene <${scene.name}>`,
+            ' '
+        );
+
+        await node.compile();
+
+        logger?.debug('red',
+            ' ',
+            `AreBrowserCompiler: Node <${node.aseid.entity}> updated successfully.`,
+            ' '
+        );
+
+        //  And then re-mount the parent scene
+        // because current scene is a current node - content 
+        await this.mountScene(scene);
+
+        logger?.debug('red',
+            ' ',
+            `AreBrowserCompiler: Scene <${scene.name}> mounted successfully after Node <${node.aseid.entity}> update.`,
+            ' '
+        );
     }
+
+
 
 
     @A_Feature.Extend({
@@ -298,6 +281,283 @@ export class AreBrowserCompiler extends AreCompiler {
         scope: [AreNode]
     })
     async destroy() {
+
+    }
+
+
+    computePath(node: Node, virtual: Element): string {
+        const path: number[] = [];
+        let current: Node | null = node;
+
+        while (current && current !== virtual) {
+            const parent = current.parentNode;
+            if (parent) {
+                const index = Array.from(parent.childNodes)
+                    .filter(n => (n as any).nodeType === Node.ELEMENT_NODE)
+                    .indexOf(current);
+
+                path.unshift(index);
+            }
+            current = parent;
+        }
+
+        return path.join('.');
+    }
+
+
+    getElementBypath(
+        root: Element,
+        path: string
+    ): Element | null {
+        const indices = path.split('.').map(index => parseInt(index, 10));
+        let current: Node | null = root;
+
+        for (const index of indices) {
+            // only element nodes
+            const elementChildren = Array.from(current.childNodes).filter(n => (n as any).nodeType === Node.ELEMENT_NODE);
+            current = elementChildren[index];
+            if (!current) {
+                return null;
+            }
+        }
+
+        return current as Element;
+    }
+
+
+    buildSceneIndex(
+        scene: AreScene,
+    ) {
+        const virtual = new DOMParser().parseFromString(scene.template, 'text/html');
+
+        const walker = document.createTreeWalker(virtual.body, NodeFilter.SHOW_ELEMENT);
+
+        let current: Node | null = walker.nextNode();
+
+        while (current) {
+
+            const path: string = this.computePath(current, virtual.body);
+
+            const areNode = new AreNode({
+                scope: scene.name,
+                component: current && (current as Element).tagName ? (current as Element).tagName.toLowerCase() : 'text-node',
+                markup: current instanceof Element ? current.outerHTML : current.textContent || '',
+            });
+
+            scene.index.add(areNode, path);
+
+            current = walker.nextNode();
+        }
+    }
+
+
+
+
+    async mountScene(
+        scene: AreScene,
+        mountPointElement?: Element | null,
+    ): Promise<Element> {
+        const syntax = scene.scope.resolve<AreSyntax>(AreSyntax)!;
+        const logger = scene.scope.resolve<A_Logger>(A_Logger)!;
+
+        logger.debug('cyan',
+            `${' - '.repeat(scene.depth)}` + `AreBrowserCompiler: Mounting Scene <${scene.name}>`,
+        );
+
+        if (!mountPointElement)
+            mountPointElement = document.getElementById(scene.id!) || document.querySelector(`[aseid="${scene.id}"]`);
+
+        if (!mountPointElement) {
+            throw new Error(`Mount point with id '${scene.id}' not found in the DOM.`);
+        }
+
+
+        const walker = document.createTreeWalker(mountPointElement, NodeFilter.SHOW_ELEMENT);
+
+        let current: Node | null = walker.nextNode();
+
+        const treeWalkerStack: Map<Node, string> = new Map();
+
+        while (current) {
+            const path: string = this.computePath(current, mountPointElement);
+
+            if (path) {
+                treeWalkerStack.set(current, path);
+            }
+
+            current = walker.nextNode();
+        }
+
+
+        for (const [current, path] of treeWalkerStack) {
+
+
+            const node = scene.index.nodeOf(path)!;
+
+            logger.debug('cyan', `${' - '.repeat(scene.depth)}` + `[${path}] - CURRENT NODE: ${(current as Element).tagName.toLowerCase()} :: MAPPED ASEID: ${node ? node.aseid.toString() : 'NOT FOUND IN INDEX'}`);
+
+            if (!node)
+                continue;
+
+
+
+            if (!scene.hasChangesFor(node)) {
+                logger.debug('magenta',
+                    `${' - '.repeat(scene.depth)}` + `[${path}] - NO CHANGES DETECTED FOR NODE <${node.aseid.entity}>. aseid: ${node.aseid.toString()} SKIPPING MOUNTING. hashes: [${scene.computeHash(node)}::${scene.getHash(node)}]`
+                );
+                continue;
+            }
+
+            logger.debug('green', `${' - '.repeat(scene.depth)}` + `[${path}] - MOUNTING NODE <${node.aseid.entity}>`);
+
+
+            const wrapper = document.createElement('div');
+            wrapper.setAttribute('aseid', node.aseid.toString());
+
+            const nodeScene = node.scope.resolve<AreScene>(AreScene)!;
+
+            if (nodeScene) {
+                wrapper.innerHTML = nodeScene.template;
+
+                // 2 ) update styles
+                const styles = await nodeScene.getStyles(node);
+
+                if (styles) {
+                    const styleElementId = `a-style-${node.aseid.entity}`;
+                    let styleElement = document.querySelector(`#${styleElementId}`) as HTMLStyleElement | null;
+
+                    if (!styleElement) {
+                        styleElement = document.createElement('style');
+                        styleElement.id = styleElementId;
+                        document.head.appendChild(styleElement);
+                    }
+                    styleElement.innerHTML = styles;
+                }
+
+                const build = await this.mountScene(nodeScene, wrapper);
+
+                // Replace the placement with the rendered content
+                wrapper.replaceChildren(...Array.from(build.childNodes));
+
+                // Replace the placement with the rendered content
+                (current as Element).replaceWith(wrapper);
+            }
+
+            //  3) update listeners
+            const eventMap = await scene.getListeners(node);
+            if (eventMap) {
+                for (const [event, handlers] of eventMap.entries()) {
+                    for (const handler of handlers) {
+                        current.addEventListener(event, handler as EventListener);
+                    }
+                }
+            }
+
+            // 4) update bindings
+            const bindingsMap = await scene.getBindings(node);
+            if (bindingsMap) {
+                console.log('bindingsMap', bindingsMap);
+                for (const [name, value] of bindingsMap.entries()) {
+                    // for (const value of values) {
+
+                    console.log('Binding', name, 'with value', value, 'on node', node.aseid.toString(), syntax.replaceInterpolation(
+                        (current as Element).innerHTML,
+                        name,
+                        value
+                    ));
+
+                    (current as Element).innerHTML = syntax.replaceInterpolation(
+                        (current as Element).innerHTML,
+                        name,
+                        value
+                    );
+                    // }
+                }
+            }
+
+            // 5) mount nested custom components and keep it state
+            await scene.mount(node);
+
+            logger.log('green', `${' - '.repeat(scene.depth)}` + `[${path}] - NODE <${node.aseid.entity}> MOUNTED SUCCESSFULLY. hashes: [${scene.computeHash(node)}::${scene.getHash(node)}]`);
+        }
+
+        logger.debug('cyan',
+            `${' - '.repeat(scene.depth)}` + `AreBrowserCompiler: Scene <${scene.name}> mounted successfully.`,
+        );
+
+
+        await scene.render();
+
+        return mountPointElement;
+    }
+
+
+
+    @A_Feature.Extend({
+        name: A_SignalVectorFeatures.Next
+    })
+    async renderScene(
+        @A_Inject(A_Caller) vector: A_SignalVector<[AreInitSignal]>,
+        @A_Inject(AreScene) scene: AreScene,
+        @A_Inject(A_Logger) logger: A_Logger,
+        @A_Inject(AreSyntax) syntax: AreSyntax,
+    ) {
+
+        try {
+
+            logger?.debug('red',
+                ' ',
+                `AreCompiler: Rendering Scene <${scene.name}>`,
+                ' '
+            );
+
+            // const updateSignal = vector.get(AreUpdateSignal);
+
+
+            // console.log('updateSignal', updateSignal);
+            // console.log('Node', updateSignal?.node);
+            // console.log('Scene', scene);
+
+
+            // if (updateSignal) {
+            //     // for (const newNode of scene.parent?.nodes(n=>n.aseid.toString() === scene.id) || []) {
+
+            //     await updateSignal.node.compile();
+
+            //     // }
+            //     // if (scene.parent)
+            //     await this.mountScene(scene.parent);
+
+            // }
+            // else {
+            for (const newNode of scene.nodes(syntax.isCustomNode.bind(syntax))) {
+                scene.attach(newNode);
+
+                await newNode.load();
+
+                await newNode.compile();
+
+            }
+
+            logger?.debug('red',
+                ' ',
+                `AreCompiler: Mounting Scene <${scene.name}>`,
+                ' '
+            );
+
+            await this.mountScene(scene);
+
+            logger?.debug('red',
+                ' ',
+                `AreCompiler: Scene <${scene.name}> rendered successfully.`,
+                ' '
+            );
+            // }
+
+
+        } catch (error) {
+            logger.error(error);
+        }
 
     }
 }

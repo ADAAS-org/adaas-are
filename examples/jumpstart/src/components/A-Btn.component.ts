@@ -2,8 +2,10 @@ import { A_Caller, A_Feature, A_FormatterHelper, A_Inject, A_Scope } from "@adaa
 import { A_Logger } from "@adaas/a-utils";
 import { Are } from "@adaas/are/components/AreComponent/Are.component";
 import { AreEvent } from "@adaas/are/context/AreEvent/AreEvent.context";
+import { AreScene } from "@adaas/are/context/AreScene/AreScene.context";
 import { AreStore } from "@adaas/are/context/AreStore/AreStore.context";
 import { AreNode } from "@adaas/are/entities/AreNode/AreNode.entity";
+import { AreInitSignal } from "src/signals/AreInit.signal";
 
 
 export class ABtn extends Are {
@@ -18,7 +20,7 @@ export class ABtn extends Are {
         return `
             .a-btn {
                 padding: 10px 20px;
-                background-color: #ff5733!important;
+                background-color: {{bgColor}}!important;
                 color: white;
                 border: none;
                 border-radius: 4px;
@@ -30,13 +32,14 @@ export class ABtn extends Are {
 
     async data() {
         return {
-            name: 'A_Button Element'
+            name: 'A_Button Element',
+            bgColor: '#007BFF',
         };
     }
 
     @Are.onBeforeLoad
     async onLoad(
-        @A_Inject(AreNode) node: AreNode,
+        @A_Inject(A_Caller) node: AreNode,
         @A_Inject(AreStore) store: AreStore,
         @A_Inject(A_Logger) logger: A_Logger,
     ) {
@@ -45,7 +48,7 @@ export class ABtn extends Are {
 
     @Are.onAfterLoad
     async onAfterLoad(
-        @A_Inject(AreNode) node: AreNode,
+        @A_Inject(A_Caller) node: AreNode,
         @A_Inject(AreStore) store: AreStore,
         @A_Inject(A_Logger) logger: A_Logger,
     ) {
@@ -55,14 +58,22 @@ export class ABtn extends Are {
     @Are.EventHandler
     async handleClick(
         @A_Inject(A_Scope) scope: A_Scope,
-        @A_Inject(AreNode) node: AreNode,
+        @A_Inject(A_Caller) node: AreNode,
         @A_Inject(AreStore) store: AreStore,
         @A_Inject(A_Logger) logger: A_Logger,
         @A_Inject(AreEvent) event: AreEvent,
+        @A_Inject(AreScene) scene: AreScene,
     ) {
-        logger.log('red', 'Button clicked!', scope, node, store, event);
 
-        alert(`Button ${store.get('name')} clicked!`);
+        store.set('name', 'Button Clicked!');
+
+        store.set('bgColor', '#ff5733');
+
+        console.log('event data:', event);
+
+       await node.update();
+
+        // await new AreUpdateSignal(node).next(scope);
     }
 
 }

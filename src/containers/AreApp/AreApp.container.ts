@@ -1,8 +1,8 @@
 import { A_Dependency, A_Feature, A_Inject } from "@adaas/a-concept";
-import { A_Config, A_Logger, A_Polyfill, A_Service, A_ServiceFeatures } from "@adaas/a-utils";
+import { A_Config, A_Logger, A_Polyfill, A_Service, A_ServiceFeatures, A_Signal } from "@adaas/a-utils";
 import { AreCompiler } from "@adaas/are/components/AreCompiler/AreCompiler.component";
-import { AreBrowserDom } from "@adaas/are/context/AreBrowserDom/AreBrowserDom.context";
 import { AreScene } from "@adaas/are/context/AreScene/AreScene.context";
+import { AreInitSignal } from "src/signals/AreInit.signal";
 
 
 
@@ -37,25 +37,9 @@ export class AreApp extends A_Service {
         @A_Inject(A_Config) config?: A_Config<any>,
 
     ): Promise<void> {
-        for (const node of scene) {
+        const signal = new AreInitSignal({ data: { ready: true } });
 
-            if (!compiler.isCustomComponent(node))
-                continue;
-
-            scene.attach(node);
-
-            await node.load();
-
-            await node.compile();
-
-            await node.render();
-
-            await this.root.mount(node);
-
-            await this.root.render()
-
-        }
-
+        await signal.next(this.scope);
     }
 
 }

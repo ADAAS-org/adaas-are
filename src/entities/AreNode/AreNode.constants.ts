@@ -26,4 +26,8 @@ export enum AreNodeFeatures {
      * Feature that is called to update the element node
      */
     onUpdate = '_AreNode_onUpdate',
+    /**
+     * Feature that is called to mount the element node
+     */
+    onMount = '_AreNode_onMount',
 }
