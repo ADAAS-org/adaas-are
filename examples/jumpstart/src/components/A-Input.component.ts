@@ -10,12 +10,13 @@ import { AreNode } from "@adaas/are/entities/AreNode/AreNode.entity";
 export class AInput extends Are {
 
     async template() {
-        return `<div><input $no-update @input="onChange" type="text" placeholder="A_Input Element"/>   {{inputValue}}</div>`;
+        return `<div><input $no-update @input="onChange" :value="inputValue" type="text" :placeholder="placeholder"> </input>  {{inputValue}}</div>`;
     }
 
 
     async data() {
         return {
+            placeholder: 'A_Input Element',
             inputValue: 'Test',
         };
     }
@@ -47,15 +48,14 @@ export class AInput extends Are {
         // const timeout = store.get('timeout');
 
         // clearTimeout(timeout);
-  if (event.data.target === null
+        if (event.data.target === null
             ||
             store.get('inputValue') === (event.data.target as HTMLInputElement).value
-
         ) return;
 
         logger.log('green', `AInput onChange event triggered... : <${node.aseid.entity}> : `, node.aseid.toString(), (event.data.target as HTMLInputElement).value);
 
-      
+
 
         store.set('inputValue', (event.data.target as HTMLInputElement).value);
 

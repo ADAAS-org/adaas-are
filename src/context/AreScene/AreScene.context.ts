@@ -5,16 +5,13 @@ import { AreEvent } from "../AreEvent/AreEvent.context";
 import { AreSCene_Serialized } from "./AreScene.types";
 import { AreProps } from "../AreProps/AreProps.context";
 import { AreStore } from "../AreStore/AreStore.context";
+import { A_Logger, A_LoggerColorName } from "@adaas/a-utils";
+import { AreSceneAction } from "@adaas/are/entities/AreSceneAction/AreSceneAction.entity";
 
 export class AreScene extends A_Fragment {
 
     protected _template: string = '';
-    protected _listeners: Map<AreNode, Map<string, Set<Function>>> = new Map();
-    protected _styles: Map<AreNode, string> = new Map();
-    protected _bindings: Map<AreNode, Map<string, any>> = new Map();
-
-
-    protected _stateHashes: Map<AreNode, string> = new Map();
+    protected _state: Set<AreSceneAction> = new Set();
 
     protected _status: 'initialized' | 'compiled' | 'rendered' = 'initialized';
 
@@ -30,7 +27,7 @@ export class AreScene extends A_Fragment {
     ) {
         super({ name: id?.toString() || 'are-app' });
         this._template = (template || '')
-        .replace(/\s+/g, ' ').trim();
+            .replace(/\s+/g, ' ').trim();
     }
 
     get id(): string {
@@ -110,15 +107,15 @@ export class AreScene extends A_Fragment {
         return depth;
     }
 
-    get styles(): Iterable<[AreNode, string]> {
-        return this._styles.entries();
+
+    get actions(): Array<AreSceneAction> {
+        return this.scope.resolveFlatAll<AreSceneAction>(AreSceneAction) || [];
     }
 
 
     *nodes(
         filter?: (node: AreNode) => boolean
     ): Iterable<AreNode> {
-
 
         for (const path of this.paths()) {
 
@@ -134,6 +131,48 @@ export class AreScene extends A_Fragment {
 
             yield node;
         }
+    }
+
+
+    *renderPlanFor(
+        node: AreNode,
+        filter: {
+            changes?: Array<string>
+            order?: Array<string>
+
+        }
+    ) {
+
+        const order = filter.order || [];
+        const changes = filter.changes || [];
+
+        let plan = this.actions;
+
+        plan = plan.sort((a, b) => {
+            const aIndex = order.indexOf(a.name);
+            const bIndex = order.indexOf(b.name);
+
+            return aIndex - bIndex;
+        });
+
+        for (const action of plan) {
+            if (action.node === node) {
+                yield action;
+            }
+        }
+    }
+
+
+    debug(color: A_LoggerColorName, message: string, ...optionalParams: any[]) {
+        const logger = this.scope.resolve(A_Logger);
+
+        if (!logger) return;
+
+        logger.debug(
+            color,
+            `${' - '.repeat(this.depth)}` +
+            `AreScene: [${this.id}] : ${message}`, ...optionalParams
+        );
     }
 
     *paths(): Iterable<string> {
@@ -159,44 +198,33 @@ export class AreScene extends A_Fragment {
         }
     }
 
+    plan(action: AreSceneAction) {
+
+        try {
+            this.scope.register(action);
+            console.log('\n\n\n\n\nPLANNED:', action);
+        } catch (error) {
+
+        }
+
+    }
+
+    unPlan(
+        action: AreSceneAction
+    ) {
+        try {
+            this.scope.deregister(action);
+        } catch (error) {
+
+        }
+    }
+
     attach(node: AreNode): void {
-
-        console.log('ATTACH NODE TO SCENE', node.aseid.entity, 'TO SCENE', this.id);
-
         this.scope.register(node);
         node.scope.inherit(this.scope)
     }
 
-    async mount(
-        node: AreNode,
-    ) {
-        const newHash = this.computeHash(node);
-        this._stateHashes.set(node, newHash);
-
-    }
-
-    async unmount(
-        node: AreNode,
-    ) {
-        this._stateHashes.delete(node);
-    }
-
-
-
-    hasChangesFor(node: AreNode): boolean {
-        const previousHash = this.getHash(node);
-        const currentHash = this.computeHash(node);
-
-
-        let result: boolean = false;
-
-        if (!previousHash || previousHash !== currentHash) {
-            result = true;
-        }
-        return result;
-    }
-
-    sceneFor(node: AreNode): AreScene | undefined {
+    sceneOf(node: AreNode): AreScene | undefined {
         return node.scope.resolveFlat<AreScene>(AreScene);
     }
 
@@ -206,120 +234,30 @@ export class AreScene extends A_Fragment {
 
     storeOf(node: AreNode): AreStore {
         return node.scope.resolveFlat<AreStore>(AreStore)!;
-    } 
-
-    getHash(node: AreNode): string | undefined {
-        return this._stateHashes.get(node);
+    }
+    isPlanned(action: AreSceneAction): boolean {
+        return this.scope.resolveFlat<AreSceneAction>(AreSceneAction, {
+            query: {
+                aseid: action.aseid.toString()
+            }
+        }) !== undefined;
     }
 
-    computeHash(node: AreNode): string {
-        const nodeBindings = this._bindings.get(node);
-        const nodeListeners = this._listeners.get(node);
-        const nodeStyles = this._styles.get(node);
-        const nestedScene = this.sceneFor(node);
-        const props =  this.propsOf(node);
-        const store = this.storeOf(node);
-
-
-        const hashSource = JSON.stringify({
-            bindings: nodeBindings ?  Array.from(nodeBindings.entries() || []): null,
-            listeners: nodeListeners ? Array.from(nodeListeners.entries() ).map(([key, value]) => [key, Array.from(value)]) : null,
-            styles: nodeStyles || null,
-            nestedScene: nestedScene ? nestedScene.toJSON() : null,
-            props: props ? props.toJSON() : null,
-            store: store ? store.toJSON() : null,
-        });
-
-        let hash = 0, i, chr;
-        for (i = 0; i < hashSource.length; i++) {
-            chr = hashSource.charCodeAt(i);
-            hash = ((hash << 5) - hash) + chr;
-            hash |= 0; // Convert to 32bit integer
-        }
-        return hash.toString();
+    isMounted(action: AreSceneAction): boolean {
+        return this._state.has(action);
     }
 
-    async addStyles(node: AreNode, styles: string) {
-        this._styles.set(node, styles);
+    mount(action?: AreSceneAction) {
+        this._state.add(action!);
     }
 
-
-    async getStyles(node: AreNode): Promise<string | undefined> {
-        return this._styles.get(node);
+    unmount(action?: AreSceneAction) {
+        this._state.delete(action!);
     }
-
-
-    async addListener(event: string, handler: string, parentNode: AreNode, node: AreNode) {
-        const callback = async (e) => {
-            const newEvent = new AreEvent(handler, {
-                event,
-                data: e
-            })
-
-            await parentNode.emit(newEvent);
-        }
-
-        //  And then Just register it
-        const existingListeners = this._listeners.get(node) || new Map<string, Set<Function>>();
-
-        const handlers = existingListeners.get(event) || new Set<Function>();
-
-        handlers.add(callback);
-
-        existingListeners.set(event, handlers);
-
-        this._listeners.set(node, existingListeners);
-    }
-
-
-    async getListeners(node: AreNode): Promise<Map<string, Set<Function>> | null> {
-        return this._listeners.get(node) || null;
-    }
-
-
-    async getBindings(node: AreNode): Promise<Map<string, any> | null> {
-        return this._bindings.get(node) || null;
-    }
-
-
-
-    async bind(node: AreNode, name: string, value: any) {
-        //  And then Just register it
-        const existingBindings = this._bindings.get(node) || new Map<string, any>();
-
-        // const values = existingBindings.get(name);
-
-        // values.add(value);
-
-        existingBindings.set(name, value);
-
-        this._bindings.set(node, existingBindings);
-    }
-
-
-
-    /**
-     * This function will combine all binding scenes into one build scene 
-     * and return the final compiled markup with all paths properly set.
-     * 
-     * All paths in the index should be updated and the full tree should be built.
-     * 
-     */
-    async compile() {
-        this._status = 'compiled';
-    }
-
-
-    async render() {
-        this._status = 'rendered';
-    }
-
 
     async clear() {
         this.index.clear();
-        this._listeners.clear();
-        this._styles.clear();
-        this._bindings.clear();
+        this._state.clear();
     }
 
 

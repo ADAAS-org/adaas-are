@@ -104,8 +104,6 @@ export class AreCompiler extends A_Component {
         @A_Inject(A_Feature) feature: A_Feature,
         ...args: any[]
     ) {
-        console.log('feature', feature);
-
         this.debug(node, `[Load -> After] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
 
         const component = this.component(node, scope);
@@ -138,17 +136,18 @@ export class AreCompiler extends A_Component {
 
         const component = this.component(node, scope);
 
+
+        
         if (!component) {
             scope.resolve(A_Logger)?.warning(
                 'Component Not Found',
                 `No component registered for entity: ${node.aseid.entity}. Please ensure that the component is registered in the scope before rendering.`
             );
-            return;
         }
         
-        const data = await component.data();
-        const template = await component.template();
-        const styles = await component.styles();
+        const data = await component?.data() || {};
+        const template = await component?.template() || '';
+        const styles = await component?.styles() || '';
 
         const newNodeScene = new AreScene(node.aseid, template);
         const newNodeIndex = new AreIndex(node.aseid);

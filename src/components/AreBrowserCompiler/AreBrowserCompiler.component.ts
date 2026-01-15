@@ -1,7 +1,7 @@
 import { AreNode } from "@adaas/are/entities/AreNode/AreNode.entity";
 import { AreIndex } from "@adaas/are/context/AreIndex/AreIndex.context";
-import { A_Config, A_Logger, A_Polyfill, A_ServiceFeatures, A_SignalVector, A_SignalVectorFeatures } from "@adaas/a-utils";
-import { A_Caller, A_Component, A_Container, A_Dependency, A_Feature, A_FormatterHelper, A_Inject, A_Scope, A_TYPES__EntityFeatures } from "@adaas/a-concept";
+import { A_Config, A_Logger, A_Polyfill, A_Schedule, A_ScheduleObject, A_ServiceFeatures, A_SignalVector, A_SignalVectorFeatures } from "@adaas/a-utils";
+import { A_Caller, A_CommonHelper, A_Component, A_Container, A_Dependency, A_Error, A_Feature, A_FormatterHelper, A_Inject, A_Scope, A_TYPES__EntityFeatures } from "@adaas/a-concept";
 import { AreNodeFeatures } from "@adaas/are/entities/AreNode/AreNode.constants";
 import { AreStore } from "@adaas/are/context/AreStore/AreStore.context";
 import { AreProps } from "@adaas/are/context/AreProps/AreProps.context";
@@ -11,6 +11,7 @@ import { AreScene } from "@adaas/are/context/AreScene/AreScene.context";
 import { AreEvent } from "@adaas/are/context/AreEvent/AreEvent.context";
 import { AreSyntax } from "@adaas/are/context/AreSyntax/AreSyntax.context";
 import { AreInitSignal } from "src/signals/AreInit.signal";
+import { AreSceneAction } from "@adaas/are/entities/AreSceneAction/AreSceneAction.entity";
 
 /**
  * Browser DOM specific scene implementation
@@ -50,6 +51,8 @@ export class AreBrowserCompiler extends AreCompiler {
 
 
 
+    protected counter = 0
+
     // ==================================================================================
     // ========================= COMPONENT METHODS =======================================
     // ==================================================================================
@@ -69,6 +72,18 @@ export class AreBrowserCompiler extends AreCompiler {
          */
         @A_Inject(A_Caller) node: AreNode,
         /**
+         * Nodes owned Scene
+         * 
+         */
+        @A_Dependency.Flat()
+        @A_Inject(AreScene) scene: AreScene,
+        /**
+         * Parent Scene where the node is registered
+         */
+        @A_Dependency.Parent()
+        @A_Inject(AreScene) parentScene: AreScene,
+
+        /**
          * Global Syntax Definition for parsing markup
          */
         @A_Inject(AreSyntax) syntax: AreSyntax,
@@ -79,34 +94,16 @@ export class AreBrowserCompiler extends AreCompiler {
 
         @A_Inject(AreProps) props: AreProps,
         @A_Inject(AreStore) store: AreStore,
-        /**
-         * Parent Scene where the node is registered
-         */
-        @A_Dependency.Parent()
-        @A_Inject(AreScene) parentScene: AreScene,
+
         @A_Dependency.Parent()
         @A_Inject(AreStore) parentStore: AreStore,
-        /**
-         * Nodes owned Scene
-         * 
-         * [!] Note, not every node has a scene - e.g. if it's not a custom component
-         */
-        @A_Dependency.Flat()
-        @A_Inject(AreScene) scene?: AreScene,
+
 
 
         @A_Inject(A_Logger) logger?: A_Logger,
     ) {
 
         this.debug(node, `Compiling node <${node.aseid.entity}> in Scene <${parentScene.name}>`);
-
-        if (!scene)
-            return;
-
-        if (!this.component(node, scope)) {
-            this.debug(node, `Node <${node.aseid.entity}> is not a registered component. Skipping compilation.`);
-            return;
-        }
 
 
         // 1) first Deal WIth interpolations - replace them with wrapped Nodes 
@@ -117,53 +114,63 @@ export class AreBrowserCompiler extends AreCompiler {
                 );
             }
 
-        /**
-         * Markup is the raw placement with all bindings and events
-         * Example: `<custom-component :prop="value"> <div>Inner Content</div> </custom-component>`
-         * 
-         * Template is target replacement string where all bindings should go in place
-         * Example: `<div> <h2>{{Interpolation}}</h2> <a-slot/> </div>`
-         * 
-         * Styles is the raw styles string with all bindings
-         * Example: `
-         *      h2 {
-         *          color: {{titleColor}};
-         *      }
-         *  `
-         * 
-         * 
-         * Then we need to:
-         */
-
         let template = node.template || '';
         let styles = node.styles || '';
 
 
 
-        if (scene && !scene.rendered) {
-            logger?.debug('red',
-                `${' - '.repeat(scene.depth)}` +
-                `AreCompiler: Building Scene Index for <${scene.name}> during compilation of Node <${node.aseid.entity}>`,
-            );
+        // 1) extract all props from the markup and set them in the props store
+        for (const attr of syntax.extractAttributes(node.markup)) {
+            const name = attr.name;
+            const value = (syntax.isBindingProp(attr) ?
+                store.get(attr.value) || parentStore.get(attr.value)
+                : attr.value) || '';
+
+            props.set(name, value);
+
+            parentScene.plan(new AreSceneAction({
+                id: [attr, node],
+                action: 'attribute',
+                node,
+                params: { name, value }
+            }));
+        }
+
+        // 3a) Process directives first before other operations
+        for (const directive of syntax.extractDirectives(node.markup)) {
+            let directiveValue: any;
+
+            // Get the directive value from store or props
+            if (directive.value) {
+                directiveValue = store.get(directive.value) || props.get(directive.value);
+            }
+
+
+
+            parentScene.plan(new AreSceneAction({
+                id: [directive, node],
+                action: 'directive',
+                node,
+                params: { directive, value: directiveValue }
+            }));
+
+        }
+
+        const mountAction = new AreSceneAction({
+            id: ['mount', node],
+            action: 'mount',
+            node,
+            params: {}
+        })
+
+        if (!parentScene.isPlanned(mountAction)) {
+            scene?.debug('red', `AreCompiler: Building Scene Index for <${scene.name}> during compilation of Node <${node.aseid.entity}>`);
 
             await scene.reset(template);
             await this.buildSceneIndex(scene);
+
+            parentScene.plan(mountAction);
         }
-
-
-        // 1) extract all props from the markup and set them in the props store
-        for (const prop of syntax.extractProps(node.markup)) {
-            const name = syntax.extractPropName(prop);
-            const value = syntax.extractPropValue(prop, parentStore)
-
-            logger?.log('green',
-                `${' - '.repeat(scene ? scene.depth : 0)}` +
-                `[Compile -> ADD -> Prop] '${name}' in component <${node.aseid.entity}> with value = ${value}`
-            );
-
-            props.set(name, value);
-        }
-
 
         // 2) replace all style interpolations in the styles
         for (const interpolation of syntax.extractInterpolations(styles)) {
@@ -171,66 +178,59 @@ export class AreBrowserCompiler extends AreCompiler {
 
             styles = syntax.replaceInterpolation(styles, interpolation, value);
         }
+        if (styles.trim())
+            parentScene.plan(new AreSceneAction({
+                id: [styles, node],
+                action: 'style',
+                node,
+                params: { styles }
+            }));
+
+        // 3) go through all listeners and register them in the scene
+        for (const listener of syntax.extractListeners(node.markup)) {
 
 
+            const targetNode = parentScene.scope.parent?.resolve<AreNode>(AreNode, {
+                query: {
+                    aseid: parentScene.name
+                }
+            }) as any;
 
-        await scene.addStyles(node, styles);
-
-
-        // 3) go through ONLY non-custom component nodes and find bindings and events
-        for (const sceneNode of scene.nodes()) {
-
-            if (syntax.isCustomNode(sceneNode)) {
-
-                const existed = scene.scope.resolveFlat<AreNode>(AreNode, {
-                    query: {
-                        aseid: sceneNode.aseid
-                    }
+            const callback = async (e) => {
+                const newEvent = new AreEvent(listener.handler, {
+                    event: listener.name,
+                    data: e
                 })
 
-                if (!existed) {
-                    logger?.debug('green',
-                        `${' - '.repeat(scene.depth)}` +
-                        `[Compile -> ADD -> Component] Attaching custom component <${sceneNode.aseid.entity}> ASEID: ${sceneNode.aseid.toString()} to Scene <${scene.name}>`
-                    );
+                await targetNode.emit(newEvent);
 
-                    scene.attach(sceneNode)
+            }
 
-                    await sceneNode.load();
+            parentScene.plan(new AreSceneAction({
+                id: [node, listener],
+                action: 'listener',
+                node,
+                params: {
+                    listener, callback
                 }
-
-                await sceneNode.compile();
-
-                continue;
-            }
-
-
-            for (const interpolation of syntax.extractInterpolations(sceneNode.markup)) {
-                const value = store.get(interpolation.name) || props.get(interpolation.name);
-
-                await scene.bind(sceneNode, interpolation.name, value);
-
-                logger?.debug('green',
-                    `${' - '.repeat(scene.depth)}` +
-                    `[Compile -> ADD -> Binding] '${interpolation.name}' with value '${value}' in component <${node.aseid.entity}> for element <${sceneNode.aseid.entity}> ASEID : ${sceneNode.aseid.toString()}; hashes:[${scene.computeHash(sceneNode)}::${scene.getHash(sceneNode)}]`);
-            }
-
-            // 3b) extract all listeners and register them in the scene
-
-
-            for (const listeners of syntax.extractListeners(sceneNode.markup)) {
-
-                await scene.addListener(listeners.name, listeners.handler, node, sceneNode);
-
-                // this.debug(sceneNode, `[Compile -> ADD -> Listener] '${listeners.name}' with handler '${listeners.handler}' in component <${node.aseid.entity}> for element <${sceneNode.aseid.entity}> ASEID '${sceneNode.aseid.toString()}'`);
-            }
-
+            }))
         }
 
+        for (const sceneNode of scene.nodes()) {
+            const existed = scene.scope.resolveFlat<AreNode>(AreNode, {
+                query: {
+                    aseid: sceneNode.aseid
+                }
+            });
 
+            if (!existed) {
+                scene.attach(sceneNode)
 
+                await sceneNode.load();
+            }
 
-        this.debug(node, `Node <${node.aseid.entity}> compiled successfully.`);
+            await sceneNode.compile();
+        }
     }
 
 
@@ -263,8 +263,9 @@ export class AreBrowserCompiler extends AreCompiler {
         );
 
         //  And then re-mount the parent scene
-        // because current scene is a current node - content 
-        await this.mountScene(scene);
+        // because current scene is a current node - content
+
+        await node.mount();
 
         logger?.debug('red',
             ' ',
@@ -285,6 +286,10 @@ export class AreBrowserCompiler extends AreCompiler {
     }
 
 
+    /**
+     * Compute path for DOM element relative to virtual root (legacy method, kept for compatibility)
+     * @deprecated Use string-based path computation instead
+     */
     computePath(node: Node, virtual: Element): string {
         const path: number[] = [];
         let current: Node | null = node;
@@ -304,125 +309,224 @@ export class AreBrowserCompiler extends AreCompiler {
         return path.join('.');
     }
 
-
-    getElementBypath(
+    /**
+     * Get DOM element by string path from root element
+     * Works with paths generated by the string-based parser
+     */
+    getElementByPath(
         root: Element,
         path: string
     ): Element | null {
+        if (!path) {
+            return root;
+        }
+
         const indices = path.split('.').map(index => parseInt(index, 10));
-        let current: Node | null = root;
+        let current: Element | null = root;
 
         for (const index of indices) {
-            // only element nodes
-            const elementChildren = Array.from(current.childNodes).filter(n => (n as any).nodeType === Node.ELEMENT_NODE);
-            current = elementChildren[index];
             if (!current) {
                 return null;
             }
+
+            // Get only element children (not text nodes, comments, etc.)
+            const elementChildren = Array.from(current.children).filter(child => child.nodeType === Node.ELEMENT_NODE);
+
+            if (index >= elementChildren.length) {
+                return null;
+            }
+
+            current = elementChildren[index] as Element;
         }
 
-        return current as Element;
+        return current;
+    }
+
+    /**
+     * Compute string path for a DOM element relative to a root element
+     * This generates the same format as parseHTMLElements uses
+     */
+    computeStringPath(element: Element, root: Element): string {
+        if (element === root) {
+            return '';
+        }
+
+        const path: number[] = [];
+        let current: Element | null = element;
+
+        while (current && current !== root) {
+            const parent = current.parentElement;
+            if (parent) {
+                const index = Array.from(parent.children).indexOf(current);
+                if (index === -1) {
+                    return '';
+                }
+                path.unshift(index);
+            }
+            current = parent;
+        }
+
+        return path.join('.');
     }
 
 
     buildSceneIndex(
         scene: AreScene,
     ) {
-        const virtual = new DOMParser().parseFromString(scene.template, 'text/html');
+        // Use a position-based approach that maps DOM paths to original markup exactly
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = scene.template;
 
-        const walker = document.createTreeWalker(virtual.body, NodeFilter.SHOW_ELEMENT);
+        // Create a mapping of DOM paths to original markup using DOM traversal
+        const markupMap = this.createPositionBasedMarkupMap(scene.template);
 
-        let current: Node | null = walker.nextNode();
+        this.indexElementsFromDOM(tempDiv, scene, [], markupMap);
+    }
 
-        while (current) {
+    /**
+     * Create a position-based mapping by parsing the original template with DOM
+     * This ensures 1:1 correspondence between DOM structure and original markup
+     */
+    private createPositionBasedMarkupMap(template: string): Map<string, string> {
+        const markupMap = new Map<string, string>();
+        const originalDiv = document.createElement('div');
+        originalDiv.innerHTML = template;
 
-            const path: string = this.computePath(current, virtual.body);
+        // Traverse the original DOM and map each position to its outerHTML
+        this.mapDOMPositions(originalDiv, [], markupMap);
 
-            const areNode = new AreNode({
-                scope: scene.name,
-                component: current && (current as Element).tagName ? (current as Element).tagName.toLowerCase() : 'text-node',
-                markup: current instanceof Element ? current.outerHTML : current.textContent || '',
-            });
+        return markupMap;
+    }
 
-            scene.index.add(areNode, path);
+    /**
+     * Recursively map DOM positions to their exact original markup
+     */
+    private mapDOMPositions(
+        parentElement: Element,
+        parentPath: number[],
+        markupMap: Map<string, string>
+    ): void {
+        const children = Array.from(parentElement.children);
 
-            current = walker.nextNode();
+        for (let i = 0; i < children.length; i++) {
+            const element = children[i];
+            const currentPath = [...parentPath, i];
+            const pathKey = currentPath.join('.');
+
+            // Store the exact outerHTML for this position
+            markupMap.set(pathKey, element.outerHTML);
+
+            // Recursively process children
+            if (element.children.length > 0) {
+                this.mapDOMPositions(element, currentPath, markupMap);
+            }
         }
     }
 
-
-
-
-    async mountScene(
+    /**
+     * Index elements using actual DOM structure with position-based markup mapping
+     */
+    private indexElementsFromDOM(
+        parentElement: Element,
         scene: AreScene,
-        mountPointElement?: Element | null,
-    ): Promise<Element> {
-        const syntax = scene.scope.resolve<AreSyntax>(AreSyntax)!;
-        const logger = scene.scope.resolve<A_Logger>(A_Logger)!;
+        parentPath: number[],
+        markupMap: Map<string, string>
+    ): void {
+        const children = Array.from(parentElement.children);
 
-        logger.debug('cyan',
-            `${' - '.repeat(scene.depth)}` + `AreBrowserCompiler: Mounting Scene <${scene.name}>`,
-        );
+        for (let i = 0; i < children.length; i++) {
+            const element = children[i];
+            const currentPath = [...parentPath, i];
+            const pathKey = currentPath.join('.');
 
-        if (!mountPointElement)
-            mountPointElement = document.getElementById(scene.id!) || document.querySelector(`[aseid="${scene.id}"]`);
+            // Get the exact markup for this position from our mapping
+            const originalMarkup = markupMap.get(pathKey);
 
-        if (!mountPointElement) {
-            throw new Error(`Mount point with id '${scene.id}' not found in the DOM.`);
+            // Create AreNode with preserved original markup
+            const areNode = new AreNode({
+                scope: scene.name,
+                component: element.tagName.toLowerCase(),
+                markup: originalMarkup || element.outerHTML,
+            });
+
+            // Add to scene index
+            scene.index.add(areNode, currentPath.join('.'));
+
+            // Recursively process children
+            if (element.children.length > 0) {
+                this.indexElementsFromDOM(element, scene, currentPath, markupMap);
+            }
+        }
+    } @A_Feature.Extend({
+        name: AreNodeFeatures.onMount,
+        scope: [AreNode]
+    })
+    async mount(
+        /**
+         * Node to be mounted
+         */
+        @A_Inject(A_Caller) node: AreNode,
+        /**
+         * Node Content
+         */
+        @A_Dependency.Flat()
+        @A_Inject(AreScene) scene: AreScene,
+
+        /**
+         * Scene where target node is registered
+         */
+        @A_Dependency.Parent()
+        @A_Inject(AreScene) parentScene: AreScene,
+
+        @A_Inject(A_Scope) scope: A_Scope,
+        @A_Inject(AreSyntax) syntax: AreSyntax,
+
+        @A_Inject(A_Logger) logger?: A_Logger,
+    ) {
+
+        const mountPoint = document.getElementById(parentScene.id!) || document.querySelector(`[aseid="${parentScene.id}"]`);
+
+        if (!mountPoint) {
+            throw new A_Error(`Mount point with id '${parentScene.id}' not found in the DOM.`);
         }
 
 
-        const walker = document.createTreeWalker(mountPointElement, NodeFilter.SHOW_ELEMENT);
 
-        let current: Node | null = walker.nextNode();
-
-        const treeWalkerStack: Map<Node, string> = new Map();
-
-        while (current) {
-            const path: string = this.computePath(current, mountPointElement);
-
-            if (path) {
-                treeWalkerStack.set(current, path);
-            }
-
-            current = walker.nextNode();
-        }
-
-
-        for (const [current, path] of treeWalkerStack) {
-
-
-            const node = scene.index.nodeOf(path)!;
-
-            logger.debug('cyan', `${' - '.repeat(scene.depth)}` + `[${path}] - CURRENT NODE: ${(current as Element).tagName.toLowerCase()} :: MAPPED ASEID: ${node ? node.aseid.toString() : 'NOT FOUND IN INDEX'}`);
-
-            if (!node)
-                continue;
-
-
-
-            if (!scene.hasChangesFor(node)) {
-                logger.debug('magenta',
-                    `${' - '.repeat(scene.depth)}` + `[${path}] - NO CHANGES DETECTED FOR NODE <${node.aseid.entity}>. aseid: ${node.aseid.toString()} SKIPPING MOUNTING. hashes: [${scene.computeHash(node)}::${scene.getHash(node)}]`
-                );
+        for (const action of parentScene.renderPlanFor(node, {
+            order: ['mount', 'style', 'listener', 'attribute', 'directive']
+        })) {
+            if (parentScene.isMounted(action)) {
+                scene.debug('yellow', `Action '${action.name}' for Node <${node.aseid.entity}> ASEID: ${node.aseid.toString()} already mounted. Skipping...`);
                 continue;
             }
 
-            logger.debug('green', `${' - '.repeat(scene.depth)}` + `[${path}] - MOUNTING NODE <${node.aseid.entity}>`);
+            const path = parentScene.index.pathOf(node)!;
+            const element = this.getElementByPath(mountPoint, path);
 
+            scene.debug('red', `Mounting action '${action.name}' for Node <${node.aseid.entity}> ASEID: ${node.aseid.toString()} at path '${path}'`);
 
-            const wrapper = document.createElement('div');
-            wrapper.setAttribute('aseid', node.aseid.toString());
+            if (!element) {
+                throw new A_Error(`Element at path '${path}' not found in the mount point.`);
+            }
+            switch (action.name) {
+                case 'mount': {
+                    if (syntax.isCustomNode(node)) {
 
-            const nodeScene = node.scope.resolve<AreScene>(AreScene)!;
+                        scene.debug('red', `Mounting Node <${node.aseid.entity}> ASEID: ${node.aseid.toString()} at path '${path}'`);
+                        const wrapper = document.createElement(this.component(node, scope)?.wrapper || 'div');
 
-            if (nodeScene) {
-                wrapper.innerHTML = nodeScene.template;
+                        wrapper.setAttribute('aseid', node.aseid.toString());
 
-                // 2 ) update styles
-                const styles = await nodeScene.getStyles(node);
+                        wrapper.innerHTML = scene.template;
 
-                if (styles) {
+                        // Replace the placement with the rendered content
+                        (element).replaceWith(wrapper);
+                    }
+                    break;
+                }
+                case 'style': {
+                    const styles = action.params?.styles;
+
                     const styleElementId = `a-style-${node.aseid.entity}`;
                     let styleElement = document.querySelector(`#${styleElementId}`) as HTMLStyleElement | null;
 
@@ -432,63 +536,49 @@ export class AreBrowserCompiler extends AreCompiler {
                         document.head.appendChild(styleElement);
                     }
                     styleElement.innerHTML = styles;
+                    break;
                 }
 
-                const build = await this.mountScene(nodeScene, wrapper);
+                case 'listener': {
+                    const listener = action.params?.listener;
+                    const callback = action.params?.callback;
 
-                // Replace the placement with the rendered content
-                wrapper.replaceChildren(...Array.from(build.childNodes));
+                    if (listener && callback) {
 
-                // Replace the placement with the rendered content
-                (current as Element).replaceWith(wrapper);
-            }
+                        scene.debug('green', `Mounting listener '${listener.name}' for target <${node.aseid.entity}> ASEID: ${node.aseid.toString()}`);
 
-            //  3) update listeners
-            const eventMap = await scene.getListeners(node);
-            if (eventMap) {
-                for (const [event, handlers] of eventMap.entries()) {
-                    for (const handler of handlers) {
-                        current.addEventListener(event, handler as EventListener);
+                        element.addEventListener(listener.name, callback as EventListener);
                     }
+                    break;
                 }
+                case 'attribute': {
+                    const name = action.params?.name;
+                    const value = action.params?.value;
+
+                    if (name) {
+                        // scene.debug('green', `Setting attribute '${name}'='${value}' for target <${node.aseid.entity}> ASEID: ${node.aseid.toString()}`);
+
+                        element.setAttribute(name, value);
+                    }
+                    break;
+                }
+                case 'directive':
+                    // Directives are already processed during compilation
+                    break;
+                default:
+                    break;
             }
 
-            // 4) update bindings
-            const bindingsMap = await scene.getBindings(node);
-            if (bindingsMap) {
-                console.log('bindingsMap', bindingsMap);
-                for (const [name, value] of bindingsMap.entries()) {
-                    // for (const value of values) {
 
-                    console.log('Binding', name, 'with value', value, 'on node', node.aseid.toString(), syntax.replaceInterpolation(
-                        (current as Element).innerHTML,
-                        name,
-                        value
-                    ));
-
-                    (current as Element).innerHTML = syntax.replaceInterpolation(
-                        (current as Element).innerHTML,
-                        name,
-                        value
-                    );
-                    // }
-                }
-            }
-
-            // 5) mount nested custom components and keep it state
-            await scene.mount(node);
-
-            logger.log('green', `${' - '.repeat(scene.depth)}` + `[${path}] - NODE <${node.aseid.entity}> MOUNTED SUCCESSFULLY. hashes: [${scene.computeHash(node)}::${scene.getHash(node)}]`);
+            if (node.type !== 'are-interpolation' && action.name === 'mount')
+                parentScene.mount(action)
         }
 
-        logger.debug('cyan',
-            `${' - '.repeat(scene.depth)}` + `AreBrowserCompiler: Scene <${scene.name}> mounted successfully.`,
-        );
+        for (const child of scene.nodes()) {
 
+            await child.mount();
+        }
 
-        await scene.render();
-
-        return mountPointElement;
     }
 
 
@@ -502,58 +592,27 @@ export class AreBrowserCompiler extends AreCompiler {
         @A_Inject(A_Logger) logger: A_Logger,
         @A_Inject(AreSyntax) syntax: AreSyntax,
     ) {
-
         try {
-
             logger?.debug('red',
                 ' ',
                 `AreCompiler: Rendering Scene <${scene.name}>`,
                 ' '
             );
 
-            // const updateSignal = vector.get(AreUpdateSignal);
+            for (const newNode of scene.nodes()) {
 
+                console.log('\n===============================\n\nWTF??? ', newNode, scene, '\n\n===============================\n');
 
-            // console.log('updateSignal', updateSignal);
-            // console.log('Node', updateSignal?.node);
-            // console.log('Scene', scene);
-
-
-            // if (updateSignal) {
-            //     // for (const newNode of scene.parent?.nodes(n=>n.aseid.toString() === scene.id) || []) {
-
-            //     await updateSignal.node.compile();
-
-            //     // }
-            //     // if (scene.parent)
-            //     await this.mountScene(scene.parent);
-
-            // }
-            // else {
-            for (const newNode of scene.nodes(syntax.isCustomNode.bind(syntax))) {
                 scene.attach(newNode);
 
                 await newNode.load();
 
                 await newNode.compile();
 
+                await newNode.mount();
+
+                console.log('\n===============================\n\nMounted Node ', newNode, scene, '\n\n===============================\n');
             }
-
-            logger?.debug('red',
-                ' ',
-                `AreCompiler: Mounting Scene <${scene.name}>`,
-                ' '
-            );
-
-            await this.mountScene(scene);
-
-            logger?.debug('red',
-                ' ',
-                `AreCompiler: Scene <${scene.name}> rendered successfully.`,
-                ' '
-            );
-            // }
-
 
         } catch (error) {
             logger.error(error);

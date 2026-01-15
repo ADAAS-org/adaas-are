@@ -118,6 +118,10 @@ export class Are<
     // ========================= COMPONENT METHODS =======================================
     // ==================================================================================
 
+    get wrapper(): string {
+        return '';
+    }
+
     /**
      * Returns the template string for the component
      * 

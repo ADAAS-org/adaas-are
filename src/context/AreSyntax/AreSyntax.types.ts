@@ -55,4 +55,10 @@ export type AreSyntaxInitOptions = {
      * identifier of the root tag to use when compiling in browser context.
      */
     rootTag?: string;
+
+    /**
+     * Custom directive delimiter for directive parsing.
+     * Default is '$'.
+     */
+    directiveDelimiter?: string;
 };

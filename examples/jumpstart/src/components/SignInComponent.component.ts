@@ -44,7 +44,7 @@ export class SignInComponent extends Are {
                 <h2>Sign In</h2>
                 <input type="email" id="email" placeholder="Email" />
                 <input type="password" id="password" placeholder="Password" />
-                <a-btn @click="signIn" :name="btnName" :style="{ color: 'red' }"></a-btn>
+                <a-btn  :name="btnName" :style="{ color: 'red' }"></a-btn>
               </div>
             `;
     }

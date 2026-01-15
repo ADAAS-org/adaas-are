@@ -12,7 +12,7 @@ export class ABtn extends Are {
 
 
     async template() {
-        return `<button class="a-btn" @click="handleClick">{{name}}</button> <a-input a-if="showInput" @click="handleclikc"></a-input>`;
+        return `<button class="a-btn" @click="handleClick"> {{name}} {{number}}</button> <a-input $if="showInput" ></a-input>`;
     }
 
 
@@ -33,27 +33,28 @@ export class ABtn extends Are {
     async data() {
         return {
             name: 'A_Button Element',
+            showInput: false,
             bgColor: '#007BFF',
         };
     }
 
-    @Are.onBeforeLoad
-    async onLoad(
-        @A_Inject(A_Caller) node: AreNode,
-        @A_Inject(AreStore) store: AreStore,
-        @A_Inject(A_Logger) logger: A_Logger,
-    ) {
-        logger.debug('red', `Before ABtn Component Load ... : <${node.aseid.entity}> : ${node.aseid.toString()}`);
-    }
+    // @Are.onBeforeLoad
+    // async onLoad(
+    //     @A_Inject(A_Caller) node: AreNode,
+    //     @A_Inject(AreStore) store: AreStore,
+    //     @A_Inject(A_Logger) logger: A_Logger,
+    // ) {
+    //     logger.debug('red', `Before ABtn Component Load ... : <${node.aseid.entity}> : ${node.aseid.toString()}`);
+    // }
 
-    @Are.onAfterLoad
-    async onAfterLoad(
-        @A_Inject(A_Caller) node: AreNode,
-        @A_Inject(AreStore) store: AreStore,
-        @A_Inject(A_Logger) logger: A_Logger,
-    ) {
-        logger.debug('red', `After ABtn Component Load ... : <${node.aseid.entity}> : ${node.aseid.toString()}`);
-    }
+    // @Are.onAfterLoad
+    // async onAfterLoad(
+    //     @A_Inject(A_Caller) node: AreNode,
+    //     @A_Inject(AreStore) store: AreStore,
+    //     @A_Inject(A_Logger) logger: A_Logger,
+    // ) {
+    //     logger.debug('red', `After ABtn Component Load ... : <${node.aseid.entity}> : ${node.aseid.toString()}`);
+    // }
 
     @Are.EventHandler
     async handleClick(
@@ -65,13 +66,16 @@ export class ABtn extends Are {
         @A_Inject(AreScene) scene: AreScene,
     ) {
 
-        store.set('name', 'Button Clicked!');
+        //  just set random Text
+        store.set('number', Math.floor(Math.random() * 1000));
+        store.set('name', `Clicked! `);
 
+        store.set('showInput', !store.get('showInput'));
         store.set('bgColor', '#ff5733');
 
         console.log('event data:', event);
 
-       await node.update();
+        await node.update();
 
         // await new AreUpdateSignal(node).next(scope);
     }

@@ -38,6 +38,11 @@ export class AreNode extends A_Entity<AreNodeNewProps> {
     }
 
 
+    get type(): string {
+        return this.aseid.entity;
+    }
+
+
     fromNew(newEntity: AreNodeNewProps): void {
         this.aseid = new ASEID({
             id: A_IdentityHelper.generateTimeId(),
