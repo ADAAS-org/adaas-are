@@ -10,22 +10,25 @@ export class AreNode extends A_Entity<AreNodeNewProps> {
      * Template string defined for the node
      * Example: `<div>{{name}}</div>`
      */
-    template!: string
+    _template!: string
     /**
      * Markup string defined for the node
      * Example: `<custom-component :prop="value"> <div>Inner Content</div> </custom-component>`
      */
-    markup!: string
+    _markup!: string
     /**
      * Styles string defined for the node
      */
-    styles!: string
-
+    _styles!: string
     /**
      * The scope associated with this node
      * uses to store all nested fragments and entities like other AreNodes and Scene
      */
     protected _scope!: A_Scope
+
+    get id(): string {
+        return this.aseid.id;
+    }
 
     get scope(): A_Scope {
         if (!this._scope) {
@@ -42,30 +45,53 @@ export class AreNode extends A_Entity<AreNodeNewProps> {
         return this.aseid.entity;
     }
 
+    get template(): string {
+        return this._template;
+    }
+
+
+    get markup(): string {
+        return this._markup;
+    }
+
+    get styles(): string {
+        return this._styles;
+    }
+
 
     fromNew(newEntity: AreNodeNewProps): void {
-        this.aseid = new ASEID({
-            id: A_IdentityHelper.generateTimeId(),
+        this.aseid = this.generateASEID({
+            id: newEntity.id,
             entity: newEntity.component,
             scope: newEntity.scope,
         });
 
-        this.template = newEntity.template || '';
-        this.markup = newEntity.markup || '';
-        this.styles = newEntity.styles || '';
+        this._template = newEntity.template || '';
+        this._markup = newEntity.markup || '';
+        this._styles = newEntity.styles || '';
     }
 
 
     fromASEID(aseid: string | ASEID): void {
         super.fromASEID(aseid);
 
-        this.template = '';
-        this.markup = '';
-        this.styles = '';
+        this._template = '';
+        this._markup = '';
+        this._styles = '';
     }
 
 
+    setTemplate(template: string): void {
+        this._template = template;
+    }
 
+    setMarkup(markup: string): void {
+        this._markup = markup;
+    }
+
+    setStyles(styles: string): void {
+        this._styles = styles;
+    }
 
 
 
@@ -113,7 +139,6 @@ export class AreNode extends A_Entity<AreNodeNewProps> {
     }
 
     async render(): Promise<void> {
-
         this.checkScopeInheritance();
 
         try {
@@ -138,29 +163,43 @@ export class AreNode extends A_Entity<AreNodeNewProps> {
         }
     }
 
-    async mount(): Promise<void> {
+
+
+    // async mount(): Promise<void> {
+    //     this.checkScopeInheritance();
+
+    //     try {
+
+    //         await this.call(AreNodeFeatures.onMount, this.scope);
+
+    //     } catch (error) {
+    //         throw error;
+    //     }
+    // }
+
+
+    async unmount(): Promise<void> {
         this.checkScopeInheritance();
 
         try {
 
-            await this.call(AreNodeFeatures.onMount, this.scope);
+            await this.call(AreNodeFeatures.onUnmount, this.scope);
 
         } catch (error) {
             throw error;
         }
     }
 
+
     async load(): Promise<any> {
         return await super.load(this.scope);
     }
 
     async destroy(scope?: A_Scope): Promise<any> {
-
         this.checkScopeInheritance();
-
         try {
 
-            await super.destroy(scope);
+            await super.destroy(this.scope);
 
             this.scope.destroy();
 

@@ -1,6 +1,7 @@
 import { A_Caller, A_Concept, A_Context, A_Feature, A_Inject, A_Scope } from "@adaas/a-concept";
 import { A_CommandFeatures, A_Logger, A_Memory, A_Polyfill } from "@adaas/a-utils";
 import { Are } from "@adaas/are/components/AreComponent/Are.component";
+import { AreStore } from "@adaas/are/context/AreStore/AreStore.context";
 import { AreNode } from "@adaas/are/entities/AreNode/AreNode.entity";
 
 export function validateEmail(email: string): boolean {
@@ -13,15 +14,23 @@ export function showAlert(message: string): void {
 
 export class SignInComponent extends Are {
 
-    async data(): Promise<{ btnName: string }> {
-        return {
+
+    @Are.Data
+    async data(
+        @A_Inject(AreStore) store: AreStore,
+        @A_Inject(A_Logger) logger: A_Logger,
+    ) {
+
+        store.setMultiple({
             btnName: 'Sign In'
-        };
+        });
     }
 
-
-    async styles(): Promise<string> {
-        return `
+    @Are.Styles
+    async styles(
+        @A_Inject(A_Caller) node: AreNode,
+    ): Promise<void> {
+        node.setStyles(` 
         .card {
             background-color: #f9f9f9;
             border: 1px solid #ddd;
@@ -35,18 +44,24 @@ export class SignInComponent extends Are {
             left:50%;
             transform: translate(-50%, -50%);
         }
-            `
+            `   );
     }
 
-    async template(): Promise<string> {
-        return `
+    @Are.Template
+    async template(
+        @A_Inject(A_Caller) node: AreNode,
+        @A_Inject(A_Logger) logger: A_Logger,
+    ): Promise<void> {
+        logger.info('blue', `SignInComponent template called... : <${node.aseid.entity}> : `, node.aseid.toString());
+
+        node.setTemplate(`
               <div class="card">
                 <h2>Sign In</h2>
                 <input type="email" id="email" placeholder="Email" />
                 <input type="password" id="password" placeholder="Password" />
                 <a-btn  :name="btnName" :style="{ color: 'red' }"></a-btn>
               </div>
-            `;
+            `);
     }
 
 

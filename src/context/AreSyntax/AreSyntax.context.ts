@@ -16,6 +16,8 @@ export type AreAttribute = {
 export type AreInterpolation = {
     raw: string;
     name: string;
+    /** Position in the template where this interpolation was found */
+    position: number;
 }
 
 
@@ -86,20 +88,31 @@ export class AreSyntax extends A_Fragment {
 
 
     /**
-     * Interpolation is a placeholder for dynamic data in the template 
-     * Example: {{dataProperty}}
+     * Extracts interpolations from template (syntax-agnostic).
      * 
-     * @param template 
+     * Simply finds all interpolation patterns and returns their position, raw text, and name.
+     * Works with any template format - HTML, plain text, or any other syntax.
+     * 
+     * Example: `Hello {{name}}, welcome to {{place}}!`
+     * Returns: [
+     *   { raw: "{{name}}", name: "name", position: 6 },
+     *   { raw: "{{place}}", name: "place", position: 26 }
+     * ]
+     * 
+     * @param template - Template string in any format
      */
     *extractInterpolations(template: string): Iterable<AreInterpolation> {
         const interpolationRegex = new RegExp(`${this.config.interpolationDelimiters[0]}\\s*([a-zA-Z0-9_.$]+)\\s*${this.config.interpolationDelimiters[1]}`, 'g');
+        
         let match: RegExpExecArray | null;
-
         while ((match = interpolationRegex.exec(template)) !== null) {
-            yield { raw: match[0], name: match[1] };
+            yield { 
+                raw: match[0], 
+                name: match[1],
+                position: match.index!
+            };
         }
     }
-
 
     /**
      * Extracts custom directives from the FIRST/TOP-LEVEL opening tag ONLY.
@@ -289,7 +302,6 @@ export class AreSyntax extends A_Fragment {
 
 
     isBindingProp(prop: AreAttribute): boolean {
-        console.log('Checking if prop is binding:', prop);
         return prop.raw.trim().startsWith(':')
     }
 
@@ -377,9 +389,6 @@ export class AreSyntax extends A_Fragment {
 
     replaceInterpolation(template: string, interpolation: AreInterpolation | string, value: any): string {
         const key = typeof interpolation === 'string' ? interpolation : interpolation.name;
-
-
-        console.log('Replacing interpolation', key, 'with value', value, new RegExp(`${this.config.interpolationDelimiters[0]}\\s*${key}\\s*${this.config.interpolationDelimiters[1]}`, 'g'));
 
         return template.replace(new RegExp(`${this.config.interpolationDelimiters[0]}\\s*${key}\\s*${this.config.interpolationDelimiters[1]}`, 'g'), value !== undefined ? String(value) : '');
     }

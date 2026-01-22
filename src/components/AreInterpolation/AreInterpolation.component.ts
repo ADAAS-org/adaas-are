@@ -13,11 +13,7 @@ export class AreInterpolation extends Are {
         return 'span';
     }
 
-    async template(): Promise<string> {
-        return ``;
-    }
-
-
+   
     @Are.onAfterCompile
     async onAfterCompile(
         @A_Inject(A_Caller) node: AreNode,
@@ -27,6 +23,6 @@ export class AreInterpolation extends Are {
     ) {
         logger.info('blue', `AreInterpolation onAfterCompile called... : <${node.aseid.entity}> : `, node.aseid.toString(), props);
 
-        await scene.reset(props.get('value'));
+        node.setTemplate(props.get('value')?.toString() || '');
     }
 }

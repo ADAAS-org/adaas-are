@@ -28,4 +28,10 @@ export enum AreFeatures {
 
     onBeforeRender = '_Are_onBeforeRender',
     onAfterRender = '_Are_onAfterRender',
+
+
+
+    onTemplate = '_Are_onTemplate',
+    onStyles = '_Are_onStyles',
+    onData = '_Are_onData',
 }

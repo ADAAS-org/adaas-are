@@ -4,7 +4,7 @@ import { A_TYPES__DeepPartial } from "@adaas/a-concept";
 
 
 
-export type AreSceneActionNewProps<T extends any = Record<string, any>> = {
+export type AreSceneInstructionNewProps<T extends any = Record<string, any>> = {
     id?: Array<any>;
     action: string;
     node: AreNode,

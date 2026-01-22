@@ -1,19 +1,27 @@
 
-import { A_Entity, A_FormatterHelper } from "@adaas/a-concept";
-import { AreSceneActionNewProps } from "./AreSceneAction.types";
+import { A_Context, A_Entity, A_FormatterHelper, A_Scope } from "@adaas/a-concept";
+import { AreSceneInstructionNewProps } from "./AreSceneInstruction.types";
 import { AreNode } from "../AreNode/AreNode.entity";
+import { AreDirective } from "@adaas/are/context/AreSyntax/AreSyntax.context";
+import { AreSceneInstructionFeatures } from "./AreSceneInstruction.constants";
+import { AreScene } from "@adaas/are/context/AreScene/AreScene.context";
 
 
 
-export class AreSceneAction<T extends any = Record<string, any>> extends A_Entity<AreSceneActionNewProps<T>> {
+export class AreSceneInstruction<T extends Record<string, any> = Record<string, any>> extends A_Entity<AreSceneInstructionNewProps<T>> {
 
-    name!: string
+    action!: string
     node!: AreNode
 
     params?: T
 
 
     hashSource!: string
+
+
+    get scene(): AreScene {
+        return A_Context.scope(this).resolve(AreScene)!
+    }
 
     /**
      * Generates even hash uses for deduplication
@@ -67,13 +75,13 @@ export class AreSceneAction<T extends any = Record<string, any>> extends A_Entit
             hash = ((hash << 5) - hash) + chr;
             hash |= 0; // Convert to 32bit integer
         }
-        
+
         const hashString = hash.toString();
 
         return hashString;
     }
 
-    fromNew(newEntity: AreSceneActionNewProps<T>): void {
+    fromNew(newEntity: AreSceneInstructionNewProps<T>): void {
         const identity = newEntity.id || {
             name: newEntity.action,
             node: newEntity.node.aseid.toString(),
@@ -87,31 +95,58 @@ export class AreSceneAction<T extends any = Record<string, any>> extends A_Entit
             id: id,
         });
 
-        this.name = newEntity.action;
+        this.action = newEntity.action;
         this.node = newEntity.node;
         this.params = newEntity.params;
 
     }
+
+
+    update(params: Partial<T>): void {
+        this.params = {
+            ...this.params,
+            ...params,
+        } as T;
+    }
+
+
+    async init(
+        scope?: A_Scope
+    ): Promise<void> {
+        try {
+            await this.call(AreSceneInstructionFeatures.Init, scope);
+        } catch (error) {
+            
+        }
+    }
+
+    async apply(
+        scope?: A_Scope
+    ): Promise<void> {
+        try {
+            await this.call(AreSceneInstructionFeatures.Apply, scope);
+        } catch (error) {
+
+        }
+    }
+
+    async revert(
+        scope?: A_Scope
+    ): Promise<void> {
+        try {
+            await this.call(AreSceneInstructionFeatures.Revert, scope);
+        } catch (error) {
+
+        }
+    }
+
+
 }
 
 
 
 
-export class AreMountSceneAction extends AreSceneAction { }
 
 
-export class AreListenerSceneAction extends AreSceneAction<{
-    event: string;
-    handler: Function;
-}> {
 
-
-    get event(): string {
-        return this.params!.event;
-    }
-
-    get handler(): Function {
-        return this.params!.handler;
-    }
-}
 

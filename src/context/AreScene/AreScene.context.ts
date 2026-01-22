@@ -6,28 +6,21 @@ import { AreSCene_Serialized } from "./AreScene.types";
 import { AreProps } from "../AreProps/AreProps.context";
 import { AreStore } from "../AreStore/AreStore.context";
 import { A_Logger, A_LoggerColorName } from "@adaas/a-utils";
-import { AreSceneAction } from "@adaas/are/entities/AreSceneAction/AreSceneAction.entity";
+import { AreSceneInstruction } from "@adaas/are/entities/AreSceneInstruction/AreSceneInstruction.entity";
+import { MountNodeInstruction } from "@adaas/are/entities/AreSceneInstruction/types/MountNode.instruction";
+import { AddStyleInstruction } from "@adaas/are/entities/AreSceneInstruction/types/AddStyle.instruction";
 
 export class AreScene extends A_Fragment {
 
-    protected _template: string = '';
-    protected _state: Set<AreSceneAction> = new Set();
-
-    protected _status: 'initialized' | 'compiled' | 'rendered' = 'initialized';
+    protected _state: Set<AreSceneInstruction> = new Set();
 
     constructor(
         /**
          * Scene identity will be used to identify mounting point in the parent scene
          */
-        id?: string | ASEID,
-        /**
-         * Initial template for the scene. 
-         */
-        template?: string
+        id: string | ASEID,
     ) {
-        super({ name: id?.toString() || 'are-app' });
-        this._template = (template || '')
-            .replace(/\s+/g, ' ').trim();
+        super({ name: id.toString() });
     }
 
     get id(): string {
@@ -52,10 +45,6 @@ export class AreScene extends A_Fragment {
         return rootScene;
     }
 
-    get status(): 'initialized' | 'compiled' | 'rendered' {
-        return this._status;
-    }
-
     get scope(): A_Scope {
         return A_Context.scope(this);
     }
@@ -64,27 +53,9 @@ export class AreScene extends A_Fragment {
         return A_Context.scope(this).resolveFlat<AreIndex<string>>(AreIndex)!;
     }
 
-    get parent() {
+    get parent(): AreScene | undefined {
         return A_Context.scope(this).parent?.resolveFlat<AreScene>(AreScene);
     }
-
-    get template(): string {
-        return this._template;
-    }
-
-    get initialized(): boolean {
-        return this._status === 'initialized';
-    }
-
-
-    get compiled(): boolean {
-        return this._status === 'compiled';
-    }
-
-    get rendered(): boolean {
-        return this._status === 'rendered';
-    }
-
 
     get children(): Array<AreScene> {
         return this.scope.resolveFlatAll<AreNode>(AreNode)
@@ -108,8 +79,8 @@ export class AreScene extends A_Fragment {
     }
 
 
-    get actions(): Array<AreSceneAction> {
-        return this.scope.resolveFlatAll<AreSceneAction>(AreSceneAction) || [];
+    get instructions(): Array<AreSceneInstruction> {
+        return this.scope.resolveFlatAll<AreSceneInstruction>(AreSceneInstruction) || [];
     }
 
 
@@ -131,29 +102,41 @@ export class AreScene extends A_Fragment {
 
             yield node;
         }
+
+        this.renderPlanFor(new AreNode(), {
+            order: [
+                MountNodeInstruction,
+                AddStyleInstruction,
+            ]
+        })
+
     }
 
 
     *renderPlanFor(
         node: AreNode,
         filter: {
-            changes?: Array<string>
-            order?: Array<string>
-
+            filter?: (instruction: AreSceneInstruction) => boolean,
+            changes?: Array<new (...args: any[]) => AreSceneInstruction>,
+            order?: Array<new (...args: any[]) => AreSceneInstruction>,
         }
     ) {
 
         const order = filter.order || [];
-        const changes = filter.changes || [];
+        const filterFn = filter.filter;
 
-        let plan = this.actions;
+        let plan = this.instructions;
 
         plan = plan.sort((a, b) => {
-            const aIndex = order.indexOf(a.name);
-            const bIndex = order.indexOf(b.name);
+            const aIndex = order.findIndex(instructionType => a instanceof instructionType);
+            const bIndex = order.findIndex(instructionType => b instanceof instructionType);
 
-            return aIndex - bIndex;
+            return (aIndex === -1 ? order.length : aIndex) - (bIndex === -1 ? order.length : bIndex);
         });
+
+        if (filterFn) {
+            plan = plan.filter(filterFn);
+        }
 
         for (const action of plan) {
             if (action.node === node) {
@@ -162,17 +145,24 @@ export class AreScene extends A_Fragment {
         }
     }
 
+    get debugPrefix() {
+        return `${' - '.repeat(this.depth)}`
+    }
 
-    debug(color: A_LoggerColorName, message: string, ...optionalParams: any[]) {
-        const logger = this.scope.resolve(A_Logger);
+    get path(): string {
+        if (!this.parent)
+            return '';
+        else {
+            const ownerNode = this.parent.scope.resolveFlat<AreNode>(AreNode, {
+                query: {
+                    aseid: this.id
+                }
+            }) as any as AreNode;
 
-        if (!logger) return;
+            const NodePath = this.parent.index.pathOf(ownerNode);
 
-        logger.debug(
-            color,
-            `${' - '.repeat(this.depth)}` +
-            `AreScene: [${this.id}] : ${message}`, ...optionalParams
-        );
+            return this.parent.path ? (this.parent.path + '.' + NodePath) : NodePath!;
+        }
     }
 
     *paths(): Iterable<string> {
@@ -198,22 +188,22 @@ export class AreScene extends A_Fragment {
         }
     }
 
-    plan(action: AreSceneAction) {
-
+    plan(instruction: AreSceneInstruction) {
         try {
-            this.scope.register(action);
-            console.log('\n\n\n\n\nPLANNED:', action);
+            this.scope.register(instruction);
         } catch (error) {
 
         }
-
     }
 
     unPlan(
-        action: AreSceneAction
+        instruction: AreSceneInstruction
     ) {
+        const planned = this.getPlanned(instruction);
+
         try {
-            this.scope.deregister(action);
+            if (planned)
+                this.scope.deregister(planned);
         } catch (error) {
 
         }
@@ -235,37 +225,121 @@ export class AreScene extends A_Fragment {
     storeOf(node: AreNode): AreStore {
         return node.scope.resolveFlat<AreStore>(AreStore)!;
     }
-    isPlanned(action: AreSceneAction): boolean {
-        return this.scope.resolveFlat<AreSceneAction>(AreSceneAction, {
+    isPlanned(action: AreSceneInstruction): boolean {
+        return this.getPlanned(action) !== undefined;
+    }
+
+    /**
+     * It returns planned instruction instance from the scene
+     * 
+     * [!] Only Planned instructions can be used for state checking
+     * 
+     * @param instruction 
+     * @returns 
+     */
+    getPlanned<T extends AreSceneInstruction>(
+        /**
+         * Should be instruction instance to get
+         */
+        instruction: T
+    ): T | undefined {
+
+        const planned = this.scope.resolveFlat<AreSceneInstruction>(AreSceneInstruction, {
             query: {
-                aseid: action.aseid.toString()
+                aseid: instruction.aseid.toString()
             }
-        }) !== undefined;
+        }) as any as T | undefined;
+
+        return planned;
     }
 
-    isMounted(action: AreSceneAction): boolean {
-        return this._state.has(action);
+    /**
+     * Operation Only applicable from Plan -> State
+     * 
+     * So only instructions presented in the plan can be moved to state
+     * State is a set of instructions that are currently applied to the scene
+     * 
+     * @param instruction 
+     */
+    setState(
+        /**
+         * Should be instruction instance to apply
+         */
+        instruction: AreSceneInstruction
+    ) {
+        const planned = this.getPlanned(instruction);
+
+        if (planned) {
+            this._state.delete(planned);
+            this._state.add(instruction);
+        }
     }
 
-    mount(action?: AreSceneAction) {
-        this._state.add(action!);
+
+    dropState<T extends AreSceneInstruction>(
+        /**
+         * Should be instruction instance to drop
+         */
+        instruction: T
+    ) {
+        const planned = this.getPlanned(instruction);
+        console.log('dropping state for', planned);
+
+        if (planned) {
+            this._state.delete(planned);
+        }
     }
 
-    unmount(action?: AreSceneAction) {
-        this._state.delete(action!);
+
+    resetState(
+        node: AreNode
+    ) {
+        for (const instruction of Array.from(this._state)) {
+            if (instruction.node === node) {
+                this._state.delete(instruction);
+            }
+        }
     }
 
-    async clear() {
+
+    getState<T extends AreSceneInstruction>(
+        /**
+         * Should be instruction instance to get state for
+         */
+        instruction: T
+    ): T | undefined {
+
+
+        const planned = this.scope.resolveFlat<AreSceneInstruction>(AreSceneInstruction, {
+            query: {
+                aseid: instruction.aseid.toString()
+            }
+        }) as any as T | undefined;
+
+        if (!planned) {
+            return undefined;
+        }
+
+        if (this._state.has(planned))
+            return planned as T;
+        else
+            return undefined;
+    }
+
+    revert(
+        /**
+         * Should be instruction instance to revert
+         */
+        instruction?: AreSceneInstruction
+    ) {
+        this._state.delete(instruction!);
+    }
+
+
+    reset() {
         this.index.clear();
         this._state.clear();
     }
-
-
-    async reset(template: string) {
-        this._template = template;
-        await this.clear();
-    }
-
 
 
     toJSON(): AreSCene_Serialized {
@@ -288,7 +362,7 @@ export class AreScene extends A_Fragment {
 //  Just to cover the proper lifecycle
 
 /*
- 1) Create Scene with template from mounting point content
- 2) Do indexing of the scene 
+1) Create Scene with template from mounting point content
+2) Do indexing of the scene 
 
 */

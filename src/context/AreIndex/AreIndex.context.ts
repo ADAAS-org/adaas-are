@@ -134,7 +134,7 @@ export class AreIndex<
     }
 
 
-    replaceByElement(oldPath: _PathType, newPath: _PathType) {
+    replacePath(oldPath: _PathType, newPath: _PathType) {
         const aseid = this._index.Path_to_ASEID.get(oldPath);
         const node = this._index.Path_to_Node.get(oldPath);
         if (aseid && node) {
@@ -146,6 +146,7 @@ export class AreIndex<
             this._index.Path_to_Node.set(newPath, node);
         }
     }
+    
 
     /**
      * Removes index entry by platform-specific element

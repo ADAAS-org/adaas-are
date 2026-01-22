@@ -1,10 +1,9 @@
-import { A_Component, A_Feature } from "@adaas/a-concept";
+import { A_Component, A_Error, A_Feature } from "@adaas/a-concept";
 import { AreFeatures } from "./Are.constants";
+import { AreCompiler } from "../AreCompiler/AreCompiler.component";
 
 
-export class Are<
-    _DataType extends Record<string, any> = Record<string, any>
-> extends A_Component {
+export class Are extends A_Component {
 
 
     //==================================================================================
@@ -113,9 +112,37 @@ export class Are<
     }
 
 
+    static get Template() {
+        return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
+            return A_Feature.Extend({
+                name: AreFeatures.onTemplate,
+                scope: [target.constructor],
+            })(target, propertyKey, descriptor);
+        }
+    }
+
+
+    static get Styles() {
+        return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
+            return A_Feature.Extend({
+                name: AreFeatures.onStyles,
+                scope: [target.constructor],
+            })(target, propertyKey, descriptor);
+        }
+    }
+
+    static get Data() {
+        return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
+            return A_Feature.Extend({
+                name: AreFeatures.onData,
+                scope: [target.constructor],
+            })(target, propertyKey, descriptor);
+        }
+    }
+
 
     // ==================================================================================
-    // ========================= COMPONENT METHODS =======================================
+    // ========================= COMPONENT METHODS ======================================
     // ==================================================================================
 
     get wrapper(): string {
@@ -129,8 +156,11 @@ export class Are<
      * 
      * @returns 
      */
-    async template(): Promise<string> {
-        return ``;
+    @Are.Template
+    async template(
+        ...args: any[]
+    ): Promise<void> {
+
     }
 
     /**
@@ -140,8 +170,11 @@ export class Are<
      * 
      * @returns 
      */
-    async styles(): Promise<string> {
-        return ``;
+    @Are.Styles
+    async styles(
+        ...args: any[]
+    ): Promise<void> {
+
     }
 
     /**
@@ -151,7 +184,11 @@ export class Are<
      * 
      * @returns 
      */
-    async data(): Promise<_DataType> {
-        return {} as _DataType;
+    @Are.Data
+    async data(
+        ...args: any[]
+    ): Promise<void> {
+
     }
+
 }

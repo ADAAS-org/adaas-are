@@ -1,5 +1,5 @@
 import { A_Caller, A_Component, A_Context, A_Dependency, A_Feature, A_FormatterHelper, A_Inject, A_Scope, A_TYPES__EntityFeatures } from "@adaas/a-concept";
-import { A_Config, A_Logger, A_LOGGER_COLORS, A_ServiceFeatures, A_Signal_Init, A_SignalBus, A_SignalVector, A_SignalVectorFeatures } from "@adaas/a-utils";
+import { A_Config, A_Logger, A_LOGGER_COLORS, A_ScheduleObject, A_ServiceFeatures, A_Signal_Init, A_SignalBus, A_SignalVector, A_SignalVectorFeatures } from "@adaas/a-utils";
 import { AreNodeFeatures } from "@adaas/are/entities/AreNode/AreNode.constants";
 import { AreNode } from "@adaas/are/entities/AreNode/AreNode.entity";
 import { AreFeatures } from "../AreComponent/Are.constants";
@@ -14,36 +14,6 @@ import { AreSyntax } from "@adaas/are/context/AreSyntax/AreSyntax.context";
 
 export class AreCompiler extends A_Component {
 
-
-
-    protected debug(node: AreNode, message: string) {
-
-        // const scene = A_Context.scope(node).resolve(AreScene)!;
-        const scene = node.scope.resolve(AreScene)!;
-
-        A_Context.scope(this).resolve(A_Logger)?.debug(
-            'magenta',
-            `${' - '.repeat(scene.depth)} ${message}`
-        );
-    }
-
-    @A_Feature.Extend()
-    protected async [A_ServiceFeatures.onBeforeLoad](
-        @A_Dependency.Parent()
-        @A_Inject(A_Scope) scope: A_Scope,
-        @A_Inject(AreScene) root?: AreScene,
-        @A_Inject(A_Config) config?: A_Config<any>,
-        @A_Inject(A_Logger) logger?: A_Logger,
-    ): Promise<void> {
-        // 1) Initialize Scene if not present
-        logger?.debug('cyan', `Initializing AreBrowserDom in AreBrowserCompiler...`);
-        const mountPoint = config?.get('ARE_MOUNT_POINT') || 'are-app';
-
-        if (!root) {
-            scope.register(new AreScene(mountPoint));
-            scope.register(new AreIndex(mountPoint));
-        }
-    }
 
     // ==================================================================================
     // ========================= COMPONENT METHODS =======================================
@@ -61,7 +31,9 @@ export class AreCompiler extends A_Component {
         @A_Inject(A_Feature) feature: A_Feature,
         ...args: any[]
     ) {
-        this.debug(node, `[Event -> Handle] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
+        const logger = scope.resolve<A_Logger>(A_Logger);
+
+        logger?.debug(scene.debugPrefix + `Event Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}} for event: ${event.name}`);
 
         const component = scope.resolve<Are>(A_FormatterHelper.toPascalCase(node.aseid.entity));
 
@@ -79,11 +51,11 @@ export class AreCompiler extends A_Component {
     async beforeLoad(
         @A_Inject(A_Caller) node: AreNode,
         @A_Inject(A_Scope) scope: A_Scope,
-        @A_Inject(AreScene) scene: AreScene,
         @A_Inject(A_Feature) feature: A_Feature,
         ...args: any[]
     ) {
-        this.debug(node, `[Load -> Before] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
+        const logger = scope.resolve<A_Logger>(A_Logger);
+
 
         const component = scope.resolve<Are>(A_FormatterHelper.toPascalCase(node.aseid.entity));
 
@@ -104,7 +76,10 @@ export class AreCompiler extends A_Component {
         @A_Inject(A_Feature) feature: A_Feature,
         ...args: any[]
     ) {
-        this.debug(node, `[Load -> After] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
+        const logger = scope.resolve<A_Logger>(A_Logger);
+
+        logger?.debug(scene.debugPrefix + `[
+Load -> After] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
 
         const component = this.component(node, scope);
 
@@ -127,8 +102,8 @@ export class AreCompiler extends A_Component {
     async load(
         @A_Inject(A_Caller) node: AreNode,
         @A_Inject(A_Scope) scope: A_Scope,
-        @A_Inject(AreScene) scene: AreScene,
         @A_Inject(AreSyntax) syntax: AreSyntax,
+        @A_Inject(A_Feature) feature: A_Feature,
 
         @A_Inject(A_Logger) logger?: A_Logger,
         ...args: any[]
@@ -137,52 +112,40 @@ export class AreCompiler extends A_Component {
         const component = this.component(node, scope);
 
 
-        
-        if (!component) {
-            scope.resolve(A_Logger)?.warning(
+        if (!component && syntax.isCustomNode(node)) {
+            logger?.warning(
                 'Component Not Found',
                 `No component registered for entity: ${node.aseid.entity}. Please ensure that the component is registered in the scope before rendering.`
             );
         }
-        
-        const data = await component?.data() || {};
-        const template = await component?.template() || '';
-        const styles = await component?.styles() || '';
 
-        const newNodeScene = new AreScene(node.aseid, template);
+
+        const newNodeScene = new AreScene(node.aseid);
         const newNodeIndex = new AreIndex(node.aseid);
         const newNodeStore = new AreStore(node.aseid);
         const newNodeProps = new AreProps(node.aseid);
 
         node.scope.register(newNodeScene);
         node.scope.register(newNodeIndex);
-        node.scope.register(newNodeStore);
-        node.scope.register(newNodeProps);
+
+        if (syntax.isCustomNode(node)) {
+            node.scope.register(newNodeStore);
+            node.scope.register(newNodeProps);
+        }
 
 
 
-        // .replace(/\s+/g, ' ').trim();
 
-        // const scene = scope.resolve<AreScene>(AreScene)!;
-
-        // Add styles to the scene
-        // await scene.addStyles(node, styles);
-
-        // Update scene with template that can be modified via later during compile phase
-        // await scene.reset(node.template);
-
-        const store = scope.resolve<AreStore>(AreStore)!;
-
-        // Update store with component default data
-        store.setMultiple(data);
+        if (component) {
+            await feature.chain(component, AreFeatures.onData, scope);
+            await feature.chain(component, AreFeatures.onStyles, scope);
+            await feature.chain(component, AreFeatures.onTemplate, scope);
+        }
 
 
-        // Copy original template to the node
-        node.template = template
-        // .replace(/\s+/g, ' ').trim();
-        node.styles = styles
 
-        this.debug(node, `Loaded component <${node.aseid.entity}> with ${this.constructor.name}`);
+
+        logger?.debug(newNodeScene.debugPrefix + `Loaded component <${node.aseid.entity}> with ${this.constructor.name}`);
     }
 
 
@@ -198,7 +161,9 @@ export class AreCompiler extends A_Component {
         @A_Inject(A_Feature) feature: A_Feature,
         ...args: any[]
     ) {
-        this.debug(node, `[Compile -> Before] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
+        const logger = scope.resolve<A_Logger>(A_Logger);
+
+        logger?.debug(scene.debugPrefix + `[Compile -> Before] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
 
         const component = scope.resolve<Are>(A_FormatterHelper.toPascalCase(node.aseid.entity));
 
@@ -218,10 +183,10 @@ export class AreCompiler extends A_Component {
         @A_Inject(A_Feature) feature: A_Feature,
         ...args: any[]
     ) {
-
-        this.debug(node, `[Compile -> After] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
-
+        const logger = scope.resolve<A_Logger>(A_Logger);
         const component = scope.resolve<Are>(A_FormatterHelper.toPascalCase(node.aseid.entity));
+
+        logger?.debug(scene.debugPrefix + `[Compile -> After] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
 
 
         if (component)
@@ -261,9 +226,11 @@ export class AreCompiler extends A_Component {
         @A_Inject(A_Feature) feature: A_Feature,
         ...args: any[]
     ) {
-        this.debug(node, `[Render -> Before] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
 
+        const logger = scope.resolve<A_Logger>(A_Logger);
         const component = scope.resolve<Are>(A_FormatterHelper.toPascalCase(node.aseid.entity));
+
+        logger?.debug(scene.debugPrefix + `[Render -> Before] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
 
         if (component)
             await feature.chain(component, AreFeatures.onBeforeRender, node.scope);
@@ -281,9 +248,11 @@ export class AreCompiler extends A_Component {
         @A_Inject(A_Feature) feature: A_Feature,
         ...args: any[]
     ) {
-        this.debug(node, `[Render -> After] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
+        const logger = scope.resolve<A_Logger>(A_Logger);
+        const component = this.component(node, scope);
 
-        const component = scope.resolve<Are>(A_FormatterHelper.toPascalCase(node.aseid.entity));
+        logger?.debug(scene.debugPrefix + `[Render -> After] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
+
 
         if (component)
             await feature.chain(component, AreFeatures.onAfterRender, node.scope);
@@ -306,26 +275,22 @@ export class AreCompiler extends A_Component {
     async render(
         @A_Inject(A_Caller) node: AreNode,
         @A_Inject(AreScene) scene: AreScene,
+        @A_Inject(A_Scope) scope: A_Scope,
 
         @A_Dependency.Required()
-        @A_Inject(AreScene) parentScene: AreScene,
+        @A_Inject(AreScene) parentScene?: AreScene,
         ...args: any[]
     ) {
+        const logger = node.scope.resolve<A_Logger>(A_Logger);
 
-        this.debug(node, `Rendering node <${node.aseid.entity}> into ${scene.name}`);
+        logger?.debug(scene.debugPrefix + `Rendering node <${node.aseid.entity}> into ${scene.name}`);
 
-        for (const newNode of scene.nodes()) {
+    }
 
-            scene.attach(newNode);
+    index(
+        node: AreNode
+    ) {
 
-            await newNode.load();
-
-            await newNode.compile();
-
-        }
-
-
-        this.debug(node, `Node <${node.aseid.entity}> rendered successfully.`);
     }
 
 
@@ -340,9 +305,12 @@ export class AreCompiler extends A_Component {
         @A_Inject(A_Caller) node: AreNode,
         @A_Inject(AreScene) scene: AreScene,
 
+
         ...args: any[]
     ) {
+        await node.compile();
 
+        await node.render();
     }
 
 
@@ -351,8 +319,30 @@ export class AreCompiler extends A_Component {
         name: A_TYPES__EntityFeatures.DESTROY,
         scope: [AreNode]
     })
-    async destroy() {
+    async destroy(
+        @A_Inject(A_Caller) node: AreNode,
+        @A_Inject(AreScene) scene: AreScene,
+        @A_Inject(AreScene) parentScene: AreScene,
 
+        @A_Inject(AreIndex) index: AreIndex,
+        @A_Inject(AreStore) store: AreStore,
+        @A_Inject(AreProps) props: AreProps,
+        @A_Inject(A_Scope) scope: A_Scope,
+
+        @A_Inject(A_Logger) logger?: A_Logger,
+        ...args: any[]
+    ) {
+
+        // logger?.debug(scene.debugPrefix + `Destroying node <${node.aseid.entity}> ASEID: ${node.aseid.toString()}`);
+        console.log('Destroying node <' + node.aseid.entity + '> ASEID: ' + node.aseid.toString());
+        // parentScene.resetState(node);
+        // index.clear();
+        // store.clear();
+        // props.clear();
+
+        for (const child of scene.nodes()) {
+            await child.destroy();
+        }
     }
 
 

@@ -1,13 +1,21 @@
-import { A_Component } from "@adaas/a-concept";
+import { A_Caller, A_Component, A_Inject } from "@adaas/a-concept";
 import { Are } from "../AreComponent/Are.component";
+import { AreNode } from "@adaas/are/entities/AreNode/AreNode.entity";
+import { AreScene } from "@adaas/are/context/AreScene/AreScene.context";
+import { A_Logger } from "@adaas/a-utils";
+import { AreProps } from "@adaas/are/context/AreProps/AreProps.context";
 
 
 
-export class AreRoot extends Are{
+export class AreRoot extends Are {
 
 
-    async template(): Promise<string> {
-        return `<div> Are Root Component</div>`;
-    }
-
+    // @Are.onAfterLoad
+    // async onAfterLoad(
+    //     @A_Inject(A_Caller) node: AreNode,
+    //     @A_Inject(AreScene) scene: AreScene,
+    //     @A_Inject(A_Logger) logger: A_Logger,
+    //     @A_Inject(AreProps) props: AreProps,
+    // ) {
+    // }
 }

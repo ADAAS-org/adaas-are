@@ -30,4 +30,8 @@ export enum AreNodeFeatures {
      * Feature that is called to mount the element node
      */
     onMount = '_AreNode_onMount',
+    /**
+     * Feature that is called to unmount the element node
+     */
+    onUnmount = '_AreNode_onUnmount',
 }

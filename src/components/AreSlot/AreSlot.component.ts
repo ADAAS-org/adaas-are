@@ -13,7 +13,7 @@ export class AreSlot extends Are {
 
 
     async template() {
-        return `<div>Are Slot Component</div>`;
+        // return `<div>Are Slot Component</div>`;
     }
 
 

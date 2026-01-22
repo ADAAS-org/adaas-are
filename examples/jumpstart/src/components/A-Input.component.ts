@@ -9,16 +9,27 @@ import { AreNode } from "@adaas/are/entities/AreNode/AreNode.entity";
 
 export class AInput extends Are {
 
-    async template() {
-        return `<div><input $no-update @input="onChange" :value="inputValue" type="text" :placeholder="placeholder"> </input>  {{inputValue}}</div>`;
+
+    @Are.Template
+    async template(
+        @A_Inject(A_Caller) node: AreNode,
+        @A_Inject(A_Logger) logger: A_Logger
+    ) {
+        logger.info('blue', `AInput template called... : <${node.aseid.entity}> : `, node.aseid.toString());
+
+        node.setTemplate(`
+            <div><input $no-update @input="onChange" :value="inputValue" type="text" :placeholder="placeholder"> </input>  {{inputValue}}</div>
+            `);
     }
 
-
-    async data() {
-        return {
+    @Are.Data
+    async data(
+        @A_Inject(AreStore) store: AreStore,
+    ) {
+        store.setMultiple({
             placeholder: 'A_Input Element',
             inputValue: 'Test',
-        };
+        });
     }
 
 

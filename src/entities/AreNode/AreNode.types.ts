@@ -7,6 +7,7 @@ export type AreNodeProps = {
 }
 
 export type AreNodeOptionalProps = {
+    id?: string,
     styles?: string
     template?: string
 }
