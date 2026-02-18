@@ -1,11 +1,6 @@
 import { A_Caller, A_Feature, A_FormatterHelper, A_Inject, A_Scope } from "@adaas/a-concept";
-import { A_Logger } from "@adaas/a-utils";
-import { Are } from "@adaas/are/components/AreComponent/Are.component";
-import { AreEvent } from "@adaas/are/context/AreEvent/AreEvent.context";
-import { AreScene } from "@adaas/are/context/AreScene/AreScene.context";
-import { AreStore } from "@adaas/are/context/AreStore/AreStore.context";
-import { AreNode } from "@adaas/are/entities/AreNode/AreNode.entity";
-import { AreInitSignal } from "src/signals/AreInit.signal";
+import { A_Logger } from "@adaas/a-utils/a-logger";
+import { Are, AreEvent, AreNode, AreScene, AreStore } from "src";
 
 
 export class ABtn extends Are {
@@ -17,9 +12,10 @@ export class ABtn extends Are {
         @A_Inject(AreStore) store: AreStore,
     ) {
         node.setTemplate(`
-        <button class="a-btn" @click="handleClick"> Make it:  {{name}} {{number}}</button> <a-input $if="showInput" ></a-input>
+        <button class="a-btn" @click="handleClick"> Make it:  {{name}} {{number}}</button> 
+            <a-input $if="showInput" ></a-input>
         <button class="a-btn" @click="handleClick2"> Do:  {{btn2}}</button> 
-       <a-input $if="showInput2" ></a-input>
+            <a-input $if="showInput2" ></a-input>
         `);
     }
 
@@ -43,9 +39,10 @@ export class ABtn extends Are {
 
     @Are.Data
     async data(
+        @A_Inject(A_Caller) node: AreNode,
         @A_Inject(AreStore) store: AreStore,
     ) {
-        store.setMultiple({
+        store.set({
             name: 'A_Button Element',
             showInput: false,
             bgColor: '#007BFF',
@@ -87,7 +84,11 @@ export class ABtn extends Are {
         store.set('number', Math.floor(Math.random() * 1000));
         store.set('name', `Clicked! `);
 
+        console.log('Changing ShowInput from ', store.get('showInput'));
         store.set('showInput', !store.get('showInput'));
+
+        console.log('Changing ShowInput to ', store.get('showInput'), store);
+
         store.set('bgColor', '#ff5733');
 
         console.log('event data:', event);

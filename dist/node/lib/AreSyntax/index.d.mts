@@ -1,0 +1,12 @@
+export { AreSyntax } from './AreSyntax.component.mjs';
+export { AreSyntaxContext } from './AreSyntax.context.mjs';
+export { AreSyntaxError } from './AreSyntax.error.mjs';
+export { AreAttribute, AreDirective, AreInterpolation, AreListener, AreSyntaxInitOptions } from './AreSyntax.types.mjs';
+import '@adaas/a-concept';
+import '../../index-DMXWCL7R.mjs';
+import '../AreEvent/AreEvent.types.mjs';
+import '../AreNode/AreNode.types.mjs';
+import '../AreScene/AreScene.types.mjs';
+import '../AreProps/AreProps.context.mjs';
+import '@adaas/a-utils/a-execution';
+import '../AreStore/AreStore.context.mjs';

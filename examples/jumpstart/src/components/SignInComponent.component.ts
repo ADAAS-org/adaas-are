@@ -1,8 +1,6 @@
 import { A_Caller, A_Concept, A_Context, A_Feature, A_Inject, A_Scope } from "@adaas/a-concept";
-import { A_CommandFeatures, A_Logger, A_Memory, A_Polyfill } from "@adaas/a-utils";
-import { Are } from "@adaas/are/components/AreComponent/Are.component";
-import { AreStore } from "@adaas/are/context/AreStore/AreStore.context";
-import { AreNode } from "@adaas/are/entities/AreNode/AreNode.entity";
+import { A_Logger } from "@adaas/a-utils/a-logger";
+import { Are, AreNode, AreStore } from "src";
 
 export function validateEmail(email: string): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -21,7 +19,7 @@ export class SignInComponent extends Are {
         @A_Inject(A_Logger) logger: A_Logger,
     ) {
 
-        store.setMultiple({
+        store.set({
             btnName: 'Sign In'
         });
     }

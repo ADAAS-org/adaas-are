@@ -1,0 +1,1 @@
+export { AreRoot } from './AreRoot.component'

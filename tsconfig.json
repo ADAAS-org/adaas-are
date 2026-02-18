@@ -1,66 +1,68 @@
 {
-  "compileOnSave": false,
+  "extends": "./.conf/tsconfig.base.json",
+
   "compilerOptions": {
-     "outDir": "dist",
-    "strict": true,
-    "noImplicitAny": false,
-    "noFallthroughCasesInSwitch": true,
-    "downlevelIteration": true,
-    "strictFunctionTypes": true,
-    "strictNullChecks": true,
-    "strictPropertyInitialization": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "noErrorTruncation": true,
-    "jsx": "react",
-    "target": "es2020",
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "removeComments": false,
-    "preserveConstEnums": true,
-    "sourceMap": true,
+    "rootDir": "./",
     "baseUrl": ".",
-    "experimentalDecorators": true,
-    "skipLibCheck": true,
-    "typeRoots": [
-      "node_modules/@types"
-    ],
+    /* ===============================
+       Internal aliases (DEV ONLY)
+       =============================== */
     "paths": {
-      "@adaas/are/constants/*": ["src/constants/*"],
-      "@adaas/are/defaults/*": ["src/defaults/*"],
-      "@adaas/are/decorators/*": ["src/decorators/*"],
+      //  default exports of common modules
       "@adaas/are/helpers/*": ["src/helpers/*"],
-      "@adaas/are/examples/*": ["src/examples/*"],
-      "@adaas/are/entities/*": ["src/entities/*"],
-      "@adaas/are/commands/*": ["src/commands/*"],
+      "@adaas/are/constants/*": ["src/constants/*"],
+
+      //  A-Concept specific paths aliases
       "@adaas/are/channels/*": ["src/channels/*"],
-
-
-      "@adaas/are/context/*": ["src/context/*"],
-      "@adaas/are/components/*": ["src/components/*"],
+      // "@adaas/are/entities/*": ["src/entities/*"],
+      // "@adaas/are/context/*": ["src/context/*"],
+      // "@adaas/are/components/*": ["src/components/*"],
       "@adaas/are/containers/*": ["src/containers/*"],
+
+
+      //  main library exports
+      "@adaas/are/app": ["src/lib/AreApp/index.ts"],
+      "@adaas/are/compiler": ["src/lib/AreCompiler/index.ts"],
+      "@adaas/are/component": ["src/lib/AreComponent/index.ts"],
+      "@adaas/are/event": ["src/lib/AreEvent/index.ts"],
+      "@adaas/are/index": ["src/lib/AreIndex/index.ts"],
+      "@adaas/are/node": ["src/lib/AreNode/index.ts"],
+      "@adaas/are/props": ["src/lib/AreProps/index.ts"],
+      "@adaas/are/store": ["src/lib/AreStore/index.ts"],
+      "@adaas/are/root": ["src/lib/AreRoot/index.ts"],
+      "@adaas/are/router": ["src/lib/AreRouter/index.ts"],
+      "@adaas/are/scene": ["src/lib/AreScene/index.ts"],
+      "@adaas/are/scene-instruction": ["src/lib/AreSceneInstruction/index.ts"],
+      "@adaas/are/slot": ["src/lib/AreSlot/index.ts"],
+      "@adaas/are/syntax": ["src/lib/AreSyntax/index.ts"],
+      "@adaas/are/signals": ["src/signals/index.ts"],
+
+
+      //  exported engines
+      "@adaas/are/engines/html": ["src/engines/html/index.ts"],
     },
-    "lib": [
-      "dom",
-      "esnext.asynciterable",
-      "es2015",
-      "es2016",
-      "es2017.object"
-    ]
+
+    /* ===============================
+       Types
+       =============================== */
+    "types": [
+      "node",
+      "jest",
+      "mocha",
+    ],
+    "typeRoots": ["node_modules/@types"]
   },
+
   "include": [
     "src/**/*",
-    "tests/**/*", 
-    "examples/**/*", 
-  ],
-  "exclude": [
+    "tests/**/*",
+    "examples/**/*.ts",
     "src/index.ts",
-    "node_modules/**/*",
-    "dist/**/*",
-    "node_modules/@types/mocha/index.d.ts"
+    "src/env/global.browser.d.ts"
+  ],
+
+  "exclude": [
+    "node_modules",
+    "dist",
   ]
 }

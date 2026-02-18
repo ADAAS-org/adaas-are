@@ -1,0 +1,12 @@
+export { AreRouter } from './AreRouter.componeent.mjs';
+import '@adaas/a-concept';
+import '@adaas/a-utils/a-config';
+import '@adaas/a-utils/a-logger';
+import '@adaas/a-utils/a-service';
+import '../../index-DMXWCL7R.mjs';
+import '../AreEvent/AreEvent.types.mjs';
+import '../AreNode/AreNode.types.mjs';
+import '../AreScene/AreScene.types.mjs';
+import '../AreProps/AreProps.context.mjs';
+import '@adaas/a-utils/a-execution';
+import '../AreStore/AreStore.context.mjs';

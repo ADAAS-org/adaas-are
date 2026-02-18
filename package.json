@@ -4,9 +4,24 @@
   "description": "A-Concept Rendering Engine (ARE) is a powerful rendering engine designed to work seamlessly with the A-Concept framework. It provides developers with the tools and capabilities needed to create dynamic and interactive user interfaces for web applications.",
   "author": "ADAAS <contact-us@adaas.org>",
   "license": "ISC",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "browser": {
+        "types": "./dist/browser/index.d.mts",
+        "import": "./dist/browser/index.mjs"
+      },
+      "node": {
+        "types": "./dist/node/index.d.ts",
+        "import": "./dist/node/index.mjs",
+        "require": "./dist/node/index.cjs"
+      },
+      "default": {
+        "types": "./dist/node/index.d.ts",
+        "import": "./dist/node/index.mjs",
+        "require": "./dist/node/index.cjs"
+      }
+    }
+  },
   "sideEffects": false,
   "nodemonConfig": {
     "ignore": [
@@ -27,7 +42,7 @@
     "test": "jest",
     "example:jumpstart": "nodemon ./examples/jumpstart/concept.ts",
     "test:test": "nodemon ./src/test/app.ts",
-    "publish": "npm run build && git add . && git commit -m \"new version created :: $(cat package.json | grep version | head -1  | awk -F: '{ print $2 }'  | sed 's/[\",]//g')\" && npm version patch && npm publish --access public",
+    "release": " npm run build && git add . && git commit -m \"new version created :: $(cat package.json | grep version | head -1  | awk -F: '{ print $2 }'  | sed 's/[\",]//g')\" && npm version patch && npm publish --access public",
     "preversion": "echo test",
     "version": "echo git add .",
     "postversion": "git push --no-verify && git push --tags --no-verify && echo \"\n======Version Pushed Successfully=====\n\" ",
@@ -48,8 +63,9 @@
   },
   "homepage": "https://github.com/ADAAS-org/adaas-are#readme",
   "dependencies": {
-    "@adaas/a-concept": "^0.1.59",
-    "@adaas/a-utils": "^0.1.40"
+    "@adaas/a-concept": "^0.3.1",
+    "@adaas/a-frame": "^0.0.10",
+    "@adaas/a-utils": "^0.3.3"
   },
   "devDependencies": {
     "@types/chai": "^4.3.14",

@@ -9,6 +9,7 @@ const config: Config.InitialOptions = {
     },
     moduleNameMapper: {
         "@adaas/are/constants/(.*)": ["<rootDir>/src/constants/$1"],
+        "@adaas/are/lib/(.*)": ["<rootDir>/src/lib/$1"],
         "@adaas/are/decorators/(.*)": ["<rootDir>/src/decorators/$1"],
         "@adaas/are/types/(.*)": ["<rootDir>/src/types/$1"],
         "@adaas/are/helpers/(.*)": ["<rootDir>/src/helpers/$1"],

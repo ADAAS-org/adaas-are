@@ -1,0 +1,110 @@
+{
+   "$schema": "https://json.schemastore.org/tsconfig",
+
+   "compilerOptions": {
+      "rootDir": "../",
+      "useDefineForClassFields": false,
+      // "isolatedModules": true,
+
+      /* ===============================
+         Output (tsup controls formats)
+         =============================== */
+      "outDir": "dist",
+      "declaration": true,
+      "declarationMap": true,
+      "sourceMap": true,
+      "emitDeclarationOnly": false,
+
+      /* ===============================
+         Language & runtime
+         =============================== */
+      "target": "ES2022",
+      "lib": ["ES2022", "DOM"],
+
+      /* ===============================
+         Module system (CRITICAL)
+         =============================== */
+      "module": "nodenext",
+      "moduleResolution": "NodeNext",
+
+      /* ===============================
+         Interop & compatibility
+         =============================== */
+      "esModuleInterop": true,
+      "allowSyntheticDefaultImports": true,
+      "resolveJsonModule": true,
+
+      /* ===============================
+         Type checking
+         =============================== */
+      "strict": true,
+      "noImplicitAny": false,
+      "strictNullChecks": true,
+      "strictFunctionTypes": true,
+      "strictPropertyInitialization": true,
+      "noFallthroughCasesInSwitch": true,
+
+      /* ===============================
+         Developer experience
+         =============================== */
+      "skipLibCheck": true,
+      "forceConsistentCasingInFileNames": true,
+      "noErrorTruncation": true,
+
+      /* ===============================
+         Decorators (if used)
+         =============================== */
+      "experimentalDecorators": true,
+
+      /* ===============================
+         Internal path aliases ONLY
+         =============================== */
+      "baseUrl": ".",
+      "paths": {
+         //  default exports of common modules
+         "@adaas/are/helpers/*": ["src/helpers/*"],
+         "@adaas/are/constants/*": ["src/constants/*"],
+
+         //  A-Concept specific paths aliases
+         "@adaas/are/channels/*": ["src/channels/*"],
+         // "@adaas/are/entities/*": ["src/entities/*"],
+         // "@adaas/are/context/*": ["src/context/*"],
+         // "@adaas/are/components/*": ["src/components/*"],
+         "@adaas/are/containers/*": ["src/containers/*"],
+
+
+         //  main library exports
+         "@adaas/are/app": ["src/lib/AreApp/index.ts"],
+         "@adaas/are/compiler": ["src/lib/AreCompiler/index.ts"],
+         "@adaas/are/component": ["src/lib/AreComponent/index.ts"],
+         "@adaas/are/event": ["src/lib/AreEvent/index.ts"],
+         "@adaas/are/index": ["src/lib/AreIndex/index.ts"],
+         "@adaas/are/node": ["src/lib/AreNode/index.ts"],
+         "@adaas/are/props": ["src/lib/AreProps/index.ts"],
+         "@adaas/are/store": ["src/lib/AreStore/index.ts"],
+         "@adaas/are/root": ["src/lib/AreRoot/index.ts"],
+         "@adaas/are/router": ["src/lib/AreRouter/index.ts"],
+         "@adaas/are/scene": ["src/lib/AreScene/index.ts"],
+         "@adaas/are/scene-instruction": ["src/lib/AreSceneInstruction/index.ts"],
+         "@adaas/are/slot": ["src/lib/AreSlot/index.ts"],
+         "@adaas/are/syntax": ["src/lib/AreSyntax/index.ts"],
+         "@adaas/are/signals": ["src/signals/index.ts"],
+
+
+         //  exported engines
+         "@adaas/are/engines/html": ["src/engines/html/index.ts"],
+      },
+      /* ===============================
+         Types
+         =============================== */
+      // "typeRoots": ["node_modules/@types"]
+   },
+   "include": [
+      "../src/**/*",
+   ],
+   "exclude": [
+      "../node_modules",
+      "../dist",
+      "**/*.spec.ts"
+   ]
+}

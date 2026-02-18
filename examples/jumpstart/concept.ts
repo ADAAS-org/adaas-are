@@ -1,6 +1,8 @@
 import { A_Concept, A_CONSTANTS__DEFAULT_ENV_VARIABLES_ARRAY, A_Context } from "@adaas/a-concept"
 import { UIContainer } from "./containers/UI.container"
-import { A_Config, A_Logger, A_Polyfill, ENVConfigReader } from "@adaas/a-utils"
+import { A_Logger } from "@adaas/a-utils/a-logger";
+import { A_Polyfill } from "node_modules/@adaas/a-utils/dist/node/lib/A-Polyfill/A-Polyfill.component.env-node";
+import { A_Config, ENVConfigReader } from "@adaas/a-utils/a-config";
 
 
 

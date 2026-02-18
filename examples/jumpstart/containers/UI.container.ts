@@ -1,5 +1,7 @@
 import { A_Concept, A_Error, A_IdentityHelper, A_Inject } from "@adaas/a-concept"
-import { A_Config, A_Logger, A_Polyfill, A_Service } from "@adaas/a-utils";
+import { A_Config } from "@adaas/a-utils/a-config";
+import { A_Logger } from "@adaas/a-utils/a-logger";
+import { A_Service } from "@adaas/a-utils/a-service";
 import { build } from "esbuild";
 import fs from "fs";
 import http from "http";
@@ -36,10 +38,12 @@ export class UIContainer extends A_Service {
             minify: config.get('A_CONCEPT_ENVIRONMENT') !== 'production' ? false : true,
             keepNames: true, // <— preserve the original function/class names
             sourcemap: config.get('A_CONCEPT_ENVIRONMENT') !== 'production' ? 'inline' : false,
-            platform: "browser",     // ✅ builds for browser
+            // platform: "browser",
+            // conditions: ["browser", "import", "default"],
+            // mainFields: ["browser", "module", "main"],    // ✅ builds for browser
             target: "es2020",
             format: "esm",           // ✅ ESM output for <script type="module">,
-            external: ["http", "https", "fs", "path", "net", 'crypto', 'url', 'buffer'], // ignore Node modules
+            // external: ["http", "https", "fs", "path", "net", 'crypto', 'url', 'buffer'], // ignore Node modules
         });
 
         logger.log('green', 'UI Container built successfully.');

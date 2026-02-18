@@ -1,0 +1,43 @@
+{
+   "extends": "./tsconfig.base.json",
+   "compilerOptions": {
+      "rootDir": "../",
+      "outDir": "dist/browser",
+      "baseUrl": "../",
+
+      "paths": {
+         //  default exports of common modules
+         "@adaas/are/helpers/*": ["src/helpers/*"],
+         "@adaas/are/constants/*": ["src/constants/*"],
+
+         //  A-Concept specific paths aliases
+         "@adaas/are/channels/*": ["src/channels/*"],
+         // "@adaas/are/entities/*": ["src/entities/*"],
+         // "@adaas/are/context/*": ["src/context/*"],
+         // "@adaas/are/components/*": ["src/components/*"],
+         "@adaas/are/containers/*": ["src/containers/*"],
+
+
+         //  main library exports
+         "@adaas/are/app": ["src/lib/AreApp/index.ts"],
+         "@adaas/are/compiler": ["src/lib/AreCompiler/index.ts"],
+         "@adaas/are/component": ["src/lib/AreComponent/index.ts"],
+         "@adaas/are/event": ["src/lib/AreEvent/index.ts"],
+         "@adaas/are/index": ["src/lib/AreIndex/index.ts"],
+         "@adaas/are/node": ["src/lib/AreNode/index.ts"],
+         "@adaas/are/props": ["src/lib/AreProps/index.ts"],
+         "@adaas/are/store": ["src/lib/AreStore/index.ts"],
+         "@adaas/are/root": ["src/lib/AreRoot/index.ts"],
+         "@adaas/are/router": ["src/lib/AreRouter/index.ts"],
+         "@adaas/are/scene": ["src/lib/AreScene/index.ts"],
+         "@adaas/are/scene-instruction": ["src/lib/AreSceneInstruction/index.ts"],
+         "@adaas/are/slot": ["src/lib/AreSlot/index.ts"],
+         "@adaas/are/syntax": ["src/lib/AreSyntax/index.ts"],
+         "@adaas/are/signals": ["src/signals/index.ts"],
+
+
+         //  exported engines
+         "@adaas/are/engines/html": ["src/engines/html/index.ts"],
+      },
+   },
+}

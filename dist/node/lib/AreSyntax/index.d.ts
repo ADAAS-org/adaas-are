@@ -1,0 +1,12 @@
+export { AreSyntax } from './AreSyntax.component.js';
+export { AreSyntaxContext } from './AreSyntax.context.js';
+export { AreSyntaxError } from './AreSyntax.error.js';
+export { AreAttribute, AreDirective, AreInterpolation, AreListener, AreSyntaxInitOptions } from './AreSyntax.types.js';
+import '@adaas/a-concept';
+import '../../index-BD-6iOuR.js';
+import '../AreEvent/AreEvent.types.js';
+import '../AreNode/AreNode.types.js';
+import '../AreScene/AreScene.types.js';
+import '../AreProps/AreProps.context.js';
+import '@adaas/a-utils/a-execution';
+import '../AreStore/AreStore.context.js';

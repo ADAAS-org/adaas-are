@@ -1,32 +1,78 @@
 import { defineConfig } from "tsup";
 
-export default defineConfig((options) => ({
-  entry: ["src/index.ts"],
-  format: ["esm", "cjs"],
-  dts: true,
-  clean: !options.watch,
-  sourcemap: true,
-  target: "es2020",
-  minify: !options.watch,
-  treeshake: "recommended",
-  skipNodeModulesBundle: true,
-  splitting: false,
-  silent: false,
-  platform: "neutral",
-  // Add hash to filenames for cache busting in production builds
-  outExtension({ format }) {
-    return {
-      js: format === "esm" ? `.mjs` : `.cjs`,
-    };
-  },
-  // Extra optimization options (for 2025 esbuild)
-  esbuildOptions(options) {
-    options.keepNames = true; // Preserve class/function names for better debugging
-    options.charset = "utf8";
+export default defineConfig([
+  /**
+   * ============================
+   * Browser build
+   * ============================
+   *
+   * Produces individual component builds:
+   *   ... (etc for each component)
+   */
+  {
+    entry: [
+      "src/index.ts", // Main entry point for browser build
+    ],
+
+    // Output directory for browser bundle
+    outDir: "dist/browser",
+
+    tsconfig: ".conf/tsconfig.browser.json",
+
+    bundle: true, // Keep individual modules for better tree-shaking
+
+    // Browser consumers expect ESM
+    format: ["esm"],
+
+    // Tells esbuild this is browser-safe code
+    platform: "browser",
+
+    // Reasonable baseline for modern browsers
+    target: "es2020",
+
+    // Smaller bundles
+    treeshake: true,
+
+    // Useful for debugging in bundlers
+    sourcemap: true,
+
+    // Emit .d.ts files
+    dts: true,
   },
 
-  // Enable minification for output size (production only)
-  minifyWhitespace: !options.watch,
-  minifyIdentifiers: !options.watch,
-  minifySyntax: !options.watch,
-}));
+  /**
+   * ============================
+   * Node build
+   * ============================
+   *
+   */
+  {
+    entry: [
+      "src/**/*.ts"
+    ],
+
+    // Output directory for node bundle
+    outDir: "dist/node",
+
+    tsconfig: ".conf/tsconfig.node.json",
+
+    bundle: false, // Don't bundle node build, keep imports as-is
+
+    clean: true,
+
+    // Support both module systems
+    format: ["cjs", "esm"],
+
+    // Enables Node globals and resolution
+    platform: "node",
+
+    // Node 16+ safe baseline
+    target: "es2020",
+
+    treeshake: true,
+    sourcemap: true,
+
+    // Emit .d.ts files (shared shape)
+    dts: true,
+  },
+]);

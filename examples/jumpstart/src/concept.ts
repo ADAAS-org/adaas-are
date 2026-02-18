@@ -1,15 +1,15 @@
 import { A_Concept, A_CONSTANTS__DEFAULT_ENV_VARIABLES_ARRAY, A_Container, A_Context } from "@adaas/a-concept"
-import { A_Config, A_Logger, A_LOGGER_DEFAULT_LEVEL, A_LOGGER_ENV_KEYS, A_Polyfill, A_SignalBus, ConfigReader, } from "@adaas/a-utils"
 import { SignInComponent } from "./components/SignInComponent.component"
 import { ABtn } from "./components/A-Btn.component";
 import { AInput } from "./components/A-Input.component";
-import { AreApp } from "@adaas/are/containers/AreApp/AreApp.container";
-import { AreBrowserCompiler } from "@adaas/are/components/AreBrowserCompiler/AreBrowserCompiler.component";
-import { AreSlot } from "@adaas/are/components/AreSlot/AreSlot.component";
-import { AreInitSignal } from "src/signals/AreInit.signal";
-import { AreSyntax } from "@adaas/are/context/AreSyntax/AreSyntax.context";
-import { AreRoot } from "@adaas/are/components/AreRoot/AreRoot.component";
-import { AreInterpolation } from "@adaas/are/components/AreInterpolation/AreInterpolation.component";
+import { AreRouteSignal } from "src/signals/AreRoute.signal";
+import { ANavigation } from "./components/A-Navigation.component";
+import { A_Config, ConfigReader } from "@adaas/a-utils/a-config";
+import { A_Logger, A_LOGGER_ENV_KEYS } from "@adaas/a-utils/a-logger";
+import { A_SignalBus } from "@adaas/a-utils/a-signal";
+import { A_Polyfill } from "@adaas/a-utils/a-polyfill";
+import { AreApp, AreContext, AreHTMLEngine, AreInitSignal, AreRoot, AreSyntax } from "src";
+import { AreSlot } from "src/lib/AreSlot/AreSlot.component";
 
 
 // //  TODO: Fix for build system ---
@@ -38,30 +38,29 @@ import { AreInterpolation } from "@adaas/are/components/AreInterpolation/AreInte
                 AInput,
                 AreSlot,
                 A_SignalBus,
-                AreRoot,
-                AreInterpolation,
                 // ----------------------------------
                 // Addons 
                 // ----------------------------------
-                A_Polyfill,
+                AreRoot,
                 ConfigReader,
-                // A_ServerProxy
-                AreBrowserCompiler,
-                A_Logger
+                AreHTMLEngine,
+                A_Logger,
+                AreSyntax,
+                ANavigation
             ],
             entities: [
                 // ............
                 AreInitSignal,
+                AreRouteSignal
             ],
-
             fragments: [
+                new AreContext(document.body.innerHTML),
+              
                 new A_Config({
                     defaults: {
-                        A_UI_MOUNT_POINT: 'a-root',
-                        [A_LOGGER_ENV_KEYS.LOG_LEVEL]: 'debug',
+                        [A_LOGGER_ENV_KEYS.LOG_LEVEL]: 'info',
                     }
                 }),
-                new AreSyntax()
             ]
         });
 

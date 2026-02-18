@@ -1,10 +1,7 @@
 import { A_Caller, A_Feature, A_Inject, A_Scope } from "@adaas/a-concept";
-import { A_Logger } from "@adaas/a-utils";
-import { Are } from "@adaas/are/components/AreComponent/Are.component";
-import { AreEvent } from "@adaas/are/context/AreEvent/AreEvent.context";
-import { AreScene } from "@adaas/are/context/AreScene/AreScene.context";
-import { AreStore } from "@adaas/are/context/AreStore/AreStore.context";
-import { AreNode } from "@adaas/are/entities/AreNode/AreNode.entity";
+
+import { A_Logger } from "@adaas/a-utils/a-logger";
+import { Are, AreEvent, AreNode, AreScene, AreStore } from "src";
 
 
 export class AInput extends Are {
@@ -26,7 +23,7 @@ export class AInput extends Are {
     async data(
         @A_Inject(AreStore) store: AreStore,
     ) {
-        store.setMultiple({
+        store.set({
             placeholder: 'A_Input Element',
             inputValue: 'Test',
         });
