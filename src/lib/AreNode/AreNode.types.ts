@@ -1,3 +1,4 @@
+import { AreNodeFeatures, AreNodeStatuses } from "./AreNode.constants";
 
 
 export type AreNodeProps = {
@@ -13,3 +14,9 @@ export type AreNodeOptionalProps = {
 }
 
 export type AreNodeNewProps = AreNodeProps & AreNodeOptionalProps;
+
+
+export type AreNodeFeatureNames = typeof AreNodeFeatures[keyof typeof AreNodeFeatures];
+
+
+export type AreNodeStatusNames = typeof AreNodeStatuses[keyof typeof AreNodeStatuses];

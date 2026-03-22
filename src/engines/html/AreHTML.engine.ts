@@ -43,10 +43,10 @@ export class AreHTMLEngine extends A_Component {
                     "hr", "strong", "em", "small", "pre", "code", "iframe", "details",
                     "summary", "svg", "path", "circle", "rect", "polygon", "g", "defs"
                 ],
-                debugMode: true,
                 interpolationDelimiters: ['{{', '}}'],
+                tagDelimiters: ['<', '>'],
                 bindingDelimiter: ':',
-                listenerDelimiter: '@',
+                eventDelimiter: '@',
                 directiveDelimiter: '$',
             });
 

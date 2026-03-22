@@ -39,15 +39,6 @@ export class AreSyntaxContext extends A_Fragment {
         return new Set(this.config.standardTags || [])
     };
     /**
-     * Enable or disable debug mode for syntax parsing.
-     * When enabled, additional debug information will be logged during parsing.
-     * 
-     * @return {boolean} True if debug mode is enabled, false otherwise.
-     */
-    get debugMode(): boolean {
-        return this.config.debugMode || false;
-    }
-    /**
      * Custom interpolation delimiters for template parsing.
      * Default is ['{{', '}}'].
      * 
@@ -55,6 +46,15 @@ export class AreSyntaxContext extends A_Fragment {
      */
     get interpolationDelimiters(): [string, string] {
         return this.config.interpolationDelimiters || ['{{', '}}'];
+    }
+    /**
+     * Custom tag delimiters for template parsing.
+     * Default is ['<', '>'].
+     * 
+     * @return {[string, string]} The opening and closing tag delimiters.
+     */
+    get tagDelimiters(): [string, string] {
+        return this.config.tagDelimiters || ['<', '>'];
     }
     /**
      * Custom binding delimiter for data binding parsing.
@@ -65,13 +65,13 @@ export class AreSyntaxContext extends A_Fragment {
         return this.config.bindingDelimiter || ':';
     }
     /**
-     * Custom listener delimiter for event binding parsing.
+     * Custom event delimiter for event binding parsing.
      * Default is '@'.
      * 
-     * @return {string} The listener delimiter.
+     * @return {string} The event delimiter.
      */
-    get listenerDelimiter(): string {
-        return this.config.listenerDelimiter || '@';
+    get eventDelimiter(): string {
+        return this.config.eventDelimiter || '@';
     }
     /**
      * Enable or disable strict mode for syntax parsing.

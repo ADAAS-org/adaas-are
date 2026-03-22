@@ -1,8 +1,13 @@
 import { A_Caller, A_Feature, A_FormatterHelper, A_Inject, A_Scope } from "@adaas/a-concept";
 import { A_Logger } from "@adaas/a-utils/a-logger";
-import { Are, AreEvent, AreNode, AreScene, AreStore } from "src";
+import { Are, AreEvent, AreNode, AreRouteSignal, AreScene, AreStore } from "src";
 
 
+
+
+@Are.Condition([
+    new AreRouteSignal('/home')
+])
 export class ABtn extends Are {
 
 
@@ -24,17 +29,17 @@ export class ABtn extends Are {
     async styles(
         @A_Inject(A_Caller) node: AreNode,
     ): Promise<void> {
-        node.setStyles(`
-            .a-btn {
-                padding: 10px 20px;
-                background-color: {{bgColor}}!important;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 16px;
-            }
-        `);
+        // node.setStyles(`
+        //     .a-btn {
+        //         padding: 10px 20px;
+        //         background-color: {{bgColor}}!important;
+        //         color: white;
+        //         border: none;
+        //         border-radius: 4px;
+        //         cursor: pointer;
+        //         font-size: 16px;
+        //     }
+        // `);
     }
 
     @Are.Data

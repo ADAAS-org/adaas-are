@@ -35,6 +35,15 @@
       "@adaas/are/scene-instruction": ["src/lib/AreSceneInstruction/index.ts"],
       "@adaas/are/slot": ["src/lib/AreSlot/index.ts"],
       "@adaas/are/syntax": ["src/lib/AreSyntax/index.ts"],
+      "@adaas/are/attribute": ["src/lib/AreAttribute/index.ts"],
+      "@adaas/are/interpolation": ["src/lib/AreInterpolation/index.ts"],
+      "@adaas/are/directive": ["src/lib/AreDirective/index.ts"],
+      "@adaas/are/queue": ["src/lib/AreQueue/index.ts"],
+      "@adaas/are/host": ["src/lib/AreHost/index.ts"],
+
+
+
+
       "@adaas/are/signals": ["src/signals/index.ts"],
 
 

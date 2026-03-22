@@ -1,28 +1,24 @@
-import { A_Caller, A_Component, A_Container, A_Context, A_Dependency, A_Error, A_Feature, A_FormatterHelper, A_Inject, A_Scope, A_TYPES__EntityFeatures, ASEID } from "@adaas/a-concept";
+import { A_Caller, A_Component, A_Dependency, A_Feature, A_FormatterHelper, A_Inject, A_Scope, A_TYPES__EntityFeatures } from "@adaas/a-concept";
 import { A_Frame } from "@adaas/a-frame";
 import { AreIndex } from "@adaas/are/index";
 import { AreScene } from "@adaas/are/scene";
 import { AreNode, AreNodeFeatures } from "@adaas/are/node";
 import {
-    AreSceneInstructionFeatures,
-    AttachRootNodeInstruction,
-    MountNodeInstruction,
-    UnmountNodeInstruction,
-    AddStyleInstruction,
-    AttachListenerInstruction,
-    AddAttributeInstruction,
-    ReplaceInterpolationInstruction,
-    AddDirectiveInstruction,
+    ARE_CONSTANTS__DEFAULT_SCENE_INSTRUCTIONS,
+    AreDeclarationInstruction,
+    AreMutationInstruction,
 } from "@adaas/are/scene-instruction";
 import { AreSyntax } from "@adaas/are/syntax";
-import { A_ExecutionContext } from "@adaas/a-utils/a-execution";
 import { A_Logger } from "@adaas/a-utils/a-logger";
 import { A_SignalBusFeatures, A_SignalState, A_SignalVector } from "@adaas/a-utils/a-signal";
 import { Are, AreContext, AreFeatures } from "@adaas/are/component";
-import { AreProps } from "@adaas/are/props";
 import { AreStore } from "@adaas/are/store";
 import { AreEvent } from "@adaas/are/event";
-import { AreCompilerError } from "./AreCompiler.error";
+import { AreAttribute, AreBindingAttribute, AreDirectiveAttribute, AreEventAttribute, AreStaticAttribute } from "../AreAttribute";
+import { AreInterpolation } from "../AreInterpolation";
+import { AreAttributeFeatures } from "../AreAttribute/AreAttribute.constants";
+import { AreDirective } from "../AreDirective";
+import { AreInterpolationFeatures } from "../AreInterpolation/AreInterpolation.constants";
 
 
 
@@ -32,31 +28,6 @@ import { AreCompilerError } from "./AreCompiler.error";
     description: 'AreCompiler is responsible for compiling AreNodes into their respective components, managing the compilation lifecycle, and ensuring that each node is processed according to its defined behavior within the A-Concept Rendering Engine (ARE) framework.'
 })
 export class AreCompiler extends A_Component {
-
-
-
-    // ==================================================================================
-    // ========================= COMPONENT METHODS ======================================
-    // ==================================================================================
-    index(node: AreNode) {
-
-    }
-
-    component(node: AreNode): Are | undefined {
-        let scope: A_Scope
-
-        try {
-            scope = node.scope
-        } catch (error) {
-            scope = A_Context.scope(this)
-        }
-
-        return scope.resolve<Are>(A_FormatterHelper.toPascalCase(node.aseid.entity)) as Are | undefined;
-    }
-    // ==================================================================================
-    // ========================= ARE-NODE METHODS ======================================
-    // ==================================================================================
-
     // -----------------------------------------------------------------------------------------
     // ----------------------------Are-Node Load Section----------------------------------------
     // -----------------------------------------------------------------------------------------
@@ -81,15 +52,17 @@ export class AreCompiler extends A_Component {
     ) {
         const logger = scope.resolve<A_Logger>(A_Logger);
 
-
-        const component = scope.resolveOnce<Are>(A_FormatterHelper.toPascalCase(node.aseid.entity));
-
-        if (component)
-            await feature.chain(component, AreFeatures.onBeforeLoad, node.scope);
+        if (node.component)
+            await feature.chain(node.component, AreFeatures.onBeforeLoad, node.scope);
+        else
+            logger?.warning(
+                'Component Not Found',
+                `No component registered for entity: ${node.aseid.entity}. Please ensure that the component is registered in the scope before rendering.`
+            );
     }
 
     /**
-     * Loads the AreNode into the AreScene
+     * Loads the AreNode 
      * 
      * @param node 
      * @param scope 
@@ -111,69 +84,74 @@ export class AreCompiler extends A_Component {
         @A_Inject(A_Logger) logger?: A_Logger,
         ...args: any[]
     ) {
-        const loadTimerLabel = `Load Node <${node.aseid.entity}> ASEID: ${node.aseid.toString()}`;
-        console.time(loadTimerLabel);
+        /**
+         * 1. Comparing to StaticNode ComponentNode has own Store
+         */
+        if (node.component) {
+            const storeConstructor = scope.resolveConstructor(AreStore);
 
-        console.time(`Load: Component Resolution for <${node.aseid.entity}>`);
-        const component = this.component(node);
-        console.timeEnd(`Load: Component Resolution for <${node.aseid.entity}>`);
+            const newNodeStore = new storeConstructor(node.aseid);
+            scope.register(newNodeStore);
+        }
+        const sceneConstructor = scope.resolveConstructor(AreScene);
 
+        const newNodeScene = new sceneConstructor(node.aseid);
 
-        if (!component && syntax.isCustomNode(node)) {
+        scope.register(newNodeScene);
+
+        if (node.component) {
+            await feature.chain(node.component, AreFeatures.onData, scope);
+            await feature.chain(node.component, AreFeatures.onStyles, scope);
+            await feature.chain(node.component, AreFeatures.onTemplate, scope);
+        } else {
             logger?.warning(
                 'Component Not Found',
                 `No component registered for entity: ${node.aseid.entity}. Please ensure that the component is registered in the scope before rendering.`
             );
         }
 
-        console.time(`Load: Scene/Store/Props Creation for <${node.aseid.entity}>`);
-        const newNodeScene = new AreScene(node.aseid);
-        const newNodeIndex = new AreIndex(node.aseid);
-        const newNodeStore = new AreStore(node.aseid);
-        const newNodeProps = new AreProps(node.aseid);
+        /**
+         * 2. extract all attributes (directives, bindings, etc) from the markup
+         * and register them in the node scope for later use during compilation and rendering
+         */
+        const attributes = syntax.extractAttributesV2(node.markup);
 
-        scope.register(newNodeScene);
-        scope.register(newNodeIndex);
+        for (let i = 0; i < attributes.length; i++) {
+            const attribute = attributes[i];
 
-        if (syntax.isCustomNode(node)) {
-            scope.register(newNodeStore);
-            scope.register(newNodeProps);
-        }
-        console.timeEnd(`Load: Scene/Store/Props Creation for <${node.aseid.entity}>`);
-
-        if (component) {
-            console.time(`Load: Component Lifecycle Chains for <${node.aseid.entity}>`);
-            await feature.chain(component, AreFeatures.onData, scope);
-            await feature.chain(component, AreFeatures.onStyles, scope);
-            await feature.chain(component, AreFeatures.onTemplate, scope);
-            console.timeEnd(`Load: Component Lifecycle Chains for <${node.aseid.entity}>`);
+            scope.register(attribute);
         }
 
-        console.time(`Load: Node Indexing for <${node.aseid.entity}>`);
-        this.index(node);
-        console.timeEnd(`Load: Node Indexing for <${node.aseid.entity}>`);
+        /**
+         * 3. Extract Interpolations, since they are part of the markup and structure and can't be changed or created dynamically like attributes and directives, we need to extract them and register them in the scope for later use during compilation and rendering
+         */
+        const interpolations = syntax.extractInterpolationsV2(node.markup);
 
-        logger?.debug(newNodeScene.debugPrefix + `Loaded component <${node.aseid.entity}> with ${this.constructor.name}`);
+        for (let i = 0; i < interpolations.length; i++) {
+            const interpolation = new AreInterpolation({
+                key: interpolations[i].key,
+                raw: interpolations[i].raw,
+                position: interpolations[i].position,
+            });
 
-        console.time(`Load: Child Nodes Processing for <${node.aseid.entity}>`);
-        const sceneNodes = newNodeScene.nodes();
-        for (let i = 0; i < sceneNodes.length; i++) {
-            const sceneNode = sceneNodes[i];
-            const childTimerLabel = `Load: Child Node [${i}] <${sceneNode.aseid.entity}> for Parent <${node.aseid.entity}>`;
-            console.time(childTimerLabel);
-
-            if (!newNodeScene.isAttached(sceneNode)) {
-                newNodeScene.attach(sceneNode)
-                await sceneNode.load();
-            }
-
-            console.timeEnd(childTimerLabel);
+            scope.register(interpolation);
         }
-        console.timeEnd(`Load: Child Nodes Processing for <${node.aseid.entity}>`);
 
-        console.timeEnd(loadTimerLabel);
 
+        /**
+         * 4. The we need to extract all children from markup and register them as child nodes of the current node, and then load them recursively to extract their attributes, directives, interpolations, and children as well. This is necessary to build the full node tree and to ensure that all nodes are properly loaded and prepared for compilation and rendering.
+         */
+        const children = syntax.extractChildren(node.markup);
+
+        for (let i = 0; i < children.length; i++) {
+            const childNode = children[i];
+
+            node.addChild(childNode);
+
+            await childNode.load();
+        }
     }
+
     /**
      * Handles after load lifecycle of the AreNode
      * 
@@ -191,19 +169,15 @@ export class AreCompiler extends A_Component {
     async afterLoad(
         @A_Inject(A_Caller) node: AreNode,
         @A_Inject(A_Scope) scope: A_Scope,
-        @A_Inject(AreScene) scene: AreScene,
         @A_Inject(A_Feature) feature: A_Feature,
         ...args: any[]
     ) {
         const logger = scope.resolve<A_Logger>(A_Logger);
 
-        logger?.debug(scene.debugPrefix + `[Load -> After] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
+        logger?.debug(`[Load -> After] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
 
-        const component = this.component(node);
-
-        if (component)
-            await feature.chain(component, AreFeatures.onAfterLoad, node.scope);
-
+        if (node.component)
+            await feature.chain(node.component, AreFeatures.onAfterLoad, node.scope);
     }
 
     // -----------------------------------------------------------------------------------------
@@ -232,234 +206,72 @@ export class AreCompiler extends A_Component {
     ) {
         const logger = scope.resolve<A_Logger>(A_Logger);
 
-        logger?.debug(scene.debugPrefix + `[Compile -> Before] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
+        logger?.debug(`[Compile -> Before] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
 
-        const component = scope.resolveOnce<Are>(A_FormatterHelper.toPascalCase(node.aseid.entity));
 
-        if (component)
-            feature.chain(component, AreFeatures.onBeforeCompile, node.scope);
+        if (node.component)
+            feature.chain(node.component, AreFeatures.onBeforeCompile, node.scope);
     }
-    /**
-     * Compiles the AreNode using AreCompiler
-     * 
-     * 
-     * @param logger 
-     */
+
     @A_Feature.Extend({
         name: AreNodeFeatures.onCompile,
         scope: [AreNode]
     })
     compile(
-        /**
-         * Actual Node no be compiled
-         */
         @A_Inject(A_Caller) node: AreNode,
-        /**
-         * Nodes owned Scene, Node content
-         */
-        @A_Dependency.Flat()
+        @A_Inject(A_Scope) scope: A_Scope,
         @A_Inject(AreScene) scene: AreScene,
-        /**
-         * Parent Scene where the node is registered
-         */
-        @A_Dependency.Parent()
-        @A_Inject(AreScene) parentScene: AreScene,
-        /**
-         * Global Syntax Definition for parsing markup
-         */
-        @A_Inject(AreSyntax) syntax: AreSyntax,
-
-        @A_Inject(AreProps) props: AreProps,
-        @A_Inject(AreStore) store: AreStore,
-
-        @A_Dependency.Parent()
-        @A_Inject(AreStore) parentStore: AreStore,
-
-        @A_Inject(A_Logger) logger?: A_Logger,
-
-        @A_Inject(A_Scope) scope?: A_Scope,
+        ...args: any[]
     ) {
-        const compileTimerLabel = `Compile Node <${node.aseid.entity}> ASEID: ${node.aseid.toString()}`;
-        console.time(compileTimerLabel);
-
-        try {
-            //  the case when it's NOT a RootNode
-            if (!syntax.isRootNode(node)) {
-
-                logger?.debug('violet', scene.debugPrefix + `Compiling node <${node.aseid.entity}> in Scene <${parentScene.name}>`);
-
-                console.time(`Compile: Mount Instruction Planning for <${node.aseid.entity}>`);
-                // -------------------------------------------------------
-                // 1) index the scene and plan Mount Node instruction
-                // -------------------------------------------------------
-                const mountInstruction = new MountNodeInstruction(node, scene.path);
-
-                if (!parentScene.isPlanned(mountInstruction)) {
-                    logger?.debug('red', scene.debugPrefix + `Planning Node Mount for Node <${node.type}> ASEID: <${node.aseid.entity}>`);
-
-                    parentScene.plan(mountInstruction);
-                    mountInstruction.init();
-                }
-                console.timeEnd(`Compile: Mount Instruction Planning for <${node.aseid.entity}>`);
-
-                console.time(`Compile: Template Interpolation Processing for <${node.aseid.entity}>`);
-                if (syntax.isCustomNode(node)) {
-                    const interpolations = syntax.extractInterpolations(node.template);
-                    for (let i = 0; i < interpolations.length; i++) {
-                        const interpolation = interpolations[i];
-                        console.time(`Compile: Interpolation [${i}] "${interpolation.name}" for <${node.aseid.entity}>`);
-
-                        const value = store.get(interpolation.name) || parentStore.get(interpolation.name);
-
-                        const instruction = new ReplaceInterpolationInstruction(node, interpolation, value);
-
-                        const stateInstruction = parentScene.getState(instruction);
-
-                        instruction.update({ value, prevValue: stateInstruction?.value });
-
-                        if (!parentScene.isPlanned(instruction)) {
-                            parentScene.plan(instruction);
-                            instruction.init();
-                        } else {
-                            parentScene.dropState(instruction);
-                            parentScene.unPlan(instruction);
-                            parentScene.plan(instruction);
-                        }
-
-                        console.timeEnd(`Compile: Interpolation [${i}] "${interpolation.name}" for <${node.aseid.entity}>`);
-                    }
-                }
-                console.timeEnd(`Compile: Template Interpolation Processing for <${node.aseid.entity}>`);
-
-                console.time(`Compile: Attributes Processing for <${node.aseid.entity}>`);
-                // 1) extract all props from the markup and set them in the props store
-                const attributes = syntax.extractAttributes(node.markup);
-                for (let i = 0; i < attributes.length; i++) {
-                    const attr = attributes[i];
-                    console.time(`Compile: Attribute [${i}] "${attr.name}" for <${node.aseid.entity}>`);
-
-                    const name = attr.name;
-                    const value = (syntax.isBindingProp(attr) ?
-                        store.get(attr.value) || parentStore.get(attr.value)
-                        : attr.value) || '';
-
-                    props.set(name, value);
-
-                    parentScene.plan(new AddAttributeInstruction(node, name, value));
-
-                    console.timeEnd(`Compile: Attribute [${i}] "${attr.name}" for <${node.aseid.entity}>`);
-                }
-                console.timeEnd(`Compile: Attributes Processing for <${node.aseid.entity}>`);
-
-                console.time(`Compile: Directives Processing for <${node.aseid.entity}>`);
-                // 3a) Process directives first before other operations
-                const directives = syntax.extractDirectives(node.markup);
-                for (let i = 0; i < directives.length; i++) {
-                    const directive = directives[i];
-                    console.time(`Compile: Directive [${i}] "${directive.name}" for <${node.aseid.entity}>`);
-
-                    let directiveValue: any;
-
-                    // Get the directive value from store or props
-                    if (directive.value) {
-                        directiveValue = store.get(directive.value) || parentStore.get(directive.value);
-                    }
-
-                    let instruction = new AddDirectiveInstruction(node, directive, directiveValue);
-
-                    const stateInstruction = parentScene.getState(instruction);
-
-                    if (!stateInstruction || stateInstruction.value !== directiveValue) {
-                        parentScene.unPlan(instruction);
-                        parentScene.plan(instruction);
-
-                        instruction.init();
-                    }
-
-                    console.timeEnd(`Compile: Directive [${i}] "${directive.name}" for <${node.aseid.entity}>`);
-                }
-                console.timeEnd(`Compile: Directives Processing for <${node.aseid.entity}>`);
-
-                console.time(`Compile: Styles Processing for <${node.aseid.entity}>`);
-                // -------------------------------------------------------
-                // 2) replace all style interpolations in the styles
-                // -------------------------------------------------------
-                let styles = node.styles || '';
-                const styleInterpolations = syntax.extractInterpolations(styles);
-                for (let i = 0; i < styleInterpolations.length; i++) {
-                    const interpolation = styleInterpolations[i];
-                    console.time(`Compile: Style Interpolation [${i}] "${interpolation.name}" for <${node.aseid.entity}>`);
-
-                    const value = store.get(interpolation.name);
-                    styles = syntax.replaceInterpolation(styles, interpolation, value);
-
-                    console.timeEnd(`Compile: Style Interpolation [${i}] "${interpolation.name}" for <${node.aseid.entity}>`);
-                }
-
-                if (styles.trim()) {
-                    const instruction = new AddStyleInstruction(node, styles);
-
-                    if (!parentScene.isPlanned(instruction)) {
-                        parentScene.plan(instruction);
-                        instruction.init();
-                    }
-                }
-                console.timeEnd(`Compile: Styles Processing for <${node.aseid.entity}>`);
-
-                console.time(`Compile: Listeners Processing for <${node.aseid.entity}>`);
-                // -------------------------------------------------------
-                // 3) go through all listeners and register them in the scene
-                // -------------------------------------------------------
-                const listeners = syntax.extractListeners(node.markup);
-                for (let i = 0; i < listeners.length; i++) {
-                    const listener = listeners[i];
-                    console.time(`Compile: Listener [${i}] "${listener.name}" for <${node.aseid.entity}>`);
-
-                    //  target emitter should be custom component that owns the listener
-                    let currentScene = scene;
-                    let targetNode = node
-
-                    while (!syntax.isCustomNode(targetNode) && currentScene.parent) {
-                        targetNode = currentScene.parent.scope.resolve<AreNode>(new A_Dependency(AreNode, {
-                            query: {
-                                aseid: currentScene.id
-                            }
-                        })) as AreNode
-
-                        currentScene = currentScene.parent;
-                    }
-
-                    const instruction = new AttachListenerInstruction(node, targetNode, listener);
-
-                    if (!parentScene.isPlanned(instruction)) {
-                        parentScene.plan(instruction);
-                        instruction.init();
-                    }
-
-                    console.timeEnd(`Compile: Listener [${i}] "${listener.name}" for <${node.aseid.entity}>`);
-                }
-                console.timeEnd(`Compile: Listeners Processing for <${node.aseid.entity}>`);
+        /**
+         * 1. Create & register Create Element Instructions to add it if no other cases presented
+         * 
+         * [!] Note: it can be removed by directives or modified if needed
+         */
+        scene.register(new AreDeclarationInstruction(
+            ARE_CONSTANTS__DEFAULT_SCENE_INSTRUCTIONS.CreateElement,
+            {
+                tag: node.type,
             }
-
-            console.time(`Compile: Child Nodes Compilation for <${node.aseid.entity}>`);
-            const sceneNodes = scene.nodes();
-            for (let i = 0; i < sceneNodes.length; i++) {
-                const sceneNode = sceneNodes[i];
-                const childTimerLabel = `Compile: Child Node [${i}] <${sceneNode.aseid.entity}> for Parent <${node.aseid.entity}>`;
-                console.time(childTimerLabel);
-
-                sceneNode.compile();
-
-                console.timeEnd(childTimerLabel);
-            }
-            console.timeEnd(`Compile: Child Nodes Compilation for <${node.aseid.entity}>`);
-
-        } catch (error) {
-            logger?.error(error);
+        ));
+        /**
+         * 2. Prepare Instructions for directives and add then to render plan.
+         */
+        for (let i = 0; i < node.directives.length; i++) {
+            const directive = node.directives[i];
+            directive.compile();
         }
-
-        console.timeEnd(compileTimerLabel);
+        /**
+         * 3. Compile all bindings of the node, since they are part of the structure and content of the node and can affect the rendering logic and instructions, we need to compile them to ensure that they are properly processed and their instructions are added to the render plan.
+         */
+        for (let i = 0; i < node.bindings.length; i++) {
+            const binding = node.bindings[i];
+            binding.compile();
+        }
+        /**
+         * 4. Prepare Instructions for attributes and add then to render plan. 
+         */
+        for (let i = 0; i < node.attributes.length; i++) {
+            const attribute = node.attributes[i];
+            attribute.compile();
+        }
+        /**
+         * 5. Compile all events of the node, since they are part of the structure and content of the node and can affect the rendering logic and instructions, we need to compile them to ensure that they are properly processed and their instructions are added to the render plan.
+         */
+        for (let i = 0; i < node.events.length; i++) {
+            const event = node.events[i];
+            event.compile();
+        }
+        /**
+         * 6. Compile all nested nodes of the root node. 
+         */
+        for (let i = 0; i < node.children.length; i++) {
+            const child = node.children[i];
+            child.compile();
+        }
     }
+
+
     /**
      * Handles after compile lifecycle of the AreNode
      * 
@@ -470,7 +282,7 @@ export class AreCompiler extends A_Component {
      * @param args 
      */
     @A_Feature.Extend({
-        name: AreNodeFeatures.onCompile,
+        name: AreNodeFeatures.onAfterCompile,
         after: /.*/,
         scope: [AreNode]
     })
@@ -482,12 +294,405 @@ export class AreCompiler extends A_Component {
         ...args: any[]
     ) {
         const logger = scope.resolve<A_Logger>(A_Logger);
-        const component = scope.resolveOnce<Are>(A_FormatterHelper.toPascalCase(node.aseid.entity));
 
-        logger?.debug(scene.debugPrefix + `[Compile -> After] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
+        logger?.debug(`[Compile -> After] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
 
-        if (component)
-            feature.chain(component, AreFeatures.onAfterCompile, node.scope);
+        if (node.component)
+            feature.chain(node.component, AreFeatures.onAfterCompile, node.scope);
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // ----------------------------Are-Node Mount Section----------------------------------------
+    // -----------------------------------------------------------------------------------------
+    /**
+     *  Handles before mount lifecycle of the AreNode
+     * 
+     * @param node 
+     * @param scope 
+     * @param scene 
+     * @param feature 
+     * @param args 
+     */
+    @A_Feature.Extend({
+        name: AreNodeFeatures.onBeforeMount,
+        before: /.*/,
+        scope: [AreNode]
+    })
+    beforeMount(
+        @A_Inject(A_Caller) node: AreNode,
+        @A_Inject(A_Scope) scope: A_Scope,
+        @A_Inject(AreScene) scene: AreScene,
+        @A_Inject(A_Feature) feature: A_Feature,
+        ...args: any[]
+    ) {
+        const logger = scope.resolve<A_Logger>(A_Logger);
+
+        logger?.debug(`[Mount -> Before] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
+
+        if (node.component)
+            feature.chain(node.component, AreFeatures.onBeforeMount, node.scope);
+    }
+    /**
+     * Mount the AreNode into the Host
+     * 
+     * @param scope 
+     * @param node 
+     * @param scene 
+     * @param logger 
+     */
+    @A_Feature.Extend({
+        name: AreNodeFeatures.onMount,
+        scope: [AreNode]
+    })
+    mount(
+        /**
+         * Node to be mounted
+         */
+        @A_Inject(A_Caller) node: AreNode,
+        /**
+         * Node Content
+         */
+        @A_Inject(AreScene) scene: AreScene,
+
+        @A_Dependency.All()
+        @A_Dependency.Flat()
+        @A_Inject(AreNode) children: AreNode[],
+
+
+        @A_Inject(A_Logger) logger?: A_Logger,
+        ...args: any[]
+    ) {
+        /**
+         * 1. We should simply run and render node itself.
+         */
+        node.render();
+        /**
+         * 2. Then go through all children of the node and mount the.
+         */
+        for (let i = 0; i < children.length; i++) {
+            const child = children[i];
+            child.mount();
+        }
+    }
+
+    /**
+     * Handles after mount lifecycle of the AreNode
+     * 
+     * @param node 
+     * @param scope 
+     * @param scene 
+     * @param feature 
+     * @param args 
+     */
+    @A_Feature.Extend({
+        name: AreNodeFeatures.onAfterMount,
+        after: /.*/,
+        scope: [AreNode]
+    })
+    afterMount(
+        /**
+         * Node to be mounted
+         */
+        @A_Inject(A_Caller) node: AreNode,
+        @A_Inject(A_Scope) scope: A_Scope,
+        @A_Inject(AreScene) scene: AreScene,
+        @A_Inject(A_Feature) feature: A_Feature,
+        ...args: any[]
+    ) {
+        const logger = scope.resolve<A_Logger>(A_Logger);
+
+        logger?.debug(`[Mount -> After] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
+
+        if (node.component)
+            feature.chain(node.component, AreFeatures.onAfterMount, node.scope);
+
+
+
+
+    }
+
+
+    // -----------------------------------------------------------------------------------------
+    // ----------------------------Are-Node Render Section----------------------------------------
+    // -----------------------------------------------------------------------------------------
+    @A_Feature.Extend({
+        name: AreNodeFeatures.onRender,
+        scope: [AreNode]
+    })
+    render(
+        /**
+         * Node to be rendered
+         */
+        @A_Inject(A_Caller) node: AreNode,
+        /**
+         * Node Content
+         */
+        @A_Inject(AreScene) scene: AreScene,
+
+
+        @A_Inject(A_Logger) logger?: A_Logger,
+        ...args: any[]
+    ) {
+        /**
+          * 1. First we need to get all changes to be applied and reverted during render operation
+          */
+        const { toApply, toRevert } = scene.changes
+        /**
+         * 2. Then we need to revert all instructions from scene
+         */
+        for (const instruction of toRevert) {
+            try {
+                instruction.revert();
+                scene.unApply(instruction);
+            } catch (error) {
+                instruction.apply();
+                scene.apply(instruction);
+            }
+        }
+        /**
+         * 3. Finally we should apply everything that needs to be applied
+         */
+        for (const instruction of toApply) {
+            try {
+                /**
+                 * 3.1. if everything went well then just simply apply and attach to state this instruction
+                 */
+                instruction.apply();
+                scene.apply(instruction);
+            } catch (error) {
+                /**
+                 * 2.2. if any error happened we simply revert the instruction and remove it from the state
+                 */
+                instruction.revert();
+                scene.unApply(instruction);
+            }
+        }
+
+    }
+
+
+
+
+    // -----------------------------------------------------------------------------------------
+    // ----------------------------Are-Node Update Section----------------------------------------
+    // -----------------------------------------------------------------------------------------
+    /**
+     * Handles before update lifecycle of the AreNode
+     * 
+     * @param node 
+     * @param scope 
+     * @param scene 
+     * @param feature 
+     * @param args 
+     */
+    @A_Feature.Extend({
+        name: AreNodeFeatures.onUpdate,
+        before: /.*/,
+        scope: [AreNode]
+    })
+    beforeUpdate(
+        @A_Inject(A_Caller) node: AreNode,
+        @A_Inject(A_Scope) scope: A_Scope,
+        @A_Inject(AreScene) scene: AreScene,
+        @A_Inject(A_Feature) feature: A_Feature,
+        ...args: any[]
+    ) {
+        const logger = scope.resolve<A_Logger>(A_Logger);
+
+        logger?.debug(`[Update -> Before] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
+
+
+        if (node.component)
+            feature.chain(node.component, AreFeatures.onBeforeUpdate, node.scope);
+    }
+    /**
+     * Updates the AreNode in the AreScene
+     * 
+     * @param node 
+     * @param scene 
+     * @param args 
+     */
+    @A_Feature.Extend({
+        name: AreNodeFeatures.onUpdate,
+        scope: [AreNode]
+    })
+    update(
+        /**
+         * Node to be updated
+         */
+        @A_Inject(A_Caller) node: AreNode,
+
+        @A_Dependency.All()
+        @A_Dependency.Flat()
+        @A_Inject(AreNode) children: AreNode[],
+
+        ...args: any[]
+    ) {
+        /**
+         * [!!!] TODO: replace it to not go through all children and attributes and directives every time, but only go through the ones that are impacted by the change, for example by using AreCache to track the impacted paths and related attributes and directives, so we can optimize the update process and avoid unnecessary updates and renders.
+         */
+        /**
+         * 1. First we need to update all directives that may impact 
+         *    component visibility and other structural and behavioral aspects of the node,
+         */
+        for (let i = 0; i < node.directives.length; i++) {
+            const directive = node.directives[i];
+            directive.update();
+        }
+        /**
+         * 2. Then check all bindings changes
+         */
+        for (let i = 0; i < node.bindings.length; i++) {
+            const binding = node.bindings[i];
+            binding.update();
+        }
+        /**
+         * 3. Check changes in interpolations
+         */
+        for (let i = 0; i < node.interpolations.length; i++) {
+            const interpolation = node.interpolations[i];
+            interpolation.update();
+        }
+        /**
+         * 4. Render everything that changed 
+         */
+        node.render();
+        /**
+         * 5. And finally go though all children of the node and update the. 
+         */
+        for (let i = 0; i < children.length; i++) {
+            const child = children[i];
+            child.update();
+        }
+    }
+    /**
+     * Handles after update lifecycle of the AreNode
+     * 
+     * @param node 
+     * @param scope 
+     * @param scene 
+     * @param feature 
+     * @param args 
+     */
+    @A_Feature.Extend({
+        name: AreNodeFeatures.onUpdate,
+        after: /.*/,
+        scope: [AreNode]
+    })
+    afterUpdate(
+        @A_Inject(A_Caller) node: AreNode,
+        @A_Inject(A_Scope) scope: A_Scope,
+        @A_Inject(AreScene) scene: AreScene,
+        @A_Inject(A_Feature) feature: A_Feature,
+        ...args: any[]
+    ) {
+        const logger = scope.resolve<A_Logger>(A_Logger);
+
+        logger?.debug(`[Update -> After] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
+
+
+        if (node.component)
+            feature.chain(node.component, AreFeatures.onAfterUpdate, node.scope);
+    }
+
+
+
+
+    // -----------------------------------------------------------------------------------------
+    // -------------------------Are-Node Unmount Section----------------------------------------
+    // -----------------------------------------------------------------------------------------
+    /**
+     * Handles before unmount lifecycle of the AreNode
+     * 
+     * @param node 
+     * @param scope 
+     * @param scene 
+     * @param feature 
+     * @param args 
+     */
+    @A_Feature.Extend({
+        name: AreNodeFeatures.onBeforeUnmount,
+        before: /.*/,
+        scope: [AreNode]
+    })
+    beforeUnmount(
+        @A_Inject(A_Caller) node: AreNode,
+        @A_Inject(A_Scope) scope: A_Scope,
+        @A_Inject(AreScene) scene: AreScene,
+        @A_Inject(A_Feature) feature: A_Feature,
+        ...args: any[]
+    ) {
+        const logger = scope.resolve<A_Logger>(A_Logger);
+
+        logger?.debug(`[Unmount -> Before] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
+
+        if (node.component)
+            feature.chain(node.component, AreFeatures.onBeforeUnmount, node.scope);
+    }
+
+    /**
+     * Unmounts the AreNode from the Host
+     * 
+     * @param node 
+     * @param scene 
+     * @param args 
+     *  
+     */
+    @A_Feature.Extend({
+        name: AreNodeFeatures.onUnmount,
+        scope: [AreNode]
+    })
+    unmount(
+        @A_Inject(A_Caller) node: AreNode,
+        @A_Inject(AreScene) scene: AreScene,
+
+        ...args: any[]
+    ) {
+        /**
+         * 1. We have to revert all instructions related to this node and remove them from the state 
+         */
+        for (let i = 0; i < scene.applied.length; i++) {
+            const instruction = scene.applied[i];
+            instruction.revert();
+            scene.unApply(instruction);
+        }
+        /**
+         * 2. Then we should unmount all children of the node
+         */
+        for (let i = 0; i < node.children.length; i++) {
+            const child = node.children[i];
+            child.unmount();
+        }
+
+    }
+
+    /**
+     * Handles after unmount lifecycle of the AreNode
+     * 
+     * @param node 
+     * @param scope 
+     * @param scene 
+     * @param feature 
+     * @param args 
+     */
+    @A_Feature.Extend({
+        name: AreNodeFeatures.onAfterUnmount,
+        after: /.*/,
+        scope: [AreNode]
+    })
+    afterUnmount(
+        @A_Inject(A_Caller) node: AreNode,
+        @A_Inject(A_Scope) scope: A_Scope,
+        @A_Inject(AreScene) scene: AreScene,
+        @A_Inject(A_Feature) feature: A_Feature,
+        ...args: any[]
+    ) {
+        const logger = scope.resolve<A_Logger>(A_Logger);
+
+        logger?.debug(`[Unmount -> After] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
+
+        if (node.component)
+            feature.chain(node.component, AreFeatures.onAfterUnmount, node.scope);
     }
 
 
@@ -518,469 +723,200 @@ export class AreCompiler extends A_Component {
     ) {
         const logger = scope.resolve<A_Logger>(A_Logger);
 
-        logger?.debug(scene.debugPrefix + `Event Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}} for event: ${event.name}`);
+        logger?.debug(`Event Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}} for event: ${event.name}`);
 
-        const component = scope.resolveOnce<Are>(A_FormatterHelper.toPascalCase(node.aseid.entity));
-
-        if (component) {
-
+        if (node.component) {
             try {
-
-                await feature.chain(component, event.name, scope);
-
+                await feature.chain(node.component, event.name, scope);
             } catch (error) {
                 logger?.error(error);
             }
         }
     }
 
+
+
     // -----------------------------------------------------------------------------------------
-    // ----------------------------Are-Node Render Section----------------------------------------
+    // -------------------------Are-Interpolation Compile Section-----------------------------------
     // -----------------------------------------------------------------------------------------
     /**
-     *  Handles before render lifecycle of the AreNode
+     * Default compile method for interpolations, which can be overridden by specific implementations if needed.
      * 
-     * @param node 
+     * @param interpolation 
      * @param scope 
      * @param scene 
+     * @param store 
      * @param feature 
-     * @param args 
      */
     @A_Feature.Extend({
-        name: AreNodeFeatures.onBeforeRender,
-        before: /.*/,
-        scope: [AreNode]
+        name: AreInterpolationFeatures.COMPILE,
+        scope: [AreInterpolation]
     })
-    beforeRender(
-        @A_Inject(A_Caller) node: AreNode,
-        @A_Inject(A_Scope) scope: A_Scope,
+    compileInterpolation(
+        @A_Inject(A_Caller) interpolation: AreInterpolation,
+
+        @A_Dependency.All()
+        @A_Dependency.Flat()
+        @A_Inject(AreDeclarationInstruction) declarations: AreDeclarationInstruction[],
+
         @A_Inject(AreScene) scene: AreScene,
-        @A_Inject(A_Feature) feature: A_Feature,
+
+        @A_Dependency.Parent()
+        @A_Inject(AreStore) parentStore: AreStore,
         ...args: any[]
     ) {
-        const logger = scope.resolve<A_Logger>(A_Logger);
-        const component = scope.resolveOnce<Are>(A_FormatterHelper.toPascalCase(node.aseid.entity));
+        for (let i = 0; i < declarations.length; i++) {
+            const declaration = declarations[i];
 
-        logger?.debug(scene.debugPrefix + `[Render -> Before] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
+            const value = parentStore.get(`${declaration.group}.${interpolation.key}`)
+                || parentStore.get(interpolation.key);
 
-        if (component)
-            feature.chain(component, AreFeatures.onBeforeRender, node.scope);
+            scene.register(new AreMutationInstruction(
+                ARE_CONSTANTS__DEFAULT_SCENE_INSTRUCTIONS.AddInterpolation,
+                declaration,
+                {
+                    raw: interpolation.raw,
+                    key: interpolation.key,
+                    value: value,
+                }
+            ));
+
+        }
     }
-    /**
-     * Renders the AreNode into the AreScene
-     * 
-     * @param scope 
-     * @param node 
-     * @param scene 
-     * @param logger 
-     */
+
+
+
+
+    // -----------------------------------------------------------------------------------------
+    // -------------------------Are-Attribute Compile Section-----------------------------------
+    // -----------------------------------------------------------------------------------------
     @A_Feature.Extend({
-        name: AreNodeFeatures.onRender,
-        scope: [AreNode]
+        name: AreAttributeFeatures.COMPILE,
+        scope: [AreStaticAttribute]
     })
-    render(
-        /**
-         * Node to be mounted
-         */
-        @A_Inject(A_Caller) node: AreNode,
-        /**
-         * Template Parsing Syntax to be used
-         */
-        @A_Inject(AreSyntax) syntax: AreSyntax,
-        /**
-         * Node Content
-         */
+    compileStaticAttribute(
+        @A_Inject(A_Caller) attribute: AreAttribute,
+
+        @A_Dependency.All()
         @A_Dependency.Flat()
+        @A_Inject(AreDeclarationInstruction) declarations: AreDeclarationInstruction[],
+
         @A_Inject(AreScene) scene: AreScene,
-        /**
-         * Scene where target node is registered
-         * 
-         * [!] For Root Node it doesn't exists
-         */
-        @A_Dependency.Parent()
-        @A_Inject(AreScene) parentScene?: AreScene,
+        ...args: any[]
+    ) {
+        for (let i = 0; i < declarations.length; i++) {
+            const declaration = declarations[i];
+            /**
+             * Default case when attribute was not able to be identified as a binding, directive, or event, we just want to add it as a regular attribute to the node. This is the most basic case for attributes that don't have any special behavior or processing logic, and it ensures that they are still rendered on the node even if they don't have any dynamic functionality.
+             */
+            scene.register(new AreMutationInstruction(
+                ARE_CONSTANTS__DEFAULT_SCENE_INSTRUCTIONS.AddAttribute,
+                declaration,
+                {
+                    name: attribute.name,
+                    value: attribute.content
+                }
+            ));
+        }
+    }
 
-
+    @A_Feature.Extend({
+        name: AreAttributeFeatures.COMPILE,
+        scope: [AreDirectiveAttribute]
+    })
+    compileDirectiveAttribute(
+        @A_Inject(A_Caller) attribute: AreAttribute,
+        @A_Inject(A_Scope) scope: A_Scope,
+        @A_Inject(A_Feature) feature: A_Feature,
         @A_Inject(A_Logger) logger?: A_Logger,
         ...args: any[]
     ) {
-        const renderTimerLabel = `Render Node <${node.aseid.entity}> ASEID: ${node.aseid.toString()}`;
-        console.time(renderTimerLabel);
+        /**
+         * 3. If the attribute is a directive, then we should find a component that is responsible for
+         *    the directive compiling logic, and call it. 
+         *    In case component is not found we just want to log a warning, 
+         *    since the directive may be handled by some parent component or simply is a mistake in the template.
+         */
+        const directiveHandlerComponent = scope.resolve<AreDirective>(`AreDirective${A_FormatterHelper.toPascalCase(attribute.name)}`) as AreDirective | undefined;
 
-        if (syntax.isRootNode(node)) {
-            logger?.debug('red', scene.debugPrefix + `Rendering Root Node <${node.aseid.entity}> ASEID: ${node.aseid.toString()}`);
-
-            console.time(`Render: Root Node Attachment for <${node.aseid.entity}>`);
-            new AttachRootNodeInstruction(node).apply(node.scope);
-            console.timeEnd(`Render: Root Node Attachment for <${node.aseid.entity}>`);
+        if (directiveHandlerComponent) {
+            feature.chain(directiveHandlerComponent, AreFeatures.onBeforeLoad, attribute.owner.scope);
         } else {
-
-            if (!parentScene) {
-                throw new AreCompilerError(
-                    AreCompilerError.RenderError,
-                    `Parent Scene not found for Node <${node.aseid.entity}> ASEID: ${node.aseid.toString()} during render process.`
-                );
-            }
-
-            logger?.debug('red', scene.debugPrefix + `Rendering  Child Node <${node.aseid.entity}> ASEID: ${node.aseid.toString()}`, parentScene);
-
-            console.time(`Render: Mount/Unmount Instructions Processing for <${node.aseid.entity}>`);
-            // 1) should be mounted or unmounted
-            const mountUnmountInstructions = parentScene.renderPlanFor(node, {
-                filter: (inst) => inst instanceof MountNodeInstruction || inst instanceof UnmountNodeInstruction,
-            });
-
-            for (let i = 0; i < mountUnmountInstructions.length; i++) {
-                const instruction = mountUnmountInstructions[i];
-                const instructionTimerLabel = `Render: Mount/Unmount Instruction [${i}] "${instruction.action}" for <${node.aseid.entity}>`;
-                console.time(instructionTimerLabel);
-
-                if (parentScene.getState(instruction)) {
-                    logger?.debug('yellow', scene.debugPrefix + `Skipping Action '${instruction.action}' for Node <${node.aseid.entity}> ASEID: ${node.aseid.toString()} already processed.`);
-                    console.timeEnd(instructionTimerLabel);
-                    continue;
-                }
-
-                logger?.debug('red', scene.debugPrefix + `Processing ${instruction.action} Instruction for Node <${node.aseid.entity}> `);
-
-                instruction.apply();
-                parentScene.setState(instruction);
-
-                console.timeEnd(instructionTimerLabel);
-            }
-            console.timeEnd(`Render: Mount/Unmount Instructions Processing for <${node.aseid.entity}>`);
-
-            //  if There's no Mount Instruction planned, ite means that this node should not be rendered 
-            //  and any other instructions related to it should be ignored
-            if (!parentScene.isPlanned(new MountNodeInstruction(node, scene.path))) {
-                logger?.debug('yellow', scene.debugPrefix + `No Mount Instruction found for Node <${node.aseid.entity}> ASEID: ${node.aseid.toString()}. Skipping...`);
-                console.timeEnd(renderTimerLabel);
-                return;
-            }
-
-            console.time(`Render: Other Instructions Processing for <${node.aseid.entity}>`);
-            // 2) process other instructions
-            const otherInstructions = parentScene.renderPlanFor(node, {
-                order: [
-                    AddStyleInstruction,
-                    AttachListenerInstruction,
-                    AddAttributeInstruction,
-                    ReplaceInterpolationInstruction
-                ]
-            });
-
-            for (let i = 0; i < otherInstructions.length; i++) {
-                const instruction = otherInstructions[i];
-                const instructionTimerLabel = `Render: Instruction [${i}] "${instruction.action}" for <${node.aseid.entity}>`;
-                console.time(instructionTimerLabel);
-
-                if (parentScene.getState(instruction)) {
-                    logger?.debug('yellow', scene.debugPrefix + `Skipping Action '${instruction.action}' for Node <${node.aseid.entity}> ASEID: ${node.aseid.toString()} already processed.`);
-                    console.timeEnd(instructionTimerLabel);
-                    continue;
-                }
-
-                try {
-                    console.time(`Render: Execution Context Creation for Instruction [${i}] <${node.aseid.entity}>`);
-                    const executionContext = new A_ExecutionContext('AreBrowserCompiler: Mount Node Instruction');
-                    executionContext.set('content', scene)
-                    const applyScope = new A_Scope({ fragments: [executionContext] }).inherit(node.scope);
-                    console.timeEnd(`Render: Execution Context Creation for Instruction [${i}] <${node.aseid.entity}>`);
-
-                    console.time(`Render: Instruction Apply for [${i}] "${instruction.action}" <${node.aseid.entity}>`);
-                    instruction.apply(applyScope);
-                    console.timeEnd(`Render: Instruction Apply for [${i}] "${instruction.action}" <${node.aseid.entity}>`);
-
-                    applyScope.destroy();
-                    parentScene.setState(instruction);
-
-                } catch (error) {
-                    logger?.error(error);
-                }
-
-                console.timeEnd(instructionTimerLabel);
-            }
-            console.timeEnd(`Render: Other Instructions Processing for <${node.aseid.entity}>`);
+            logger?.warning(`Directive handler component not found for directive: ${attribute.name}. Make sure to create a component named "AreDirective${A_FormatterHelper.toPascalCase(attribute.name)}" to handle this directive.`);
         }
-
-        console.time(`Render: Child Nodes Rendering for <${node.aseid.entity}>`);
-        const childNodes = scene.nodes();
-        for (let i = 0; i < childNodes.length; i++) {
-            const child = childNodes[i];
-            const childTimerLabel = `Render: Child Node [${i}] <${child.aseid.entity}> for Parent <${node.aseid.entity}>`;
-            console.time(childTimerLabel);
-
-            console.log(scene.debugPrefix + `Rendering Child Node <${child.aseid.entity}> ASEID: ${child.aseid.toString()}`);
-            child.render();
-
-            console.timeEnd(childTimerLabel);
-        }
-        console.timeEnd(`Render: Child Nodes Rendering for <${node.aseid.entity}>`);
-
-        console.timeEnd(renderTimerLabel);
-    }
-    /**
-     * Handles after render lifecycle of the AreNode
-     * 
-     * @param node 
-     * @param scope 
-     * @param scene 
-     * @param feature 
-     * @param args 
-     */
-    @A_Feature.Extend({
-        name: AreNodeFeatures.onAfterRender,
-        after: /.*/,
-        scope: [AreNode]
-    })
-    afterRender(
-        /**
-         * Node to be rendered
-         */
-        @A_Inject(A_Caller) node: AreNode,
-        @A_Inject(A_Scope) scope: A_Scope,
-        @A_Inject(AreScene) scene: AreScene,
-        @A_Inject(A_Feature) feature: A_Feature,
-        ...args: any[]
-    ) {
-        const logger = scope.resolve<A_Logger>(A_Logger);
-        const component = this.component(node);
-
-        logger?.debug(scene.debugPrefix + `[Render -> After] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
-
-
-        if (component)
-            feature.chain(component, AreFeatures.onAfterRender, node.scope);
-
     }
 
-    // -----------------------------------------------------------------------------------------
-    // ----------------------------Are-Node Update Section----------------------------------------
-    // -----------------------------------------------------------------------------------------
-    /**
-     * Handles before update lifecycle of the AreNode
-     * 
-     * @param node 
-     * @param scope 
-     * @param scene 
-     * @param feature 
-     * @param args 
-     */
     @A_Feature.Extend({
-        name: AreNodeFeatures.onUpdate,
-        before: /.*/,
-        scope: [AreNode]
+        name: AreAttributeFeatures.COMPILE,
+        scope: [AreEventAttribute]
     })
-    beforeUpdate(
-        @A_Inject(A_Caller) node: AreNode,
-        @A_Inject(A_Scope) scope: A_Scope,
-        @A_Inject(AreScene) scene: AreScene,
-        @A_Inject(A_Feature) feature: A_Feature,
-        ...args: any[]
-    ) {
-        const logger = scope.resolve<A_Logger>(A_Logger);
+    compileEventAttribute(
+        @A_Inject(A_Caller) attribute: AreEventAttribute,
 
-        logger?.debug(scene.debugPrefix + `[Update -> Before] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
-
-        const component = this.component(node);
-
-        if (component)
-            feature.chain(component, AreFeatures.onBeforeUpdate, node.scope);
-    }
-    /**
-     * Updates the AreNode in the AreScene
-     * 
-     * @param node 
-     * @param scene 
-     * @param args 
-     */
-    @A_Feature.Extend({
-        name: AreNodeFeatures.onUpdate,
-        scope: [AreNode]
-    })
-    update(
-        /**
-         * Node to be updated
-         */
-        @A_Inject(A_Caller) node: AreNode,
-        @A_Inject(AreScene) scene: AreScene,
-
-        ...args: any[]
-    ) {
-        console.time(scene.debugPrefix + `Updating Node <${node.aseid.entity}> ASEID: ${node.aseid.toString()}`);
-
-        console.time(`Node Compile Time for <${node.aseid.entity}> ASEID: ${node.aseid.toString()}>`);
-        node.compile();
-        console.timeEnd(`Node Compile Time for <${node.aseid.entity}> ASEID: ${node.aseid.toString()}>`);
-
-        console.time(`Node Render Time for <${node.aseid.entity}> ASEID: ${node.aseid.toString()}>`);
-        node.render();
-        console.timeEnd(`Node Render Time for <${node.aseid.entity}> ASEID: ${node.aseid.toString()}>`);
-
-        console.timeEnd(scene.debugPrefix + `Updating Node <${node.aseid.entity}> ASEID: ${node.aseid.toString()}`);
-
-    }
-    /**
-     * Handles after update lifecycle of the AreNode
-     * 
-     * @param node 
-     * @param scope 
-     * @param scene 
-     * @param feature 
-     * @param args 
-     */
-    @A_Feature.Extend({
-        name: AreNodeFeatures.onUpdate,
-        after: /.*/,
-        scope: [AreNode]
-    })
-    afterUpdate(
-        @A_Inject(A_Caller) node: AreNode,
-        @A_Inject(A_Scope) scope: A_Scope,
-        @A_Inject(AreScene) scene: AreScene,
-        @A_Inject(A_Feature) feature: A_Feature,
-        ...args: any[]
-    ) {
-        const logger = scope.resolve<A_Logger>(A_Logger);
-
-        logger?.debug(scene.debugPrefix + `[Update -> After] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
-
-        const component = this.component(node);
-
-        if (component)
-            feature.chain(component, AreFeatures.onAfterUpdate, node.scope);
-    }
-
-    // -----------------------------------------------------------------------------------------
-    // ----------------------------Are-Node Unmount Section----------------------------------------
-    // -----------------------------------------------------------------------------------------
-    /**
-     * Handles before unmount lifecycle of the AreNode
-     * 
-     * @param node 
-     * @param scope 
-     * @param scene 
-     * @param feature 
-     * @param args 
-     */
-    @A_Feature.Extend({
-        name: AreNodeFeatures.onUnmount,
-        before: /.*/,
-        scope: [AreNode]
-    })
-    beforeUnmount(
-        @A_Inject(A_Caller) node: AreNode,
-        @A_Inject(A_Scope) scope: A_Scope,
-        @A_Inject(AreScene) scene: AreScene,
-        @A_Inject(A_Feature) feature: A_Feature,
-        ...args: any[]
-    ) {
-        const logger = scope.resolve<A_Logger>(A_Logger);
-
-        logger?.debug(scene.debugPrefix + `[Unmount -> Before] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
-
-        const component = this.component(node);
-
-        if (component)
-            feature.chain(component, AreFeatures.onBeforeUnmount, node.scope);
-    }
-    /**
-     * Unmounts the AreNode from the AreScene
-     * 
-     * @param node 
-     * @param syntax 
-     * @param scene 
-     * @param parentScene 
-     * @param logger 
-     */
-    @A_Feature.Extend({
-        name: AreNodeFeatures.onUnmount,
-        scope: [AreNode]
-    })
-    unmount(
-        /**
-         * Node to be unmounted
-         */
-        @A_Inject(A_Caller) node: AreNode,
-        /**
-         * Template Parsing Syntax to be used
-         */
-        @A_Inject(AreSyntax) syntax: AreSyntax,
-        /**
-         * Node Content
-         */
+        @A_Dependency.All()
         @A_Dependency.Flat()
+        @A_Inject(AreDeclarationInstruction) declarations: AreDeclarationInstruction[],
+
         @A_Inject(AreScene) scene: AreScene,
-        /**
-         * Scene where target node is registered
-         * 
-         * [!] For Root Node it doesn't exists
-         */
-        @A_Dependency.Parent()
-        @A_Inject(AreScene) parentScene?: AreScene,
-
-        @A_Inject(A_Logger) logger?: A_Logger,
-    ) {
-        try {
-
-
-            logger?.debug('red', scene.debugPrefix + `Unmounting Node <${node.aseid.entity}> ASEID: ${node.aseid.toString()}`);
-
-            if (!syntax.isRootNode(node)) {
-                if (!parentScene) {
-                    throw new AreCompilerError(
-                        AreCompilerError.RenderError,
-                        `Parent Scene not found for Node <${node.aseid.entity}> ASEID: ${node.aseid.toString()} during unmount process.`
-                    );
-                }
-
-                for (const instruction of parentScene.renderPlanFor(node)) {
-                    if (instruction.node === node) {
-                        instruction.revert(node.scope);
-                        parentScene.dropState(instruction);
-                        parentScene.unPlan(instruction);
-                    }
-                }
-            }
-
-            for (const child of scene.nodes()) {
-                child.unmount();
-            }
-
-            // await node.reset();
-        } catch (error) {
-            logger?.error(error);
-        }
-    }
-    /**
-     * Handles after unmount lifecycle of the AreNode
-     * 
-     * @param node 
-     * @param scope 
-     * @param scene 
-     * @param feature 
-     * @param args
-     */
-    @A_Feature.Extend({
-        name: AreNodeFeatures.onUnmount,
-        after: /.*/,
-        scope: [AreNode]
-    })
-    afterUnmount(
-        @A_Inject(A_Caller) node: AreNode,
-        @A_Inject(A_Scope) scope: A_Scope,
-        @A_Inject(AreScene) scene: AreScene,
-        @A_Inject(A_Feature) feature: A_Feature,
         ...args: any[]
     ) {
-        const logger = scope.resolve<A_Logger>(A_Logger);
 
-        logger?.debug(scene.debugPrefix + `[Unmount -> After] Component Trigger for <${node.aseid.entity}>  with aseid :{${node.aseid.toString()}}`);
+        for (let i = 0; i < declarations.length; i++) {
+            const declaration = declarations[i];
+            /**
+             * 2. In case the attribute is an event listener, then 
+             *    we should simply add a callback handler that will be used to proxy an event 
+             *    into the ComponentNode component.  
+             *[!] In this case AreAttribute is AreEventAttribute that has prepared callback function to be used 
+             *    in the event listener. It is important to store callback function once 
+             *    to prevent duplicated functions in case of multiple compilations during development.
+             */
+            scene.register(new AreMutationInstruction(
+                ARE_CONSTANTS__DEFAULT_SCENE_INSTRUCTIONS.AddListener,
+                declaration,
+                {
+                    name: attribute.name,
+                    callback: attribute.callback
+                }));
+        }
+    }
 
-        const component = this.component(node);
 
-        if (component)
-            feature.chain(component, AreFeatures.onAfterUnmount, node.scope);
+    @A_Feature.Extend({
+        name: AreAttributeFeatures.COMPILE,
+        scope: [AreBindingAttribute]
+    })
+    compileBindingAttribute(
+        @A_Inject(A_Caller) attribute: AreBindingAttribute,
+
+        @A_Dependency.All()
+        @A_Dependency.Flat()
+        @A_Inject(AreDeclarationInstruction) declarations: AreDeclarationInstruction[],
+
+        @A_Inject(AreScene) scene: AreScene,
+        @A_Dependency.Parent()
+        @A_Inject(AreStore) parentStore: AreStore,
+        ...args: any[]
+    ) {
+
+        for (let i = 0; i < declarations.length; i++) {
+            const declaration = declarations[i];
+
+            const value = parentStore.get(`${declaration.group}.${attribute.content}`)
+                || parentStore.get(attribute.content);
+
+            /**
+             * 1. In case the attribute is a binding then we just need to extract it value 
+             *    and plan it rendering instructions
+             */
+            scene.register(new AreMutationInstruction(
+                ARE_CONSTANTS__DEFAULT_SCENE_INSTRUCTIONS.AddAttribute,
+                declaration,
+                {
+                    name: attribute.name,
+                    value
+                }));
+        }
     }
 
 

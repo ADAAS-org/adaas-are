@@ -1,3 +1,9 @@
+export type AreSyntaxAttributeType = 'directive'
+    | 'binding'
+    | 'event'
+    | 'static'
+    | 'custom';
+
 
 
 export type AreSyntaxInitOptions = {
@@ -15,19 +21,22 @@ export type AreSyntaxInitOptions = {
     interpolationDelimiters?: [string, string];
 
     /**
+     * Custom tag delimiters for template parsing.
+     * Default is ['<', '>'].
+     */
+    tagDelimiters: [string, string];
+
+    /**
      * Custom binding delimiters for data binding parsing.
      * Default is ':'.
      */
     bindingDelimiter?: string;
 
-
     /**
-     * Custom listener delimiters for event binding parsing.
+     * Custom events delimiters for event binding parsing.
      * Default is '@'.
      */
-    listenerDelimiter?: string;
-
-
+    eventDelimiter?: string;
 
     /**
      * Enable or disable strict mode for syntax parsing.
@@ -73,11 +82,7 @@ export type AreSyntaxInitOptions = {
 // ========================= SYNTAX Structures TYPES ================================
 // ==================================================================================
 
-export type AreAttribute = {
-    /**
-     * Tag name where the attribute was found
-     */
-    tag: string;
+export type AreAttributeTemplate = {
     /**
      * Property name (e.g. "label")
      */
@@ -91,20 +96,25 @@ export type AreAttribute = {
      */
     value: string;
     /**
-     * True if the attribute is a binding (e.g. :prop), false otherwise (e.g. prop="value")
+     * The prefix used in the attribute (e.g. ":" for bindings, "@" for listeners, "$" for directives)
      */
-    binding: boolean;
+    prefix: string;
+    /**
+     * The type of the attribute based on its prefix (e.g. "binding", "event", "directive", "static")
+     */
+    type: AreSyntaxAttributeType;
+
 };
 
-export type AreInterpolation = {
+export type AreInterpolationTemplate = {
     /**
      * Tag name where the interpolation was found
      */
     raw: string;
     /**
-     * Name of the interpolation (e.g. "userName")
+     * The key inside the interpolation (e.g. "user.name" for {{ user.name }})
      */
-    name: string;
+    key: string;
     /**
      * Position in the template where this interpolation was found 
      */
@@ -132,7 +142,7 @@ export type AreListener = {
 };
 
 
-export type AreDirective = {
+export type AreDirectiveTemplate = {
     /**
      * The tag name where the directive was found
      */

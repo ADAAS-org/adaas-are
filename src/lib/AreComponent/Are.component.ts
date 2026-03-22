@@ -1,6 +1,8 @@
-import { A_Component,  A_Feature } from "@adaas/a-concept";
+import { A_Component, A_Context, A_Feature, A_Meta, A_TYPES__Ctor } from "@adaas/a-concept";
 import { AreFeatures } from "./Are.constants";
 import { A_Frame } from "@adaas/a-frame";
+import { AreMeta } from "./Are.meta";
+import { A_Signal, A_SignalVector } from "@adaas/a-utils/a-signal";
 
 
 @A_Frame.Component({
@@ -8,12 +10,38 @@ import { A_Frame } from "@adaas/a-frame";
     name: 'Are',
     description: 'Base component class for A-Concept Rendering Engine (ARE) components. It provides lifecycle decorators and methods for defining templates, styles, and data, facilitating the creation of dynamic and interactive UI components within the ARE framework.'
 })
+@A_Meta.Define(AreMeta)
 export class Are extends A_Component {
 
 
     //==================================================================================
     //======================== LIFECYCLE DECORATORS ====================================
     //==================================================================================
+
+    /**
+     * Allows to apply Signal Vector as a condition for rendering the component. The component will be rendered only if at least one of the signals in the vector is active. This can be used to manage complex rendering logic and to optimize performance by ensuring that components are only rendered when necessary based on the defined conditions.
+     * 
+     * @param signals 
+     * @returns 
+     */
+    static Condition(vector: A_SignalVector)
+    static Condition(vector: Array<A_Signal>)
+    static Condition(signals: Array<A_Signal> | A_SignalVector) {
+        return function <TTarget extends A_TYPES__Ctor<Are>>(
+            target: TTarget
+        ): TTarget {
+            // Store meta info on the target class itself for the Meta decorator to pick up
+            const meta = A_Context.meta<AreMeta>(target);
+
+            if (Array.isArray(signals))
+                meta.vector = new A_SignalVector(signals);
+            else if (signals instanceof A_SignalVector)
+                meta.vector = signals;
+
+            return target;
+        };
+
+    }
 
     static get EventHandler() {
         return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {

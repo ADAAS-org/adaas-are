@@ -63,9 +63,9 @@
   },
   "homepage": "https://github.com/ADAAS-org/adaas-are#readme",
   "dependencies": {
-    "@adaas/a-concept": "^0.3.1",
-    "@adaas/a-frame": "^0.0.10",
-    "@adaas/a-utils": "^0.3.3"
+    "@adaas/a-concept": "^0.3.2",
+    "@adaas/a-frame": "^0.0.11",
+    "@adaas/a-utils": "^0.3.4"
   },
   "devDependencies": {
     "@types/chai": "^4.3.14",

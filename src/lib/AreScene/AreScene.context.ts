@@ -1,14 +1,36 @@
 import { A_Context, A_Dependency, A_Fragment, A_Scope, ASEID } from "@adaas/a-concept";
 import { AreIndex } from "../AreIndex/AreIndex.context";
-import { AreNode } from "@adaas/are/node";
-import { AreSCene_Serialized } from "./AreScene.types";
+import { AreNode, AreRootNode } from "@adaas/are/node";
+import { AreSCene_Serialized, AreSceneChanges } from "./AreScene.types";
 import { AreProps } from "@adaas/are/props";
 import { AreStore } from "@adaas/are/store";
-import { AreSceneInstruction } from "@adaas/are/scene-instruction";
+import { AreSceneInstruction, AreSceneInstructionsStatuses } from "@adaas/are/scene-instruction";
+import { A_Frame } from "@adaas/a-frame";
 
+
+
+@A_Frame.Component({
+    namespace: 'A-ARE',
+    name: 'AreScene',
+    description: 'AreScene fragment is keeps only what actually is displayed, while Are Node has everything related to the node like template, markup, styles, etc. Scene is responsible for rendering, managing state and lifecycle of the nodes within the scene.'
+})
 export class AreScene extends A_Fragment {
+    /**
+     * Plan is a queue of changes that should be applied to render the node
+     * 
+     * It works as FIFO, so the first instruction that should be applied is the first one in the queue, and so on.
+     */
+    protected _plan: Array<AreSceneInstruction> = [];
+    /**
+     * State is a list of instructions that are currently applied to the node, 
+     * so it represents the current state of the node in the scene.
+     * 
+     * It always in a reverse order of the plan, so the last instruction in the state is the first one that should be reverted when we need to revert the changes, and so on.
+     * 
+     * For example, if we have a node with two instructions in the plan: [Instruction A, Instruction B], and both of them are applied to the node, then the state will be [Instruction B, Instruction A], so when we need to revert the changes, we will revert Instruction B first, and then Instruction A.
+     */
+    protected _state: Array<AreSceneInstruction> = [];
 
-    protected _state: Set<string> = new Set();
 
     constructor(
         /**
@@ -19,364 +41,220 @@ export class AreScene extends A_Fragment {
         super({ name: id.toString() });
     }
 
+    /**
+     * Scene ID that corresponds to the root node's ID (part of ASEID) 
+     */
     get id(): string {
         return this.name;
     }
-
     /**
-     * Get the root scene of the current scene
+     * The scope where scene is registered. This scope is owned by AreNode 
      */
-    get root(): AreScene {
-        let currentScope: A_Scope | undefined = this.scope;
-        let rootScene: AreScene = this;
-
-        while (currentScope) {
-            const parentScene = currentScope.parent?.resolve<AreScene>(this.constructor as typeof AreScene);
-            if (parentScene) {
-                rootScene = parentScene;
-            }
-            currentScope = currentScope.parent;
-        }
-
-        return rootScene;
-    }
-
     get scope(): A_Scope {
         return A_Context.scope(this);
     }
-
-    get index(): AreIndex<string> {
-        return A_Context.scope(this).resolveFlat<AreIndex<string>>(AreIndex)!;
+    /**
+     * The owner node of the scene, which is the node that registered the scene in its scope. 
+     * This is typically the node that is responsible for rendering the scene and managing its lifecycle.
+     */
+    get owner(): AreRootNode {
+        return this.scope.issuer() as AreRootNode;
     }
-
-    get parent(): AreScene | undefined {
-        return A_Context.scope(this).parent?.resolveFlat<AreScene>(AreScene);
-    }
-
-    get children(): Array<AreScene> {
-        return this.scope.resolveFlatAll<AreNode>(AreNode)
-            .map(n => n.scope.resolveFlat<AreScene>(AreScene))
-            .filter(s => !!s);
-    }
-
-
-    get depth(): number {
-        let depth = 0;
-        let currentScope: A_Scope | undefined = this.scope;
-
-        while (currentScope) {
-            if (currentScope.parent && currentScope.parent.resolve<AreScene>(this.constructor as typeof AreScene)) {
-                depth++;
-            }
-            currentScope = currentScope.parent;
-        }
-
-        return depth;
-    }
-
-
-    get instructions(): Array<AreSceneInstruction> {
+    /**
+     * Returns All instructions are registered in the scene scope. 
+     */
+    get instructions(): AreSceneInstruction[] {
         return this.scope.resolveFlatAll<AreSceneInstruction>(AreSceneInstruction) || [];
     }
-
-
-    nodes(
-        filter?: (node: AreNode) => boolean
-    ): AreNode[] {
-
-        const nodes: AreNode[] = [];
-
-        for (const path of this.paths()) {
-
-            const node = this.index.nodeOf(path);
-
-            if (!node) {
-                continue;
-            }
-
-            if (filter && !filter(node)) {
-                continue;
-            }
-
-            nodes.push(node);
-        }
-
-        return nodes;
+    /**
+     * Plan is a queue of changes that should be applied to render the node
+     * 
+     * It works as FIFO, so the first instruction that should be applied is the first one in the queue, and so on.
+     */
+    get planned(): AreSceneInstruction[] {
+        return this._plan;
     }
-
-
-    renderPlanFor(
-        node: AreNode,
-        filter?: {
-            filter?: (instruction: AreSceneInstruction) => boolean,
-            changes?: Array<new (...args: any[]) => AreSceneInstruction>,
-            order?: Array<new (...args: any[]) => AreSceneInstruction>,
-        }
-    ) {
-
-        const actions: AreSceneInstruction[] = [];
-
-        const order = filter?.order || [];
-        const filterFn = filter?.filter;
-
-        let plan = this.instructions;
-
-        plan = plan.sort((a, b) => {
-            const aIndex = order.findIndex(instructionType => a instanceof instructionType);
-            const bIndex = order.findIndex(instructionType => b instanceof instructionType);
-
-            return (aIndex === -1 ? order.length : aIndex) - (bIndex === -1 ? order.length : bIndex);
-        });
-
-        if (filterFn) {
-            plan = plan.filter(filterFn);
-        }
-
-        for (const action of plan) {
-            if (action.node === node) {
-                actions.push(action);
-            }
-        }
-        return actions;
-    }
-
-    get debugPrefix() {
-        return `${' - '.repeat(this.depth)}`
-    }
-
-    get path(): string {
-        if (!this.parent)
-            return '';
-        else {
-            const ownerNode = this.parent.scope.resolve<AreNode>(new A_Dependency(AreNode, {
-                flat: true,
-                query: {
-                    aseid: this.id
-                }
-            })) as AreNode;
-
-            const NodePath = this.parent.index.pathOf(ownerNode);
-
-            return this.parent.path ? (this.parent.path + '.' + NodePath) : NodePath!;
-        }
-    }
-
-    *paths(): Iterable<string> {
-        let paths = this.index.paths;
-
-        //  create proper tree sequence
-        paths.sort((a, b) => {
-            const aParsed = a.split('.').map(part => parseInt(part, 10));
-            const bParsed = b.split('.').map(part => parseInt(part, 10));
-
-            const len = Math.min(aParsed.length, bParsed.length);
-            for (let i = 0; i < len; i++) {
-                if (aParsed[i] !== bParsed[i]) {
-                    return aParsed[i] - bParsed[i];
-                }
-            }
-            return aParsed.length - bParsed.length;
-        });
-
-        // yield paths
-        for (const path of paths) {
-            yield path;
-        }
-    }
-
-    plan(instruction: AreSceneInstruction) {
-        try {
-            this.scope.register(instruction);
-        } catch (error) {
-        }
-    }
-
-    unPlan(
-        instruction: AreSceneInstruction
-    ) {
-        const planned = this.getPlanned(instruction);
-
-        try {
-            if (planned)
-                this.scope.deregister(planned);
-        } catch (error) {
-
-        }
-    }
-
-    isAttached(node: AreNode): boolean {
-        return !!(this.scope.resolve<AreNode>(new A_Dependency(AreNode, {
-            flat: true,
-            query: {
-                aseid: node.aseid
-            }
-        })));
-    }
-
-    attach(node: AreNode): void {
-        this.scope.register(node);
-        node.scope.inherit(this.scope)
-    }
-
-    sceneOf(node: AreNode): AreScene | undefined {
-        return node.scope.resolveFlat<AreScene>(AreScene);
-    }
-
-    propsOf(node: AreNode): AreProps {
-        return node.scope.resolveFlat<AreProps>(AreProps)!;
-    }
-
-    storeOf(node: AreNode): AreStore {
-        return node.scope.resolveFlat<AreStore>(AreStore)!;
-    }
-    isPlanned(action: AreSceneInstruction): boolean {
-        return this.getPlanned(action) !== undefined;
+    /**
+     * State is a list of instructions that are currently applied to the node, 
+     * so it represents the current state of the node in the scene.
+     * 
+     * It always in a reverse order of the plan, so the last instruction in the state is the first one that should be reverted when we need to revert the changes, and so on.
+     * 
+     * For example, if we have a node with two instructions in the plan: [Instruction A, Instruction B], and both of them are applied to the node, then the state will be [Instruction B, Instruction A], so when we need to revert the changes, we will revert Instruction B first, and then Instruction A.
+     */
+    get applied(): AreSceneInstruction[] {
+        return this._state.reverse(); // we reverse the state to have the correct order of instructions, so the first instruction in the state is the first one that should be reverted when we need to revert the changes, and so on.
     }
 
     /**
-     * It returns planned instruction instance from the scene
+     * Should return instructions to be reverted and to be applied. 
+     * A difference between plan vs state is that plan is what should be applied to the scene, 
+     * while state is what currently applied to the scene. 
      * 
-     * [!] Only Planned instructions can be used for state checking
+     */
+    get changes(): AreSceneChanges {
+        const toApply = this.planned.filter(i => !this.isApplied(i));
+        const toRevert = this.applied.filter(i => !this.isInPlan(i));
+
+        return {
+            toApply,
+            toRevert,
+        }
+    }
+
+
+    //===============================================================================================
+    //============================= Scene Primary Methods ===========================================
+    //===============================================================================================
+    /**
+     * Method that should register the instruction as a basic draw plan.
+     * 
+     * [!] Note: Comparing to plan method this one Adds Instruction to the node to keep original instructions 
+     *     AND to PLAN to set the default rendering procedure. 
      * 
      * @param instruction 
      * @returns 
      */
-    getPlanned<T extends AreSceneInstruction>(
-        /**
-         * Should be instruction instance to get
-         */
-        instruction: T
-    ): T | undefined {
+    register(instruction: AreSceneInstruction) {
+        const registered = this.getRegistered(instruction);
 
-        const planned = this.scope.resolve<AreSceneInstruction>(new A_Dependency(AreSceneInstruction, {
-            flat: true,
-            query: {
-                aseid: instruction.aseid.toString()
-            }
-        })) as T | undefined;
-
-        return planned;
+        if (!registered) {
+            this.scope.register(instruction);
+            this.plan(instruction);
+        }
     }
-
     /**
-     * Operation Only applicable from Plan -> State
-     * 
-     * So only instructions presented in the plan can be moved to state
-     * State is a set of instructions that are currently applied to the scene
+     * Allows to deregister method from original initial node scope, so it will be removed from the node and will not be rendered anymore.
      * 
      * @param instruction 
      */
-    setState(
-        /**
-         * Should be instruction instance to apply
-         */
-        instruction: AreSceneInstruction
-    ) {
+    deregister(instruction: AreSceneInstruction) {
+        const registered = this.getRegistered(instruction);
+
+        if (registered) {
+            this.scope.deregister(registered);
+            this.unPlan(registered);
+        }
+    }
+    /**
+     * Checks if the instruction is already registered in the scene scope. 
+     * 
+     * @param instruction 
+     * @returns 
+     */
+    isRegistered(instruction: AreSceneInstruction): boolean {
+        return !!this.getRegistered(instruction);
+    }
+    /**
+     * Returns the instruction if it's registered in the scene scope, otherwise returns undefined.
+     * 
+     * @param instruction 
+     * @returns 
+     */
+    getRegistered(instruction: AreSceneInstruction): AreSceneInstruction | undefined {
+        const found = this.scope.resolve(new A_Dependency(instruction.constructor as any, {
+            query: { aseid: instruction.aseid }
+        })) as AreSceneInstruction | undefined;
+
+        return found;
+    }
+
+    // ------------------------------------------------------------------------------------------------------------
+    // Scene Render Plan Methods
+    // ------------------------------------------------------------------------------------------------------------
+    /**
+     * Method that should register the instruction in the plan, so it will be rendered in the next render cycle.
+     * 
+     * @param instruction 
+     */
+    plan(instruction: AreSceneInstruction) {
         const planned = this.getPlanned(instruction);
-
-
-
-        if (planned) {
-            this._state.delete(planned.aseid.toString());
-            this._state.add(instruction.aseid.toString());
-        }
-    }
-
-
-    dropState<T extends AreSceneInstruction>(
-        /**
-         * Should be instruction instance to drop
-         */
-        instruction: T
-    ) {
-        const planned = this.getPlanned(instruction);
-
-        if (planned) {
-            this._state.delete(planned.aseid.toString());
-        }
-    }
-
-
-    resetPlan(
-        node: AreNode
-    ) {
-        for (const instruction of this.renderPlanFor(node)) {
-            if (instruction.node === node) {
-                this.unPlan(instruction);
-            }
-        }
-    }
-
-    resetState(
-        node: AreNode
-    ) {
-        for (const instruction of this.renderPlanFor(node)) {
-            if (instruction.node === node) {
-
-                this._state.delete(instruction.aseid.toString());
-            }
-        }
-    }
-
-
-    getState<T extends AreSceneInstruction>(
-        /**
-         * Should be instruction instance to get state for
-         */
-        instruction: T
-    ): T | undefined {
-
-
-        const planned = this.getPlanned(instruction);
-
 
         if (!planned) {
-            return undefined;
+            this._plan.push(instruction);
         }
-
-        if (this._state.has(planned.aseid.toString()))
-            return planned as T;
-        else
-            return undefined;
     }
-
-    revert(
-        /**
-         * Should be instruction instance to revert
-         */
+    /**
+     * Allows to remove instruction from the plan, so it will not be rendered anymore, but it will still be registered in the scene scope, so it can be planned again if needed.
+     * 
+     * @param instruction 
+     */
+    unPlan(
         instruction: AreSceneInstruction
     ) {
-        this._state.delete(instruction!.aseid.toString());
+        this._plan = this._plan.filter(i => i.aseid.toString() !== instruction.aseid.toString());
+    }
+    /**
+     * Checks if the instruction is already in the plan, so it will be rendered in the next render cycle.
+     * 
+     * @param instruction 
+     * @returns 
+     */
+    getPlanned(instruction: AreSceneInstruction): AreSceneInstruction | undefined {
+        const found = this._plan.find(i => i.aseid.toString() === instruction.aseid.toString());
+
+        return found;
+    }
+    /**
+     * Checks if the instruction is already in the plan, so it will be rendered in the next render cycle.
+     * 
+     * @param instruction 
+     * @returns 
+     */
+    isInPlan(instruction: AreSceneInstruction): boolean {
+        return !!this.getPlanned(instruction);
     }
 
+    // -------------------------------------------------------------------------------------------------------------
+    // Scene Apply Methods
+    // -------------------------------------------------------------------------------------------------------------
+    /**
+     * Method moves the instruction to state to keep it applied and to be able to revert it later if needed. The instruction should be already registered in the scene scope and planned to be applied, otherwise it will not be applied.
+     * 
+     * @param instruction 
+     */
+    apply(instruction: AreSceneInstruction) {
 
-    reset() {
-        this.index.clear();
-        this._state.clear();
-    }
-
-
-    toJSON(): AreSCene_Serialized {
-        return {
-            ...super.toJSON(),
-            children: Object.fromEntries(
-                Array.from(this.children).map(child => [
-                    child.id.toString(),
-                    child.toJSON()
-                ])
-            )
+        if (!this.isApplied(instruction)) {
+            this._state.push(instruction);
         }
     }
+    /**
+     * Method moves the instruction from state to unapply it and to be able to apply it later if needed. The instruction should be already registered in the scene scope and applied, otherwise it will not be unapplied.
+     * 
+     * @param instruction 
+     */
+    unApply(
+        instruction: AreSceneInstruction
+    ) {
+        this._state = this._state.filter(i => i.aseid.toString() !== instruction.aseid.toString());
+    }
+    /**
+     * Checks if the instruction is already in the state, so it is currently applied to the scene.
+     * 
+     * @param instruction 
+     * @returns 
+     */
+    getApplied(instruction: AreSceneInstruction): AreSceneInstruction | undefined {
+        const found = this._state.find(i => i.aseid.toString() === instruction.aseid.toString());
+
+        return found;
+    }
+    /**
+     * Checks if the instruction is already in the state, so it is currently applied to the scene.
+     * 
+     * @param instruction 
+     * @returns 
+     */
+    isApplied(instruction: AreSceneInstruction): boolean {
+        return !!this.getApplied(instruction);
+    }
+    /**
+     * Method that should reset the scene to the initial state, so it will clear the plan and state, but it will not deregister the instructions from the scene scope, so they will still be registered in the scene and can be planned and applied again if needed.
+     * 
+     */
+    reset() {
+        this._plan = [];
+        this._state = [];
+    }
 }
-
-
-
-
-
-//  Just to cover the proper lifecycle
-
-/*
-1) Create Scene with template from mounting point content
-2) Do indexing of the scene 
-
-*/

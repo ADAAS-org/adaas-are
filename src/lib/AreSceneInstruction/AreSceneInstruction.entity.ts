@@ -1,149 +1,118 @@
 
-import { A_Context, A_Entity, A_FormatterHelper, A_Scope } from "@adaas/a-concept";
+import { A_Caller, A_Context, A_Entity, A_Error, A_Feature, A_FormatterHelper, A_Inject, A_Scope } from "@adaas/a-concept";
 import { AreSceneInstructionNewProps } from "./AreSceneInstruction.types";
-import type { AreNode } from "@adaas/are/node";
 import { AreSceneInstructionFeatures } from "./AreSceneInstruction.constants";
-import { AreScene } from "@adaas/are/scene";
+import { AreCacheHelper } from "@adaas/are/helpers/AreChache.helper";
+import type { AreNode } from "../AreNode";
+import { AreHost } from "../AreHost";
 
 
 
 export class AreSceneInstruction<T extends Record<string, any> = Record<string, any>> extends A_Entity<AreSceneInstructionNewProps<T>> {
 
-    action!: string
-    node!: AreNode
+    name!: string
 
-    params?: T
-
-
-    hashSource!: string
+    protected _payload?: T
 
 
-    get scene(): AreScene {
-        return A_Context.scope(this).resolve(AreScene)!
+    protected _group: string | undefined
+
+    get payload(): T {
+        return this._payload || {} as T;
     }
 
     /**
-     * Generates even hash uses for deduplication
-     * 
-     * @param str 
+     * By default all instructions are independent, but if group is provided, it will be used to group instructions together, so they will be applied and reverted together. For example, if we have a CreateElement instruction with group "create-element-1", and we have an AddAttribute instruction with the same group "create-element-1", when we apply the CreateElement instruction, the AddAttribute instruction will be applied as well, and when we revert the CreateElement instruction, the AddAttribute instruction will be reverted as well.
      */
-    protected createHash(str?: string): string
-    protected createHash(str?: undefined): string
-    protected createHash(str?: Record<string, any>): string
-    protected createHash(str?: Array<any>): string
-    protected createHash(str?: number): string
-    protected createHash(str?: boolean): string
-    protected createHash(str?: null): string
-    protected createHash(map?: Map<any, any>): string
-    protected createHash(set?: Set<any>): string
-    protected createHash(str?: any): string {
-        let hashSource: string;
-
-        if (str instanceof Map) {
-            hashSource = JSON.stringify(Array.from(str.entries()));
-        } else if (str instanceof Set) {
-            hashSource = JSON.stringify(Array.from(str.values()));
-        } else {
-            switch (typeof str) {
-                case 'string':
-                    hashSource = str;
-                    break;
-                case 'undefined':
-                    hashSource = 'undefined';
-                    break;
-
-                case 'object':
-                    if ('toJSON' in str)
-                        hashSource = JSON.stringify(str.toJSON());
-
-                    else
-                        hashSource = JSON.stringify(str);
-                    break;
-                case 'number':
-                    hashSource = str.toString();
-                    break;
-                case 'boolean':
-                    hashSource = str ? 'true' : 'false';
-                    break;
-                case 'function':
-                    hashSource = str.toString();
-                    break;
-                default:
-                    hashSource = String(str);
-            }
-        }
-
-        let hash = 0, i, chr;
-        for (i = 0; i < hashSource.length; i++) {
-            chr = hashSource.charCodeAt(i);
-            hash = ((hash << 5) - hash) + chr;
-            hash |= 0; // Convert to 32bit integer
-        }
-
-        const hashString = hash.toString();
-
-        return hashString;
+    get group(): string {
+        return this.aseid.id
     }
 
+
+    get id(): string {
+        return this.aseid.id;
+    }
+
+    get owner(): AreNode {
+        return A_Context.scope(this).issuer<AreNode>()!;
+    }
+
+
     fromNew(newEntity: AreSceneInstructionNewProps<T>): void {
+
         const identity = newEntity.id || {
-            name: newEntity.action,
-            node: newEntity.node.aseid.toString(),
+            name: newEntity.name,
         };
 
-        const id = this.createHash(identity);
-
+        const id = AreCacheHelper.createHash(identity);
 
         this.aseid = this.generateASEID({
-            entity: A_FormatterHelper.toKebabCase(newEntity.action),
+            entity: A_FormatterHelper.toKebabCase(newEntity.name),
             id: id,
         });
 
-        this.action = newEntity.action;
-        this.node = newEntity.node;
-        this.params = newEntity.params;
-
+        this.name = newEntity.name;
+        this._payload = newEntity.payload
+        this._group = newEntity.group;
     }
 
 
-    update(params: Partial<T>): void {
-        this.params = {
-            ...this.params,
-            ...params,
-        } as T;
+    fromUndefined(): void {
+        throw new A_Error({
+            title: "Cannot create an instruction without properties",
+            description: "AreSceneInstruction cannot be created without properties. Please provide the necessary properties to create an instruction.",
+        })
     }
 
-
-    init(
-        scope?: A_Scope
-    ): void {
-        try {
-            this.call(AreSceneInstructionFeatures.Init, scope);
-        } catch (error) {
-
-        }
-    }
 
     apply(
         scope?: A_Scope
     ): void {
-        try {
-           return this.call(AreSceneInstructionFeatures.Apply, scope);
-        } catch (error) {
-
-        }
+        this.call(AreSceneInstructionFeatures.Apply, scope);
     }
 
     revert(
         scope?: A_Scope
     ): void {
-        try {
-            this.call(AreSceneInstructionFeatures.Revert, scope);
-        } catch (error) {
-
-        }
+        this.call(AreSceneInstructionFeatures.Revert, scope);
     }
 
+    // -----------------------------------------------------------------------------------------
+    // ----------------------------Are-Instruction Section----------------------------------------
+    // -----------------------------------------------------------------------------------------
+
+    @A_Feature.Extend({
+        name: AreSceneInstructionFeatures.Apply,
+    })
+    protected applyInstruction(
+        @A_Inject(A_Caller) instruction: AreSceneInstruction,
+        @A_Inject(AreHost) host: AreHost,
+        @A_Inject(A_Scope) scope: A_Scope,
+        @A_Inject(A_Feature) feature: A_Feature,
+        ...args: any[]
+    ) {
+        /**
+         * So we're looking for any instruction name in the host to be executed.
+         */
+        feature.chain(host, instruction.name + AreSceneInstructionFeatures.Apply, scope);
+    }
+
+
+    @A_Feature.Extend({
+        name: AreSceneInstructionFeatures.Revert,
+    })
+    protected revertInstruction(
+        @A_Inject(A_Caller) instruction: AreSceneInstruction,
+        @A_Inject(AreHost) host: AreHost,
+        @A_Inject(A_Scope) scope: A_Scope,
+        @A_Inject(A_Feature) feature: A_Feature,
+        ...args: any[]
+    ) {
+        /**
+         * So we're looking for any instruction name in the host to be executed.
+         */
+        feature.chain(host, instruction.name + AreSceneInstructionFeatures.Revert, scope);
+    }
 
 }
 

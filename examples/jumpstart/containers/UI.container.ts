@@ -35,9 +35,11 @@ export class UIContainer extends A_Service {
             entryPoints: [entryFile],
             outfile: outFile,
             bundle: true,            // ✅ includes all imports & node_modules
-            minify: config.get('A_CONCEPT_ENVIRONMENT') !== 'production' ? false : true,
+            // minify: config.get('A_CONCEPT_ENVIRONMENT') !== 'production' ? false : true,
+            minify: false,
             keepNames: true, // <— preserve the original function/class names
-            sourcemap: config.get('A_CONCEPT_ENVIRONMENT') !== 'production' ? 'inline' : false,
+            // sourcemap: config.get('A_CONCEPT_ENVIRONMENT') !== 'production' ? 'inline' : false,
+            sourcemap: false,
             // platform: "browser",
             // conditions: ["browser", "import", "default"],
             // mainFields: ["browser", "module", "main"],    // ✅ builds for browser

@@ -10,6 +10,7 @@ import { A_SignalBus } from "@adaas/a-utils/a-signal";
 import { A_Polyfill } from "@adaas/a-utils/a-polyfill";
 import { AreApp, AreContext, AreHTMLEngine, AreInitSignal, AreRoot, AreSyntax } from "src";
 import { AreSlot } from "src/lib/AreSlot/AreSlot.component";
+import { PromptTextArea } from "./components/PromptTextArea.component";
 
 
 // //  TODO: Fix for build system ---
@@ -44,6 +45,7 @@ import { AreSlot } from "src/lib/AreSlot/AreSlot.component";
                 AreRoot,
                 ConfigReader,
                 AreHTMLEngine,
+                PromptTextArea,
                 A_Logger,
                 AreSyntax,
                 ANavigation
