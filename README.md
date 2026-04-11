@@ -209,6 +209,8 @@ npm test
 ---
 
 ## License
+This project is licensed under the Apache License 2.0.
 
-ISC &copy; [ADAAS](https://adaas.org)
+© 2026 ADAAS YAZILIM LİMİTED ŞİRKETİ. All rights reserved.
+All original code and concepts are the intellectual property of ADAAS YAZILIM LİMİTED ŞİRKETİ.
 
