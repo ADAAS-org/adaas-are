@@ -1,8 +1,23 @@
 {
   "name": "@adaas/are",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "A-Concept Rendering Engine (ARE) is a powerful rendering engine designed to work seamlessly with the A-Concept framework. It provides developers with the tools and capabilities needed to create dynamic and interactive user interfaces for web applications.",
-  "keywords": ["a-concept", "a-frame", "a-utils", "rendering-engine", "web-components", "virtual-dom", "reactivity-system", "template-syntax", "lifecycle-management", "event-handling", "state-management", "scene-graph", "instruction-set", "are-engine"],
+  "keywords": [
+    "a-concept",
+    "a-frame",
+    "a-utils",
+    "rendering-engine",
+    "web-components",
+    "virtual-dom",
+    "reactivity-system",
+    "template-syntax",
+    "lifecycle-management",
+    "event-handling",
+    "state-management",
+    "scene-graph",
+    "instruction-set",
+    "are-engine"
+  ],
   "license": "Apache-2.0",
   "author": {
     "name": "ADAAS YAZILIM LİMİTED ŞİRKETİ",
@@ -63,7 +78,6 @@
     "echo-version": "echo $npm_package_version",
     "build": "tsup --config tsup.config.ts"
   },
-
   "dependencies": {
     "@adaas/a-concept": "^0.3.13",
     "@adaas/a-frame": "^0.0.22",
