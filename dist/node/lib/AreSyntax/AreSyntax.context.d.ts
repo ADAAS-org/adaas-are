@@ -1,15 +1,17 @@
 import { A_Fragment } from '@adaas/a-concept';
-import { AreNode } from '../AreNode/AreNode.entity.js';
-import { AreSyntaxInitOptions, AreSyntaxTokenRules, AreSyntaxCompiledExpression } from './AreSyntax.types.js';
-import { AreStore } from '@adaas/are/store/AreStore.context';
-import '@adaas/are/event/AreEvent.context';
-import '@adaas/are/scene/AreScene.context';
-import '@adaas/are/attribute/AreAttribute.entity';
-import '@adaas/are/component/Are.component';
-import '../AreNode/AreNode.types.js';
-import '@adaas/are/syntax/AreSyntax.types';
+import { q as AreSyntaxInitOptions, t as AreSyntaxTokenRules, g as AreNode, p as AreSyntaxCompiledExpression, o as AreStore } from '../../Are.context-9Ija_fdC.js';
+import '@adaas/a-utils/a-signal';
+import '../AreEvent/AreEvent.context.js';
+import '@adaas/a-utils/a-execution';
+import '../AreStore/AreStore.types.js';
+import '../AreStore/AreStore.constants.js';
+import '../AreScene/AreScene.constants.js';
+import '../AreAttribute/AreAttribute.types.js';
+import '../AreAttribute/AreAttribute.constants.js';
+import '../AreComponent/Are.component.js';
+import '../AreComponent/Are.types.js';
+import '../AreComponent/Are.constants.js';
 import '../AreNode/AreNode.constants.js';
-import '@adaas/are/node/AreNode.entity';
 
 declare class AreSyntax extends A_Fragment {
     /**

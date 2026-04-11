@@ -1,10 +1,19 @@
 import { A_Component, A_Scope, A_Feature } from '@adaas/a-concept';
 import { A_SignalVector, A_SignalState } from '@adaas/a-utils/a-signal';
 import { A_Logger } from '@adaas/a-utils/a-logger';
-import { AreNode } from '@adaas/are/node/AreNode.entity';
-import { AreEvent } from '@adaas/are/event/AreEvent.context';
+import { g as AreNode } from '../../Are.context-9Ija_fdC.js';
+import { AreEvent } from '../AreEvent/AreEvent.context.js';
 import { AreSignalsContext } from './AreSignals.context.js';
-import '@adaas/are/component/Are.component';
+import '../AreStore/AreStore.types.js';
+import '../AreStore/AreStore.constants.js';
+import '../AreScene/AreScene.constants.js';
+import '../AreAttribute/AreAttribute.types.js';
+import '../AreAttribute/AreAttribute.constants.js';
+import '../AreComponent/Are.component.js';
+import '../AreComponent/Are.types.js';
+import '../AreComponent/Are.constants.js';
+import '@adaas/a-utils/a-execution';
+import '../AreNode/AreNode.constants.js';
 import './AreSignals.types.js';
 import './AreSignals.meta.js';
 

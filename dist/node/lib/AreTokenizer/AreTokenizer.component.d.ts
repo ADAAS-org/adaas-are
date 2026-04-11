@@ -1,9 +1,19 @@
 import { A_Component } from '@adaas/a-concept';
-import { AreNode } from '@adaas/are/node/AreNode.entity';
-import { AreSyntaxTokenMatch, AreSyntaxTokenRules } from '@adaas/are/syntax/AreSyntax.types';
-import { AreSyntax } from '@adaas/are/syntax/AreSyntax.context';
-import { AreContext } from '@adaas/are/component/Are.context';
+import { g as AreNode, a as AreContext, r as AreSyntaxTokenMatch, t as AreSyntaxTokenRules } from '../../Are.context-9Ija_fdC.js';
+import { AreSyntax } from '../AreSyntax/AreSyntax.context.js';
 import { A_Logger } from '@adaas/a-utils/a-logger';
+import '@adaas/a-utils/a-signal';
+import '../AreEvent/AreEvent.context.js';
+import '@adaas/a-utils/a-execution';
+import '../AreStore/AreStore.types.js';
+import '../AreStore/AreStore.constants.js';
+import '../AreScene/AreScene.constants.js';
+import '../AreAttribute/AreAttribute.types.js';
+import '../AreAttribute/AreAttribute.constants.js';
+import '../AreComponent/Are.component.js';
+import '../AreComponent/Are.types.js';
+import '../AreComponent/Are.constants.js';
+import '../AreNode/AreNode.constants.js';
 
 declare class AreTokenizer extends A_Component {
     /**

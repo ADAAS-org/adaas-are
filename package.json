@@ -81,8 +81,7 @@
   "dependencies": {
     "@adaas/a-concept": "^0.3.13",
     "@adaas/a-frame": "^0.0.22",
-    "@adaas/a-utils": "^0.3.18",
-    "@adaas/are": "^0.0.4"
+    "@adaas/a-utils": "^0.3.18"
   },
   "devDependencies": {
     "@types/chai": "^4.3.14",

@@ -1,16 +1,30 @@
 import { A_Component, A_Scope, A_TYPES__A_DependencyInjectable, A_TYPES__Ctor } from '@adaas/a-concept';
-import { AreSyntax } from '@adaas/are/syntax/AreSyntax.context';
+import { AreSyntax } from '../AreSyntax/AreSyntax.context.js';
 import { A_Logger } from '@adaas/a-utils/a-logger';
-import { AreCompiler } from '@adaas/are/compiler/AreCompiler.component';
-import { AreTransformer } from '@adaas/are/transformer/AreTransformer.component';
-import { AreLoader } from '@adaas/are/loader/AreLoader.component';
-import { AreInterpreter } from '@adaas/are/interpreter/AreInterpreter.component';
-import { AreLifecycle } from '@adaas/are/lifecycle/AreLifecycle.component';
-import { AreContext } from '@adaas/are/component/Are.context';
+import { AreCompiler } from '../AreCompiler/AreCompiler.component.js';
+import { AreTransformer } from '../AreTransformer/AreTransformer.component.js';
+import { AreLoader } from '../AreLoader/AreLoader.component.js';
+import { AreInterpreter } from '../AreInterpreter/AreInterpreter.component.js';
+import { AreLifecycle } from '../AreLifecycle/AreLifecycle.component.js';
+import { a as AreContext } from '../../Are.context-9Ija_fdC.js';
 import { AreEngineDependencies } from './AreEngine.types.js';
 import { A_SignalBus } from '@adaas/a-utils/a-signal';
-import '@adaas/are/tokenizer/AreTokenizer.component';
-import '@adaas/are/signals/AreSignals.component';
+import '../AreEvent/AreEvent.context.js';
+import '@adaas/a-utils/a-execution';
+import '../AreStore/AreStore.types.js';
+import '../AreStore/AreStore.constants.js';
+import '../AreScene/AreScene.constants.js';
+import '../AreAttribute/AreAttribute.types.js';
+import '../AreAttribute/AreAttribute.constants.js';
+import '../AreComponent/Are.component.js';
+import '../AreComponent/Are.types.js';
+import '../AreComponent/Are.constants.js';
+import '../AreNode/AreNode.constants.js';
+import '../AreTokenizer/AreTokenizer.component.js';
+import '../AreSignals/AreSignals.component.js';
+import '../AreSignals/AreSignals.context.js';
+import '../AreSignals/AreSignals.types.js';
+import '../AreSignals/AreSignals.meta.js';
 
 declare class AreEngine extends A_Component {
     /**

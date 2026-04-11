@@ -1,7 +1,17 @@
 import { A_Component, A_Scope, A_Feature } from '@adaas/a-concept';
-import { AreScene } from '@adaas/are/scene/AreScene.context';
-import { AreInstruction } from '@adaas/are/instruction/AreInstruction.entity';
-import { AreStore } from '@adaas/are/store/AreStore.context';
+import { k as AreScene, c as AreInstruction, o as AreStore } from '../../Are.context-9Ija_fdC.js';
+import '@adaas/a-utils/a-signal';
+import '../AreEvent/AreEvent.context.js';
+import '@adaas/a-utils/a-execution';
+import '../AreStore/AreStore.types.js';
+import '../AreStore/AreStore.constants.js';
+import '../AreScene/AreScene.constants.js';
+import '../AreAttribute/AreAttribute.types.js';
+import '../AreAttribute/AreAttribute.constants.js';
+import '../AreComponent/Are.component.js';
+import '../AreComponent/Are.types.js';
+import '../AreComponent/Are.constants.js';
+import '../AreNode/AreNode.constants.js';
 
 declare class AreInterpreter extends A_Component {
     /**

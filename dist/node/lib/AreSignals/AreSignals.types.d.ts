@@ -1,6 +1,8 @@
 import { A_TYPES__Ctor } from '@adaas/a-concept';
 import { A_Signal } from '@adaas/a-utils/a-signal';
-import { Are } from '@adaas/are/component/Are.component';
+import { Are } from '../AreComponent/Are.component.js';
+import '../AreComponent/Are.types.js';
+import '../AreComponent/Are.constants.js';
 
 type AreSignalsContextConfig<T extends Are> = {
     [key in string]: {

@@ -1,9 +1,18 @@
 import { A_Component, A_TYPES__Entity_Constructor, A_Scope, A_Feature } from '@adaas/a-concept';
-import { AreScene } from '@adaas/are/scene/AreScene.context';
-import { AreNode } from '@adaas/are/node/AreNode.entity';
+import { g as AreNode, A as AreAttribute, k as AreScene, a as AreContext } from '../../Are.context-9Ija_fdC.js';
 import { A_Logger } from '@adaas/a-utils/a-logger';
-import { AreAttribute } from '@adaas/are/attribute/AreAttribute.entity';
-import { AreContext } from '@adaas/are/component/Are.context';
+import '@adaas/a-utils/a-signal';
+import '../AreEvent/AreEvent.context.js';
+import '@adaas/a-utils/a-execution';
+import '../AreStore/AreStore.types.js';
+import '../AreStore/AreStore.constants.js';
+import '../AreScene/AreScene.constants.js';
+import '../AreAttribute/AreAttribute.types.js';
+import '../AreAttribute/AreAttribute.constants.js';
+import '../AreComponent/Are.component.js';
+import '../AreComponent/Are.types.js';
+import '../AreComponent/Are.constants.js';
+import '../AreNode/AreNode.constants.js';
 
 declare class AreLifecycle extends A_Component {
     static Init<T extends AreNode>(node: A_TYPES__Entity_Constructor<T>): any;

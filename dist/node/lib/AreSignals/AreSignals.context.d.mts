@@ -1,9 +1,19 @@
 import { A_Fragment, A_TYPES__Ctor } from '@adaas/a-concept';
 import { A_SignalVector } from '@adaas/a-utils/a-signal';
-import { Are } from '@adaas/are/component/Are.component';
+import { Are } from '../AreComponent/Are.component.mjs';
 import { AreSignalsContextConfig } from './AreSignals.types.mjs';
-import { AreNode } from '@adaas/are/node/AreNode.entity';
+import { g as AreNode } from '../../Are.context-D7w32H1G.mjs';
 import { AreSignalsMeta } from './AreSignals.meta.mjs';
+import '../AreComponent/Are.types.mjs';
+import '../AreComponent/Are.constants.mjs';
+import '../AreEvent/AreEvent.context.mjs';
+import '@adaas/a-utils/a-execution';
+import '../AreStore/AreStore.types.mjs';
+import '../AreStore/AreStore.constants.mjs';
+import '../AreScene/AreScene.constants.mjs';
+import '../AreAttribute/AreAttribute.types.mjs';
+import '../AreAttribute/AreAttribute.constants.mjs';
+import '../AreNode/AreNode.constants.mjs';
 
 declare class AreSignalsContext<T extends Are = Are> extends A_Fragment {
     /**
