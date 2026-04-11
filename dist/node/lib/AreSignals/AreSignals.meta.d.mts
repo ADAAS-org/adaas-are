@@ -1,8 +1,6 @@
 import { A_ComponentMeta, A_TYPES__Ctor, A_TYPES__ComponentMeta } from '@adaas/a-concept';
 import { A_SignalVector } from '@adaas/a-utils/a-signal';
-import { Are } from '../AreComponent/Are.component.mjs';
-import '../AreComponent/Are.types.mjs';
-import '../AreComponent/Are.constants.mjs';
+import { Are } from '@adaas/are/component/Are.component';
 
 declare class AreSignalsMeta extends A_ComponentMeta<{
     vectorToComponent: Map<A_SignalVector, A_TYPES__Ctor<Are>>;

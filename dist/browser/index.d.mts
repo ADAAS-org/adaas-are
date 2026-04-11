@@ -1,9 +1,31 @@
 import * as _adaas_a_concept from '@adaas/a-concept';
-import { A_Component, A_TYPES__Entity_Serialized, A_Entity, A_Scope, A_TYPES__Fragment_Serialized, A_Fragment, ASEID, A_TYPES__Paths, A_TYPES__Entity_Constructor, A_Error, A_Feature, A_TYPES__Ctor, A_ComponentMeta, A_TYPES__ComponentMeta } from '@adaas/a-concept';
-import { A_SignalVector, A_Signal, A_SignalState } from '@adaas/a-utils/a-signal';
+import { A_Component, A_Fragment, A_Entity, A_Scope, ASEID, A_TYPES__Entity_Serialized, A_TYPES__Entity_Constructor, A_Error, A_Feature, A_TYPES__Paths, A_TYPES__Fragment_Serialized, A_TYPES__Ctor, A_ComponentMeta, A_TYPES__ComponentMeta, A_TYPES__Component_Constructor, A_TYPES__A_DependencyInjectable } from '@adaas/a-concept';
+import { A_SignalVector, A_Signal, A_SignalState, A_SignalBus } from '@adaas/a-utils/a-signal';
+import { AreNode as AreNode$1 } from '@adaas/are/node/AreNode.entity';
 import { A_ExecutionContext } from '@adaas/a-utils/a-execution';
+import { AreEvent as AreEvent$1 } from '@adaas/are/event/AreEvent.context';
+import { AreScene as AreScene$1 } from '@adaas/are/scene/AreScene.context';
+import { AreAttribute as AreAttribute$1 } from '@adaas/are/attribute/AreAttribute.entity';
+import { Are as Are$1 } from '@adaas/are/component/Are.component';
+import { AreSyntaxTokenMatch as AreSyntaxTokenMatch$1, AreSyntaxTokenPayload as AreSyntaxTokenPayload$1, AreSyntaxTokenRules as AreSyntaxTokenRules$1 } from '@adaas/are/syntax/AreSyntax.types';
+import { AreStore as AreStore$1 } from '@adaas/are/store/AreStore.context';
+import { AreSyntax as AreSyntax$1 } from '@adaas/are/syntax/AreSyntax.context';
+import { AreContext as AreContext$1 } from '@adaas/are/component/Are.context';
 import { A_Logger } from '@adaas/a-utils/a-logger';
+import { AreInstruction as AreInstruction$1 } from '@adaas/are/instruction/AreInstruction.entity';
+import { AreDeclaration as AreDeclaration$1 } from '@adaas/are/instruction/types/AreDeclaration.instruction';
+import { AreInstructionSerialized as AreInstructionSerialized$1, AreInstructionNewProps as AreInstructionNewProps$1 } from '@adaas/are/instruction/AreInstruction.types';
+import { AreMutation as AreMutation$1 } from '@adaas/are/instruction/types/AreMutation.instruction';
+import { AreStoreWatchingEntity as AreStoreWatchingEntity$1 } from '@adaas/are/store/AreStore.types';
+import { AreSignal as AreSignal$1 } from '@adaas/are/signals/AreSignal.entity';
 import { A_Route } from '@adaas/a-utils/a-route';
+import { AreCompiler as AreCompiler$1 } from '@adaas/are/compiler/AreCompiler.component';
+import { AreTransformer as AreTransformer$1 } from '@adaas/are/transformer/AreTransformer.component';
+import { AreLoader as AreLoader$1 } from '@adaas/are/loader/AreLoader.component';
+import { AreInterpreter as AreInterpreter$1 } from '@adaas/are/interpreter/AreInterpreter.component';
+import { AreLifecycle as AreLifecycle$1 } from '@adaas/are/lifecycle/AreLifecycle.component';
+import { AreTokenizer as AreTokenizer$1 } from '@adaas/are/tokenizer/AreTokenizer.component';
+import { AreSignals as AreSignals$1 } from '@adaas/are/signals/AreSignals.component';
 
 declare const AreFeatures: {
     /**
@@ -170,675 +192,62 @@ declare class Are extends A_Component {
     data(...args: any[]): Promise<void> | void;
 }
 
-declare class AreEvent<T extends Record<string, any> = Record<string, any>> extends A_ExecutionContext<T> {
-}
-
-type AreInstructionNewProps<T extends any = Record<string, any>> = {
+declare class AreContext extends A_ExecutionContext {
     /**
-     * The deduplication ID that prevents duplicated instruction within the same node.
-     *
-     * For example to prevent duplicated AddAttribute instruction for the same attribute, we can use the attribute name as the deduplication ID, so if we have two AddAttribute instructions with the same attribute name, only the first one will be applied, and the second one will be ignored.
-     *
-     *
-     * [!] Note; By default it uses action name and group if provided
+     * The source string represents the original template or input from which the ARE scene is generated. This can be used for debugging, error reporting, or any features that require access to the raw template data. The roots array holds references to the root nodes of the ARE scene, allowing for easy access and management of the top-level components in the rendering hierarchy. The signalsMap is a mapping between root nodes and their associated signal vectors, enabling efficient management of reactive updates and interactions within the ARE framework based on changes in the application state or user input.
      */
+    protected _source: string;
     /**
-     * the Host operation to be performed. Exactly this name will be used to call a method from the Host class.
+     * The roots array holds references to the root nodes of the ARE scene, allowing for easy access and management of the top-level components in the rendering hierarchy. The signalsMap is a mapping between root nodes and their associated signal vectors, enabling efficient management of reactive updates and interactions within the ARE framework based on changes in the application state or user input.
      */
-    name: string;
+    protected _roots: Array<AreNode$1>;
     /**
-     * The parent instruction that created this instruction. For example, if we have a CreateElement instruction that creates a new element, and then we have an AddAttribute instruction that adds an attribute to that element, the AddAttribute instruction would have the CreateElement instruction as its parent. This can be used to track the hierarchy of instructions and their dependencies.
+     * This property stores a map between root node and conditions that should be met to render particular component inside the root node. This can be used to manage complex rendering logic and to optimize performance by ensuring that components are only rendered when necessary based on the defined conditions.
      */
-    parent?: AreInstruction | undefined;
+    protected _signalsMap: Map<string, A_SignalVector>;
+    protected _performance: Map<string, number>;
+    protected _performanceStart: Map<string, number>;
+    protected _performanceDepth: Map<string, number>;
     /**
-     * Group is an optional property that can be used to group instructions together.
-     *
-     * For example a set of instructions that depend on create CreateElement instruction can be grouped together with the same group name, so if the CreateElement instruction is reverted, all the instructions in the same group will be reverted as well, and so on.
-     *
-     * This can be useful to manage complex changes that involve multiple instructions.
-     *
-     * [!] Note, the best option is to use ASEID of the Instruction as a group, so all instructions with the same ASEID will be treated as a single change, and will be applied and reverted together.
+     * The global object can be used to store any global data or configurations that need to be accessed across different components and entities within the ARE framework. This can include things like theme settings, user preferences, or any other shared data that is relevant to the entire scene or application. By centralizing this information in the context, it allows for easier management and access to global state without needing to pass it through multiple layers of components or entities.
      */
-    group?: AreInstruction | undefined;
-    /**
-     * A set of additional parameters that may be needed for the rendering purpose.
-     *
-     * For example: for AddAttribute instruction, we may need to provide the attribute name and value as a payload, so the Host can use this information to add the attribute to the node.
-     */
-    payload?: T;
-};
-type AreInstructionSerialized<T extends any = Record<string, any>> = {
-    /**
-     * The name of the instruction, which corresponds to the operation that should be performed in the Host. This name is used to identify the specific method in the Host that should be called to execute the instruction, allowing for a clear mapping between instructions and their corresponding actions in the rendering process.
-     */
-    name: string;
-    /**
-     * The type of the instruction, which can be used to categorize instructions and determine how they should be processed. For example, we can have different types for declaration instructions (e.g., DeclarationInstruction or CreateElement) and mutation instructions (e.g., AddAttribute), allowing for better organization and management of instructions based on their purpose and behavior in the scene.
-     */
-    type: string;
-    /**
-     * The parent instruction that created this instruction. For example, if we have a CreateElement instruction that creates a new element, and then we have an AddAttribute instruction that adds an attribute to that element, the AddAttribute instruction would have the CreateElement instruction as its parent. This can be used to track the hierarchy of instructions and their dependencies.
-     */
-    parent?: string | undefined;
-    /**
-     * Group is an optional property that can be used to group instructions together. For example a set of instructions that depend on create CreateElement instruction can be grouped together with the same group name, so if the CreateElement instruction is reverted, all the instructions in the same group will be reverted as well, and so on. This can be useful to manage complex changes that involve multiple instructions. The best option is to use ASEID of the Instruction as a group, so all instructions with the same ASEID will be treated as a single change, and will be applied and reverted together.
-     */
-    group?: string | undefined;
-    /**
-     * A set of additional parameters that may be needed for the rendering purpose. For example: for AddAttribute instruction, we may need to provide the attribute name and value as a payload, so the Host can use this information to add the attribute to the node.
-     */
-    payload: T;
-} & A_TYPES__Entity_Serialized;
-
-declare const AreStoreAreComponentMetaKeys: {
-    readonly StoreExtensions: "_AreStore_StoreExtensions";
-};
-
-type AreStorePathValue<T, P extends string> = P extends `${infer K}.${infer Rest}` ? K extends keyof T ? AreStorePathValue<T[K], Rest> : never : P extends keyof T ? T[P] : never;
-type AreStoreWatchingEntity = {
-    update(...args: any[]): void;
-};
-type AreStoreAreComponentMetaKeyNames = typeof AreStoreAreComponentMetaKeys[keyof typeof AreStoreAreComponentMetaKeys];
-
-declare class AreInstruction<T extends Record<string, any> = Record<string, any>, S extends AreInstructionSerialized<T> = AreInstructionSerialized<T>> extends A_Entity<AreInstructionNewProps<T>, S> implements AreStoreWatchingEntity {
-    /**
-     * The name of the instruction, for example "CreateElement", "AddAttribute", "RemoveNode", etc. This is used to identify the type of the instruction and how to process it. The name should be in PascalCase format, and should be unique across all instruction types. It is recommended to use a prefix that indicates the category of the instruction, for example "CreateElement" for instructions that create new elements, "UpdateAttribute" for instructions that update attributes, etc.
-     */
-    protected _name: string;
-    /**
-     * The payload of the instruction, which can contain any additional information that may be needed for the rendering purpose. For example, for CreateElement instruction, the payload can contain the tag name and parent information, so the Host can use this information to create the element in the correct place in the scene. The payload is optional and can be an empty object if no additional information is needed.
-     */
-    protected _payload?: T;
-    /**
-     * Group is an optional property that can be used to group instructions together. For example a set of instructions that depend on create CreateElement instruction can be grouped together with the same group name, so if the CreateElement instruction is reverted, all the instructions in the same group will be reverted as well, and so on. This can be useful to manage complex changes that involve multiple instructions.
-     *
-     * [!] Note, the best option is to use ASEID of the Instruction as a group, so all instructions with the same ASEID will be treated as a single change, and will be applied and reverted together.
-     */
-    protected _group: string | undefined;
-    /**
-     * The parent instruction that created this instruction. For example, if we have a CreateElement instruction that creates a new element, and then we have an AddAttribute instruction that adds an attribute to that element, the AddAttribute instruction would have the CreateElement instruction as its parent. This can be used to track the hierarchy of instructions and their dependencies.
-     */
-    protected _parent: string | undefined;
-    /**
-     * A set of properties that influence the behavior of the instruction, for example, for AddTextInstruction, we can interpolation dependent on some key in the store, so we can have a property called "interpolationKey" that will be used to track the dependencies of the instruction, and when the value of this key changes in the scope, we can update the instruction accordingly.
-     */
-    protected _props: Set<string>;
-    /**
-     * The name of the instruction, for example "CreateElement", "AddAttribute", "RemoveNode", etc. This is used to identify the type of the instruction and how to process it. The name should be in PascalCase format, and should be unique across all instruction types. It is recommended to use a prefix that indicates the category of the instruction, for example "CreateElement" for instructions that create new elements, "UpdateAttribute" for instructions that update attributes, etc.
-     */
-    get name(): string;
-    /**
-     * The payload of the instruction, which can contain any additional information that may be needed for the rendering purpose. For example, for CreateElement instruction, the payload can contain the tag name and parent information, so the Host can use this information to create the element in the correct place in the scene. The payload is optional and can be an empty object if no additional information is needed.
-     *
-     * [!] Note, the payload should be serializable, so it can be stored and transmitted easily. It is recommended to use simple data structures for the payload, such as objects, arrays, strings, numbers, etc., and avoid using complex data types that may not be easily serializable.
-     */
-    get payload(): T;
-    /**
-     * Group is an optional property that can be used to group instructions together. For example a set of instructions that depend on create CreateElement instruction can be grouped together with the same group name, so if the CreateElement instruction is reverted, all the instructions in the same group will be reverted as well, and so on. This can be useful to manage complex changes that involve multiple instructions.
-     *
-     * [!] Note, the best option is to use ASEID of the Instruction as a group, so all instructions with the same ASEID will be treated as a single change, and will be applied and reverted together.
-     */
-    get group(): string | undefined;
-    /**
-     * The parent instruction ASEID that created this instruction. For example, if we have a CreateElement instruction that creates a new element, and then we have an AddAttribute instruction that adds an attribute to that element, the AddAttribute instruction would have the CreateElement instruction as its parent. This can be used to track the hierarchy of instructions and their dependencies.
-     *
-     * [!] Note, the parent should be provided as an ASEID string, so it can be easily referenced and tracked across different contexts and times.
-     */
-    get parent(): string | undefined;
-    get id(): string;
-    get owner(): AreNode;
-    fromNew(newEntity: AreInstructionNewProps<T>): void;
-    fromUndefined(): void;
-    /**
-     * Group this instruction with another instruction. This means that when one of the instructions in the group is applied or reverted, all the instructions in the same group will be applied or reverted together. This can be useful to manage complex changes that involve multiple instructions.
-     *
-     * For example, if we have a CreateElement instruction that creates a new element, and then we have an AddAttribute instruction that adds an attribute to that element, we can group them together with the same group name, so if we revert the CreateElement instruction, the AddAttribute instruction will be reverted as well, and so on.
-     *
-     * @param instruction
-     * @returns
-     */
-    groupWith(instruction: AreInstruction): this;
-    /**
-     * Ungroup this instruction from any group. This means that this instruction will be treated as an independent instruction, and will not be applied or reverted together with any other instructions. This can be useful when you want to separate an instruction from a group, so it can be applied or reverted independently.
-     *
-     * @returns
-     */
-    unGroup(): this;
-    /**
-     * Attach this instruction to a parent instruction. This means that this instruction will be considered as a child of the parent instruction, and can be used to track the hierarchy of instructions and their dependencies.
-     *
-     * For example, if we have a CreateElement instruction that creates a new element, and then we have an AddAttribute instruction that adds an attribute to that element, we can attach the AddAttribute instruction to the CreateElement instruction as its parent, so we can track that the AddAttribute instruction is related to the CreateElement instruction.
-     *
-     * @param parent
-     * @returns
-     */
-    attachTo(parent: AreInstruction): this;
-    /**
-     * Detach this instruction from its parent instruction. This means that this instruction will no longer be considered as a child of the parent instruction, and will not be related to it in any way. This can be useful when you want to separate an instruction from its parent, so it can be treated as an independent instruction.
-     *
-     * @returns
-     */
-    detach(): this;
-    /**
-     * Apply this instruction to the scene. This means that the changes represented by this instruction will be applied to the scene, and the Host will perform the necessary operations to reflect these changes in the rendered output.
-     *
-     * For example, if this instruction is a CreateElement instruction, when we apply it, the Host will create a new element in the scene according to the information provided in the payload of the instruction. If this instruction is an AddAttribute instruction, when we apply it, the Host will add the specified attribute to the target element in the scene. The apply method can also accept an optional scope parameter, which can be used to provide additional context or information that may be needed for applying the instruction.
-     *
-     * @param scope
-     */
-    apply(scope?: A_Scope): void;
-    /**
-     * Update this instruction in the scene. This means that the changes represented by this instruction will be updated in the scene, and the Host will perform the necessary operations to reflect these changes in the rendered output. This is particularly useful for instructions that have dynamic properties or effects that may change over time, allowing for adjustments to be made to the instruction's behavior or effects without needing to revert and reapply it entirely. The update method can also accept an optional scope parameter, which can be used to provide additional context or information that may be needed for updating the instruction.
-     *
-     * @param scope
-     */
-    update(scope?: A_Scope): void;
-    /**
-     * Revert this instruction from the scene. This means that the changes represented by this instruction will be reverted from the scene, and the Host will perform the necessary operations to undo these changes in the rendered output.
-     *
-     * @param scope
-     */
-    revert(scope?: A_Scope): void;
-}
-
-/**
- * This is a top-level instruction that represents the creation of a new element in the scene. It contains all the necessary information to create a new element, such as its tag and parent. This instruction can be applied to the scene to create a new element and can be reverted to remove the created element.
- */
-declare class AreDeclaration<T extends Record<string, any> = Record<string, any>, S extends AreInstructionSerialized<T> = AreInstructionSerialized<T>> extends AreInstruction<T, S> {
+    get globals(): any;
     constructor(
     /**
-     * Serialized form of the instruction, used for deserialization and reconstruction of the instruction instance. This allows for the instruction to be easily stored, transmitted, and recreated in different contexts or at different times, while maintaining all the necessary information and relationships intact.
+     * The source string represents the original template or input from which the ARE scene is generated. This can be used for debugging, error reporting, or any features that require access to the raw template data. The roots array holds references to the root nodes of the ARE scene, allowing for easy access and management of the top-level components in the rendering hierarchy. The signalsMap is a mapping between root nodes and their associated signal vectors, enabling efficient management of reactive updates and interactions within the ARE framework based on changes in the application state or user input.
      */
-    serialized: AreInstructionSerialized);
-    constructor(
+    source?: string);
     /**
-     * The name of the operation to be performed in Host. For example, for CreateElement instruction, the name can be "createElement", so the Host can have a method with the same name to handle this instruction.
+     * The scope of the context, which can be used to access other entities and features within the same scope. This is particularly useful for components that need to interact with other parts of the scene or component, as it allows them to access shared data and functionality without needing to pass it explicitly through parameters.
      */
-    name: string, 
+    get scope(): _adaas_a_concept.A_Scope<any, _adaas_a_concept.A_TYPES__Component_Constructor<_adaas_a_concept.A_Component>[], _adaas_a_concept.A_TYPES__Error_Constructor<_adaas_a_concept.A_Error<_adaas_a_concept.A_TYPES__Error_Init, _adaas_a_concept.A_TYPES__Error_Serialized>>[], _adaas_a_concept.A_TYPES__Entity_Constructor<_adaas_a_concept.A_Entity<any, _adaas_a_concept.A_TYPES__Entity_Serialized>>[], A_Fragment<_adaas_a_concept.A_TYPES__Fragment_Serialized>[]>;
     /**
-     * In case this is a child instruction that is related to a declaration instruction, we can pass the parent declaration instruction to establish the relationship between them. This allows us to manage related instructions together and ensure that they are executed in the correct order in the scene.
+     * The roots array holds references to the root nodes of the ARE scene, allowing for easy access and management of the top-level components in the rendering hierarchy. The signalsMap is a mapping between root nodes and their associated signal vectors, enabling efficient management of reactive updates and interactions within the ARE framework based on changes in the application state or user input.
      */
-    parent: AreDeclaration, 
+    get roots(): Array<AreNode$1>;
     /**
-     * A set of additional parameters that may be needed for the rendering purpose. For example, for CreateElement instruction, the payload can contain the tag name and parent information, so the Host can use this information to create the element in the correct place in the scene.
+     * This property stores a map between root node and conditions that should be met to render particular component inside the root node. This can be used to manage complex rendering logic and to optimize performance by ensuring that components are only rendered when necessary based on the defined conditions.
      */
-    payload: T);
-    constructor(
+    get source(): string;
+    get performance(): Array<string>;
+    get stats(): string[];
+    protected countInstructions(node: AreNode$1): number;
+    protected countNodes(node: AreNode$1): number;
     /**
-     * The name of the operation to be performed in Host. For example, for CreateElement instruction, the name can be "createElement", so the Host can have a method with the same name to handle this instruction.
+     * This property stores a map between root node and conditions that should be met to render particular component inside the root node. This can be used to manage complex rendering logic and to optimize performance by ensuring that components are only rendered when necessary based on the defined conditions.
+     *
+     * @param node
      */
-    name?: string, 
+    addRoot(node: AreNode$1): void;
     /**
-     * A set of additional parameters that may be needed for the rendering purpose. For example, for CreateElement instruction, the payload can contain the tag name and parent information, so the Host can use this information to create the element in the correct place in the scene.
+     * This property stores a map between root node and conditions that should be met to render particular component inside the root node. This can be used to manage complex rendering logic and to optimize performance by ensuring that components are only rendered when necessary based on the defined conditions.
+     *
+     * @param node
      */
-    payload?: T);
+    removeRoot(node: AreNode$1): void;
+    startPerformance(label?: string): void;
+    endPerformance(label: string): void;
 }
-
-declare const AreSceneStatuses: {
-    Active: string;
-    Inactive: string;
-    Destroyed: string;
-};
-
-type AreSceneChanges = {
-    /**
-     * An array of instructions that are planned to be applied to the scene. These instructions represent the changes that will be made to the scene when they
-     */
-    toApply: AreInstruction[];
-    /**
-     * An array of instructions that are planned to be reverted from the scene. These instructions represent the changes that will be undone from the scene when they are reverted, allowing for a rollback of changes if needed.
-     */
-    toRevert: AreInstruction[];
-};
-type AreScene_Serialized = {
-    instructions: AreInstructionSerialized[];
-} & A_TYPES__Fragment_Serialized;
-type AreSceneStatusNames = typeof AreSceneStatuses[keyof typeof AreSceneStatuses];
-
-declare class AreMutation<T extends Record<string, any> = Record<string, any>, S extends AreInstructionSerialized<T> = AreInstructionSerialized<T>> extends AreInstruction<T, S> {
-    get parent(): string;
-    get group(): string;
-    constructor(
-    /**
-     * Serialized form of the instruction, used for deserialization and reconstruction of the instruction instance. This allows for the instruction to be easily stored, transmitted, and recreated in different contexts or at different times, while maintaining all the necessary information and relationships intact.
-     */
-    serialized: S);
-    constructor(
-    /**
-     * The name of the operation to be performed in Host.
-     */
-    name: string, 
-    /**
-     * Parent instruction for grouping in case of mutations related to a specific declaration. This allows for better organization and management of instructions in the scene, as all mutations related to the same declaration will be executed together.
-     */
-    parent: AreDeclaration, 
-    /**
-     * A set of additional parameters that may be needed for the rendering purpose. For example, for AddAttribute instruction, the payload can contain the attribute name and value as a payload, so the Host can use this information to add the attribute to the node.
-     */
-    payload?: T);
-    fromNew(newEntity: AreInstructionNewProps<T>): void;
-}
-
-declare class AreScene extends A_Fragment {
-    protected _groupToInstructionsMap: Map<string, Set<AreInstruction>>;
-    /**
-     * Plan is a queue of changes that should be applied to render the node
-     *
-     * It works as FIFO, so the first instruction that should be applied is the first one in the queue, and so on.
-     */
-    protected _plan: Array<AreInstruction>;
-    /**
-     * State is a list of instructions that are currently applied to the node,
-     * so it represents the current state of the node in the scene.
-     *
-     * It always in a reverse order of the plan, so the last instruction in the state is the first one that should be reverted when we need to revert the changes, and so on.
-     *
-     * For example, if we have a node with two instructions in the plan: [Instruction A, Instruction B], and both of them are applied to the node, then the state will be [Instruction B, Instruction A], so when we need to revert the changes, we will revert Instruction B first, and then Instruction A.
-     */
-    protected _state: Array<AreInstruction>;
-    protected _host: AreDeclaration | undefined;
-    /**
-     * Scene status is used to determine the current lifecycle stage of the scene, which can be 'active', 'inactive' or 'destroyed'. This status can be used to control the behavior of the scene and its instructions, for example, we can prevent applying new instructions to an inactive or destroyed scene, or we can trigger certain actions when the scene becomes active or inactive. The default status of the scene is 'inactive', which means that the scene is not yet rendered and its instructions are not applied, and it will become 'active' when it is mounted and its instructions are applied, and it will become 'destroyed' when it is unmounted and its instructions are reverted.
-     */
-    protected _status: AreSceneStatusNames;
-    constructor(
-    /**
-     * Scene identity will be used to identify mounting point in the parent scene
-     */
-    id: string | ASEID);
-    /**
-     * Scene ID that corresponds to the root node's ID (part of ASEID)
-     */
-    get id(): string;
-    /**
-     * The scope where scene is registered. This scope is owned by AreNode
-     */
-    get scope(): A_Scope;
-    /**
-     * The owner node of the scene, which is the node that registered the scene in its scope.
-     * This is typically the node that is responsible for rendering the scene and managing its lifecycle.
-     */
-    get owner(): AreNode;
-    /**
-     * It's a primary declaration instruction that represents the node in the scene, so it should be registered as a host instruction for the scene, and it will be used to keep track of the node in the scene and to manage its lifecycle.
-     */
-    get host(): AreDeclaration | undefined;
-    /**
-     * Scene status is used to determine the current lifecycle stage of the scene, which can be 'active', 'inactive' or 'destroyed'. This status can be used to control the behavior of the scene and its instructions, for example, we can prevent applying new instructions to an inactive or destroyed scene, or we can trigger certain actions when the scene becomes active or inactive. The default status of the scene is 'inactive', which means that the scene is not yet rendered and its instructions are not applied, and it will become 'active' when it is mounted and its instructions are applied, and it will become 'destroyed' when it is unmounted and its instructions are reverted.
-     */
-    get status(): AreSceneStatusNames;
-    get isActive(): boolean;
-    get isInactive(): boolean;
-    /**
-     * Returns All declaration instructions are registered in the scene scope. Since declaration instructions are the main instructions that represent the structure of the node, we have a separate getter for them to easily access and manage them in the scene.
-     */
-    get declarations(): AreDeclaration[];
-    /**
-     * Returns All mutation instructions are registered in the scene scope. Mutation instructions are the instructions that represent the changes to be applied to the node, so we have a separate getter for them to easily access and manage them in the scene, especially when we want to apply or revert changes based on the mutations.
-     */
-    get mutations(): AreMutation[];
-    /**
-     * Returns All instructions are registered in the scene scope.
-     */
-    get instructions(): AreInstruction[];
-    /**
-     * Plan is a queue of changes that should be applied to render the node
-     *
-     * It works as FIFO, so the first instruction that should be applied is the first one in the queue, and so on.
-     */
-    get planned(): AreInstruction[];
-    /**
-     * State is a list of instructions that are currently applied to the node,
-     * so it represents the current state of the node in the scene.
-     *
-     * It always in a reverse order of the plan, so the last instruction in the state is the first one that should be reverted when we need to revert the changes, and so on.
-     *
-     * For example, if we have a node with two instructions in the plan: [Instruction A, Instruction B], and both of them are applied to the node, then the state will be [Instruction B, Instruction A], so when we need to revert the changes, we will revert Instruction B first, and then Instruction A.
-     */
-    get applied(): AreInstruction[];
-    /**
-     * Should return instructions to be reverted and to be applied.
-     * A difference between plan vs state is that plan is what should be applied to the scene,
-     * while state is what currently applied to the scene.
-     *
-     */
-    get changes(): AreSceneChanges;
-    activate(): void;
-    deactivate(): void;
-    /**
-     * Each scene has a primary declaration instruction that represents the node in the scene, so it should be registered as a host instruction for the scene, and it will be used to keep track of the node in the scene and to manage its lifecycle. This method allows to set the host instruction for the scene, but it will throw an error if we try to set another host instruction while there is already a host instruction set, so we can ensure that there is only one host instruction for the scene at any given time.
-     *
-     * @param instruction
-     */
-    setHost(instruction: AreDeclaration): void;
-    /**
-     * Unsets the current host instruction from the scene.
-     *
-     * This method should be used when we want to remove the primary declaration instruction that represents the node in the scene, for example, when we want to unmount the node or when we want to replace it with another node. Unsetting the host instruction will allow us to set a new host instruction for the scene if needed.
-     */
-    removeHost(): void;
-    /**
-     * Method that should register the instruction in the plan, so it will be rendered in the next render cycle.
-     *
-     * @param instruction
-     */
-    plan(instruction: AreInstruction): void;
-    planBefore(instruction: AreInstruction, beforeInstruction: AreInstruction): void;
-    planAfter(instruction: AreInstruction, afterInstruction: AreInstruction): void;
-    moveBefore(instruction: AreInstruction, beforeInstruction: AreInstruction): void;
-    moveAfter(instruction: AreInstruction, afterInstruction: AreInstruction): void;
-    /**
-     * Allows to remove instruction from the plan, so it will not be rendered anymore, but it will still be registered in the scene scope, so it can be planned again if needed.
-     *
-     * @param instruction
-     */
-    unPlan(instruction: AreInstruction): void;
-    /**
-     * Checks if the instruction is already in the plan, so it will be rendered in the next render cycle.
-     *
-     * @param instruction
-     * @returns
-     */
-    getPlanned(instruction: AreInstruction): AreInstruction | undefined;
-    /**
-     * Checks if the instruction is already in the plan, so it will be rendered in the next render cycle.
-     *
-     * @param instruction
-     * @returns
-     */
-    isInPlan(instruction: AreInstruction): boolean;
-    /**
-     * Method moves the instruction to state to keep it applied and to be able to revert it later if needed. The instruction should be already registered in the scene scope and planned to be applied, otherwise it will not be applied.
-     *
-     * @param instruction
-     */
-    apply(instruction: AreInstruction): void;
-    /**
-     * Method moves the instruction from state to unapply it and to be able to apply it later if needed. The instruction should be already registered in the scene scope and applied, otherwise it will not be unapplied.
-     *
-     * @param instruction
-     */
-    unApply(instruction: AreInstruction): void;
-    /**
-     * Checks if the instruction is already in the state, so it is currently applied to the scene.
-     *
-     * @param instruction
-     * @returns
-     */
-    getApplied(instruction: AreInstruction): AreInstruction | undefined;
-    /**
-     * Checks if the instruction is already in the state, so it is currently applied to the scene.
-     *
-     * @param instruction
-     * @returns
-     */
-    isApplied(instruction: AreInstruction): boolean;
-    /**
-     * Method that should reset the scene to the initial state, so it will clear the plan and state, but it will not deregister the instructions from the scene scope, so they will still be registered in the scene and can be planned and applied again if needed.
-     *
-     */
-    reset(): void;
-}
-
-declare const AreAttributeFeatures: {
-    /**
-     * Initializes the attribute. This method is called when the attribute is first created and should set up any necessary state or perform any initial processing based on the provided content and context. It can also be used to validate the attribute's content and throw errors if it is invalid.
-     */
-    readonly Init: "_AreAttribute_Init";
-    /**
-     * Uses to generate all rendering instructions for the attribute. This method is called during the compilation phase of the ARE component and should return an array of instructions that describe how to render the attribute based on its content and context. The instructions can include details such as which DOM properties to set, which events to listen for, and how to update the attribute when the underlying data changes.
-     */
-    readonly Transform: "_AreAttribute_Transform";
-    /**
-     * Feature that should convert a directiveAttribute definition into a set of SceneInstructions to be rendered correctly
-     */
-    readonly Compile: "_AreAttribute_Compile";
-    /**
-     * Feature that should update the directiveAttribute based on the changes in the store or other dependencies. This method is called during the update phase of the ARE component and should perform any necessary updates to the attribute based on changes in the underlying data or context. This can include tasks such as updating DOM properties, re-evaluating expressions, or modifying event listeners to ensure that the attribute remains in sync with the current state of the application.
-     */
-    readonly Update: "_AreAttribute_Update";
-    /**
-     * Feature that should validate the attribute's content and context. This method is called during the validation phase of the ARE component and should check whether the attribute's content is valid based on its expected format, type, or other constraints. If the content is invalid, this method should throw an error with a descriptive message to help developers identify and fix the issue.
-     */
-    readonly Validate: "_AreAttribute_Validate";
-};
-
-/**
- * This file defines the types for the AreAttribute entity, which represents an attribute of a node in the ARE (Adaptive Rendering Engine) framework. The AreAttribute entity is responsible for managing the details of an attribute, such as its name, raw content, and value, as well as providing methods for initializing, transforming, compiling, updating, and validating the attribute based on its content and context. The types defined in this file include the initialization properties for creating a new AreAttribute instance, the serialized format for storing or transmitting an AreAttribute instance, and the names of the features that can be implemented by the AreAttribute entity.
- */
-type AreAttribute_Init = {
-    /**
-     * Property name (e.g. "label")
-     */
-    name: string;
-    /**
-     * Full raw attribute (e.g. ' :label="buttonLabel" ')
-     */
-    raw: string;
-    /**
-     * Attribute content (e.g. "buttonLabel")
-     */
-    content: string;
-    /**
-     * The prefix of the attribute, for example for ':label' it would be ':', for 'v-if' it would be 'v-'. This can be used to determine the type of the attribute and how to process it.
-     */
-    prefix: string;
-};
-/**
- * The evaluated value of the attribute, which can be different from the raw value depending on the context and type of the attribute. For example, for a directive like `v-if="condition"`, the raw value is "condition", but the evaluated value would be the result of evaluating "condition" in the current scope.
- */
-type AreAttribute_Serialized = {
-    /**
-     * Property name (e.g. "label")
-     */
-    name: string;
-    /**
-     * Full raw attribute (e.g. ' :label="buttonLabel" ')
-     */
-    raw: string;
-    /**
-     * Attribute value (e.g. "buttonLabel")
-     */
-    value: string;
-} & A_TYPES__Entity_Serialized;
-/**
- * The names of the features that can be implemented by the AreAttribute entity. These features correspond to specific methods that can be defined on the AreAttribute class to provide custom behavior for initializing, transforming, compiling, updating, and validating the attribute based on its content and context. Each feature name is associated with a specific method that should be implemented to handle the corresponding aspect of the attribute's lifecycle and behavior within the ARE framework.
- */
-type AreAttributeFeatureNames = typeof AreAttributeFeatures[keyof typeof AreAttributeFeatures];
-
-declare class AreAttribute extends A_Entity<AreAttribute_Init, AreAttribute_Serialized> {
-    /**
-     * Property name (e.g. "label")
-     */
-    name: string;
-    /**
-     * Full raw attribute (e.g. ' :label="buttonLabel" ')
-     */
-    raw: string;
-    /**
-     * Attribute content (e.g. "buttonLabel")
-     * Example: For a directive like `v-if="condition"`, the raw value is "condition", but the content would be "condition" without the quotes, and the value would be the result of evaluating "condition" in the current scope.
-     */
-    content: string;
-    /**
-     * The evaluated value of the attribute, which can be different from the raw value depending on the context and type of the attribute. For example, for a directive like `v-if="condition"`, the raw value is "condition", but the evaluated value would be the result of evaluating "condition" in the current scope.
-     */
-    value: any;
-    /**
-     * The prefix of the attribute, for example for ':label' it would be ':', for 'v-if' it would be 'v-'. This can be used to determine the type of the attribute and how to process it.
-     */
-    prefix: string;
-    /**
-     * The scope where the attribute is defined, which can be used to access other entities and features within the same scope. This is particularly useful for attributes that need to interact with other parts of the scene or component, as it allows them to access shared data and functionality without needing to pass it explicitly through parameters.
-     */
-    get scope(): A_Scope<any, _adaas_a_concept.A_TYPES__Component_Constructor<_adaas_a_concept.A_Component>[], _adaas_a_concept.A_TYPES__Error_Constructor<_adaas_a_concept.A_Error<_adaas_a_concept.A_TYPES__Error_Init, _adaas_a_concept.A_TYPES__Error_Serialized>>[], _adaas_a_concept.A_TYPES__Entity_Constructor<A_Entity<any, _adaas_a_concept.A_TYPES__Entity_Serialized>>[], _adaas_a_concept.A_Fragment<_adaas_a_concept.A_TYPES__Fragment_Serialized>[]>;
-    /**
-     * The owner node of the attribute, which is the node that the attribute is attached to. This can be used to access the properties and features of the owner node, as well as to determine the context in which the attribute is being used. For example, if the attribute is attached to a button element, the owner would be that button node, and the attribute could use this information to modify the button's behavior or appearance based on its content and context.
-     */
-    get owner(): AreNode;
-    /**
-     * Initializes the attribute based on the provided properties. This method is called when a new attribute is created and should set up the attribute's state based on the provided properties. It can also be used to generate a unique ASEID for the attribute based on its name and content, which can be used for caching and identification purposes within the ARE framework.
-     *
-     * @param newEntity
-     */
-    fromNew(newEntity: AreAttribute_Init): void;
-    /**
-     * Creates a clone of the current attribute instance. This method can be used to create a new instance of the attribute with the same properties and state as the original, which can be useful in scenarios where you want to reuse an attribute's configuration or create variations of it without modifying the original instance.
-     *
-     * @returns
-     */
-    clone(): this;
-    /**
-     * Initializes the attribute. This method is called when the attribute is first created and should set up any necessary state or perform any initial processing based on the provided content and context. It can also be used to validate the attribute's content and throw errors if it is invalid.
-     *
-     * @param scope
-     */
-    init(scope?: A_Scope): void;
-    /**
-     * Generates all rendering instructions for the attribute. This method is called during the compilation phase of the ARE component and should return an array of instructions that describe how to render the attribute based on its content and context. The instructions can include details such as which DOM properties to set, which events to listen for, and how to update the attribute when the underlying data changes.
-     *
-     * @param scope
-     */
-    transform(scope?: A_Scope): void;
-    /**
-     * Compiles the attribute. This method should transform attribute details into a set of SceneInstructions. It may also modify attribute value, since this field is editable during runtime.
-     *
-     * @param scope
-     */
-    compile(scope?: A_Scope): void;
-    /**
-     * Updates the attribute based on changes in the store or other dependencies. This method is called during the update phase of the ARE component and should perform any necessary updates to the attribute based on changes in the underlying data or context. This can include tasks such as updating DOM properties, re-evaluating expressions, or modifying event listeners to ensure that the attribute remains in sync with the current state of the application.
-     *
-     * @param scope
-     */
-    update(scope?: A_Scope): void;
-    /**
-     * Validates the attribute's content and context. This method is called during the validation phase of the ARE component and should check whether the attribute's content is valid based on its expected format, type, or other constraints. If the content is invalid, this method should throw an error with a descriptive message to help developers identify and fix the issue.
-     *
-     * @param scope
-     */
-    validate(scope?: A_Scope): void;
-}
-
-declare class AreStore<T extends Record<string, any> = Record<string, any>> extends A_ExecutionContext<T> {
-    protected dependencies: Map<string, Set<AreStoreWatchingEntity>>;
-    protected _keys: Set<keyof T>;
-    /**
-     * Allows to define a pure function that will be executed in the context of the store, so it can access the store's data and methods, but it won't have access to the component's scope or other features. This can be useful for example for defining a function that will update the store's data based on some logic, without having access to the component's scope or other features, so we can keep the store's logic separate from the component's logic.
-     */
-    static get Function(): <T extends Are>(target: T, propertyKey: string, descriptor: PropertyDescriptor) => PropertyDescriptor;
-    get owner(): AreNode;
-    get parent(): AreStore | undefined;
-    get context(): AreContext;
-    constructor(aseid: ASEID | string);
-    get watchers(): Set<AreStoreWatchingEntity>;
-    get keys(): Set<keyof T>;
-    watch(instruction: AreStoreWatchingEntity): void;
-    unwatch(instruction: AreStoreWatchingEntity): void;
-    set<K extends keyof T>(values: Partial<T>): this;
-    set<P extends A_TYPES__Paths<T>>(key: P, value: AreStorePathValue<T, P>): this;
-    get<K extends keyof T>(key: K): T[K] | undefined;
-    protected setAsObject(values: Partial<T>): this;
-    protected setAsKeyValue<K extends keyof T, P extends A_TYPES__Paths<T>>(key: K | P, value: T[K] | AreStorePathValue<T, P>): this;
-    /**
-     * Notifies instructions — immediately or deferred if inside a batch.
-     */
-    private notify;
-    /**
-     * Removes an instruction from all dependency sets.
-     * Called when an instruction is reverted/destroyed.
-     */
-    unregister(instruction: AreStoreWatchingEntity): void;
-    /**
-     * Normalizes a path once — reused in both get and set.
-     */
-    private normalizePath;
-    /**
-     * Extracts direct children of the current markup level into typed instances.
-     * No tree walking, recursion, or nested parsing — just direct children.
-     */
-    extractPathSegments(path: string): string[];
-    /**
-     * Method allows to initialize all extensions defined in the component with @AreStore.Function decorator, so we can use them in the store's context. This method should be called in the component's constructor after super() call, so the store will have access to the component's instance and its properties.
-     *
-     * @param component
-     */
-    loadExtensions(component: Are): void;
-}
-
-interface AreSyntaxTokenRules<T extends AreNode = AreNode> {
-    /** Opening delimiter e.g. '<', '{{', '<!--', '{' */
-    opening?: string;
-    /** Closing delimiter e.g. '>', '}}', '-->', '}' */
-    closing?: string;
-    /** Optional self-closing marker e.g. '/>' */
-    selfClosing?: string;
-    /** Regex that must match content immediately before the opening delimiter */
-    prefix?: RegExp;
-    /** Replaces open/close entirely — matches entire pattern via RegExp */
-    pattern?: RegExp;
-    /**
-     * Fully custom matcher — complete control over how a token is found.
-     * Receives (source, from, to, build) where build(raw, content, position, closing)
-     * constructs the AreSyntaxTokenMatch. Return null if no match found.
-     */
-    matcher?: (source: string, from: number, to: number, build: (raw: string, content: string, position: number, closing: string) => AreSyntaxTokenMatch) => AreSyntaxTokenMatch | null;
-    /** Constructor to instantiate when this rule matches */
-    component: A_TYPES__Entity_Constructor<T>;
-    /** Higher = checked first. Default: 0 */
-    priority?: number;
-    /** Whether this token can contain nested tokens of same open/close. Default: true */
-    nested?: boolean;
-    /** Custom data extractor — called after match, result stored in match.meta */
-    extract?: (raw: string, match: AreSyntaxTokenMatch) => Record<string, any>;
-}
-type AreSyntaxTokenPayload = {
-    /**
-     * Allows to override ASEID generation for this token match. Useful when the token corresponds to an existing entity or needs a stable ID across parses. If not provided, ASEID will be generated based on position and content.
-     */
-    id?: string;
-    /**
-     * Allows to override the entity type for this token match. Useful when the token corresponds to an existing entity or needs a specific entity type across parses. If not provided, the entity type will be inferred from the token.
-     */
-    entity?: string;
-    /**
-     * Allows to override the scope for this token match. Useful when the token corresponds to an existing entity or needs a specific scope across parses. If not provided, the scope will be generated based on position and content.
-     */
-    scope?: string;
-    [key: string]: any;
-};
-interface AreSyntaxTokenMatch {
-    /** Full matched string including delimiters */
-    raw: string;
-    /** Content between delimiters */
-    content: string;
-    /** The opening delimiter that matched */
-    opening: string;
-    /** The closing delimiter that matched */
-    closing: string;
-    /** Start position in source string */
-    position: number;
-    /** Data extracted via rule.extract */
-    payload: AreSyntaxTokenPayload;
-    /** @internal – the rule that produced this match (used by instantiate) */
-    _rule?: AreSyntaxTokenRules;
-}
-interface AreSyntaxInitOptions {
-    /**
-     * Array of token rules defining the syntax to be parsed. Each rule specifies how to identify and process a particular type of token (e.g. interpolation, directive, comment) within templates. The rules are checked in order of priority, allowing for flexible and customizable parsing behavior.
-     */
-    rules: AreSyntaxTokenRules[];
-    /**
-     * Whether to trim leading/trailing whitespace from token content. Default: true. When enabled, any whitespace at the start or end of the content captured by a token will be removed before further processing. This can help prevent issues with unintended spaces affecting rendering or logic, especially in cases like interpolations or directives where extra whitespace may be common.
-     */
-    trimWhitespace?: boolean;
-    /** Throw on unclosed tokens. Default: true */
-    strictMode?: boolean;
-}
-type AreSyntaxCompiledExpression = {
-    execute: (store: AreStore, scope?: Record<string, any>) => any;
-    isCallable: boolean;
-};
 
 declare const AreNodeFeatures: {
     /**
@@ -945,7 +354,7 @@ declare const AreNodeStatuses: {
     readonly Unmounted: "unmounted";
 };
 
-type AreNodeNewProps = AreSyntaxTokenMatch;
+type AreNodeNewProps = AreSyntaxTokenMatch$1;
 type AreNodeFeatureNames = typeof AreNodeFeatures[keyof typeof AreNodeFeatures];
 type AreNodeStatusNames = typeof AreNodeStatuses[keyof typeof AreNodeStatuses];
 
@@ -969,7 +378,7 @@ declare class AreNode extends A_Entity<AreNodeNewProps> {
     /**
      * The payload associated with the node, which can include any additional data or metadata that is extracted during the tokenization process. The payload can be used to store custom information related to the node, such as directive arguments, binding expressions, or any other relevant data that may be needed for processing and rendering the node within the scene.
      */
-    protected _payload?: AreSyntaxTokenPayload;
+    protected _payload?: AreSyntaxTokenPayload$1;
     /**
      * Content string defined for the node — the inner content between delimiters.
      * Example: `{{name}}`
@@ -1012,7 +421,7 @@ declare class AreNode extends A_Entity<AreNodeNewProps> {
     /**
      * The attributes defined for the node, which can include static attributes, binding attributes, directive attributes, and event attributes. These attributes are extracted during tokenization and processed during the compilation phase to generate the corresponding SceneInstructions for rendering and updating the node in the scene.
      */
-    get attributes(): AreAttribute[];
+    get attributes(): AreAttribute$1[];
     /**
      * A custom component associated with this node, which can be used to provide custom logic and behavior for the node. This component is typically defined in the context and can be resolved based on the node's type or other identifying information. The component can include its own content, markup, styles, and features that are specific to the functionality it provides.
      *
@@ -1020,7 +429,7 @@ declare class AreNode extends A_Entity<AreNodeNewProps> {
      *
      * [!] Note: The component is optional and may not be defined for all nodes. If no component is associated with the node, it will be treated as a standard HTML element or a basic node without custom logic.
      */
-    get component(): Are | undefined;
+    get component(): Are$1 | undefined;
     /**
      * The parent node of this node, which is the node that registered the current node in its scope. This is typically the node that is responsible for rendering the current node and managing its lifecycle within the scene. The parent node can be used to access shared context, propagate events, and manage interactions between nodes in a hierarchical structure.
      *
@@ -1037,8 +446,8 @@ declare class AreNode extends A_Entity<AreNodeNewProps> {
      * It returns the scene where the node exists, so it should be the scene of the rootNode,
      * primary parent of this node.
      */
-    get scene(): AreScene;
-    protected _scene: AreScene;
+    get scene(): AreScene$1;
+    protected _scene: AreScene$1;
     fromNew(newEntity: AreNodeNewProps): void;
     fromASEID(aseid: string | ASEID): void;
     /**
@@ -1122,7 +531,7 @@ declare class AreNode extends A_Entity<AreNodeNewProps> {
      * @param scope - The scope or event to be emitted to the node
      */
     emit(scope: A_Scope): any;
-    emit(event: AreEvent): any;
+    emit(event: AreEvent$1): any;
     /**
      * Destroys the node, which typically involves executing any necessary cleanup logic to remove the node from the scene and to free up any resources associated with the node. This may include deregistering the node from its scope, removing any event listeners or reactive properties, and performing any other necessary cleanup tasks to ensure that the node is properly removed from the scene and that resources are released as needed.
      *
@@ -1137,62 +546,219 @@ declare class AreNode extends A_Entity<AreNodeNewProps> {
     protected checkScopeInheritance(): void;
 }
 
-declare class AreContext extends A_ExecutionContext {
+declare const AreAttributeFeatures: {
     /**
-     * The source string represents the original template or input from which the ARE scene is generated. This can be used for debugging, error reporting, or any features that require access to the raw template data. The roots array holds references to the root nodes of the ARE scene, allowing for easy access and management of the top-level components in the rendering hierarchy. The signalsMap is a mapping between root nodes and their associated signal vectors, enabling efficient management of reactive updates and interactions within the ARE framework based on changes in the application state or user input.
+     * Initializes the attribute. This method is called when the attribute is first created and should set up any necessary state or perform any initial processing based on the provided content and context. It can also be used to validate the attribute's content and throw errors if it is invalid.
      */
-    protected _source: string;
+    readonly Init: "_AreAttribute_Init";
     /**
-     * The roots array holds references to the root nodes of the ARE scene, allowing for easy access and management of the top-level components in the rendering hierarchy. The signalsMap is a mapping between root nodes and their associated signal vectors, enabling efficient management of reactive updates and interactions within the ARE framework based on changes in the application state or user input.
+     * Uses to generate all rendering instructions for the attribute. This method is called during the compilation phase of the ARE component and should return an array of instructions that describe how to render the attribute based on its content and context. The instructions can include details such as which DOM properties to set, which events to listen for, and how to update the attribute when the underlying data changes.
      */
-    protected _roots: Array<AreNode>;
+    readonly Transform: "_AreAttribute_Transform";
     /**
-     * This property stores a map between root node and conditions that should be met to render particular component inside the root node. This can be used to manage complex rendering logic and to optimize performance by ensuring that components are only rendered when necessary based on the defined conditions.
+     * Feature that should convert a directiveAttribute definition into a set of SceneInstructions to be rendered correctly
      */
-    protected _signalsMap: Map<string, A_SignalVector>;
-    protected _performance: Map<string, number>;
-    protected _performanceStart: Map<string, number>;
-    protected _performanceDepth: Map<string, number>;
+    readonly Compile: "_AreAttribute_Compile";
     /**
-     * The global object can be used to store any global data or configurations that need to be accessed across different components and entities within the ARE framework. This can include things like theme settings, user preferences, or any other shared data that is relevant to the entire scene or application. By centralizing this information in the context, it allows for easier management and access to global state without needing to pass it through multiple layers of components or entities.
+     * Feature that should update the directiveAttribute based on the changes in the store or other dependencies. This method is called during the update phase of the ARE component and should perform any necessary updates to the attribute based on changes in the underlying data or context. This can include tasks such as updating DOM properties, re-evaluating expressions, or modifying event listeners to ensure that the attribute remains in sync with the current state of the application.
      */
-    get globals(): any;
-    constructor(
+    readonly Update: "_AreAttribute_Update";
     /**
-     * The source string represents the original template or input from which the ARE scene is generated. This can be used for debugging, error reporting, or any features that require access to the raw template data. The roots array holds references to the root nodes of the ARE scene, allowing for easy access and management of the top-level components in the rendering hierarchy. The signalsMap is a mapping between root nodes and their associated signal vectors, enabling efficient management of reactive updates and interactions within the ARE framework based on changes in the application state or user input.
+     * Feature that should validate the attribute's content and context. This method is called during the validation phase of the ARE component and should check whether the attribute's content is valid based on its expected format, type, or other constraints. If the content is invalid, this method should throw an error with a descriptive message to help developers identify and fix the issue.
      */
-    source?: string);
+    readonly Validate: "_AreAttribute_Validate";
+};
+
+/**
+ * This file defines the types for the AreAttribute entity, which represents an attribute of a node in the ARE (Adaptive Rendering Engine) framework. The AreAttribute entity is responsible for managing the details of an attribute, such as its name, raw content, and value, as well as providing methods for initializing, transforming, compiling, updating, and validating the attribute based on its content and context. The types defined in this file include the initialization properties for creating a new AreAttribute instance, the serialized format for storing or transmitting an AreAttribute instance, and the names of the features that can be implemented by the AreAttribute entity.
+ */
+type AreAttribute_Init = {
     /**
-     * The scope of the context, which can be used to access other entities and features within the same scope. This is particularly useful for components that need to interact with other parts of the scene or component, as it allows them to access shared data and functionality without needing to pass it explicitly through parameters.
+     * Property name (e.g. "label")
      */
-    get scope(): _adaas_a_concept.A_Scope<any, _adaas_a_concept.A_TYPES__Component_Constructor<_adaas_a_concept.A_Component>[], _adaas_a_concept.A_TYPES__Error_Constructor<_adaas_a_concept.A_Error<_adaas_a_concept.A_TYPES__Error_Init, _adaas_a_concept.A_TYPES__Error_Serialized>>[], _adaas_a_concept.A_TYPES__Entity_Constructor<_adaas_a_concept.A_Entity<any, _adaas_a_concept.A_TYPES__Entity_Serialized>>[], A_Fragment<_adaas_a_concept.A_TYPES__Fragment_Serialized>[]>;
+    name: string;
     /**
-     * The roots array holds references to the root nodes of the ARE scene, allowing for easy access and management of the top-level components in the rendering hierarchy. The signalsMap is a mapping between root nodes and their associated signal vectors, enabling efficient management of reactive updates and interactions within the ARE framework based on changes in the application state or user input.
+     * Full raw attribute (e.g. ' :label="buttonLabel" ')
      */
-    get roots(): Array<AreNode>;
+    raw: string;
     /**
-     * This property stores a map between root node and conditions that should be met to render particular component inside the root node. This can be used to manage complex rendering logic and to optimize performance by ensuring that components are only rendered when necessary based on the defined conditions.
+     * Attribute content (e.g. "buttonLabel")
      */
-    get source(): string;
-    get performance(): Array<string>;
-    get stats(): string[];
-    protected countInstructions(node: AreNode): number;
-    protected countNodes(node: AreNode): number;
+    content: string;
     /**
-     * This property stores a map between root node and conditions that should be met to render particular component inside the root node. This can be used to manage complex rendering logic and to optimize performance by ensuring that components are only rendered when necessary based on the defined conditions.
+     * The prefix of the attribute, for example for ':label' it would be ':', for 'v-if' it would be 'v-'. This can be used to determine the type of the attribute and how to process it.
+     */
+    prefix: string;
+};
+/**
+ * The evaluated value of the attribute, which can be different from the raw value depending on the context and type of the attribute. For example, for a directive like `v-if="condition"`, the raw value is "condition", but the evaluated value would be the result of evaluating "condition" in the current scope.
+ */
+type AreAttribute_Serialized = {
+    /**
+     * Property name (e.g. "label")
+     */
+    name: string;
+    /**
+     * Full raw attribute (e.g. ' :label="buttonLabel" ')
+     */
+    raw: string;
+    /**
+     * Attribute value (e.g. "buttonLabel")
+     */
+    value: string;
+} & A_TYPES__Entity_Serialized;
+/**
+ * The names of the features that can be implemented by the AreAttribute entity. These features correspond to specific methods that can be defined on the AreAttribute class to provide custom behavior for initializing, transforming, compiling, updating, and validating the attribute based on its content and context. Each feature name is associated with a specific method that should be implemented to handle the corresponding aspect of the attribute's lifecycle and behavior within the ARE framework.
+ */
+type AreAttributeFeatureNames = typeof AreAttributeFeatures[keyof typeof AreAttributeFeatures];
+
+declare class AreAttribute extends A_Entity<AreAttribute_Init, AreAttribute_Serialized> {
+    /**
+     * Property name (e.g. "label")
+     */
+    name: string;
+    /**
+     * Full raw attribute (e.g. ' :label="buttonLabel" ')
+     */
+    raw: string;
+    /**
+     * Attribute content (e.g. "buttonLabel")
+     * Example: For a directive like `v-if="condition"`, the raw value is "condition", but the content would be "condition" without the quotes, and the value would be the result of evaluating "condition" in the current scope.
+     */
+    content: string;
+    /**
+     * The evaluated value of the attribute, which can be different from the raw value depending on the context and type of the attribute. For example, for a directive like `v-if="condition"`, the raw value is "condition", but the evaluated value would be the result of evaluating "condition" in the current scope.
+     */
+    value: any;
+    /**
+     * The prefix of the attribute, for example for ':label' it would be ':', for 'v-if' it would be 'v-'. This can be used to determine the type of the attribute and how to process it.
+     */
+    prefix: string;
+    /**
+     * The scope where the attribute is defined, which can be used to access other entities and features within the same scope. This is particularly useful for attributes that need to interact with other parts of the scene or component, as it allows them to access shared data and functionality without needing to pass it explicitly through parameters.
+     */
+    get scope(): A_Scope<any, _adaas_a_concept.A_TYPES__Component_Constructor<_adaas_a_concept.A_Component>[], _adaas_a_concept.A_TYPES__Error_Constructor<_adaas_a_concept.A_Error<_adaas_a_concept.A_TYPES__Error_Init, _adaas_a_concept.A_TYPES__Error_Serialized>>[], _adaas_a_concept.A_TYPES__Entity_Constructor<A_Entity<any, _adaas_a_concept.A_TYPES__Entity_Serialized>>[], _adaas_a_concept.A_Fragment<_adaas_a_concept.A_TYPES__Fragment_Serialized>[]>;
+    /**
+     * The owner node of the attribute, which is the node that the attribute is attached to. This can be used to access the properties and features of the owner node, as well as to determine the context in which the attribute is being used. For example, if the attribute is attached to a button element, the owner would be that button node, and the attribute could use this information to modify the button's behavior or appearance based on its content and context.
+     */
+    get owner(): AreNode$1;
+    /**
+     * Initializes the attribute based on the provided properties. This method is called when a new attribute is created and should set up the attribute's state based on the provided properties. It can also be used to generate a unique ASEID for the attribute based on its name and content, which can be used for caching and identification purposes within the ARE framework.
      *
-     * @param node
+     * @param newEntity
      */
-    addRoot(node: AreNode): void;
+    fromNew(newEntity: AreAttribute_Init): void;
     /**
-     * This property stores a map between root node and conditions that should be met to render particular component inside the root node. This can be used to manage complex rendering logic and to optimize performance by ensuring that components are only rendered when necessary based on the defined conditions.
+     * Creates a clone of the current attribute instance. This method can be used to create a new instance of the attribute with the same properties and state as the original, which can be useful in scenarios where you want to reuse an attribute's configuration or create variations of it without modifying the original instance.
      *
-     * @param node
+     * @returns
      */
-    removeRoot(node: AreNode): void;
-    startPerformance(label?: string): void;
-    endPerformance(label: string): void;
+    clone(): this;
+    /**
+     * Initializes the attribute. This method is called when the attribute is first created and should set up any necessary state or perform any initial processing based on the provided content and context. It can also be used to validate the attribute's content and throw errors if it is invalid.
+     *
+     * @param scope
+     */
+    init(scope?: A_Scope): void;
+    /**
+     * Generates all rendering instructions for the attribute. This method is called during the compilation phase of the ARE component and should return an array of instructions that describe how to render the attribute based on its content and context. The instructions can include details such as which DOM properties to set, which events to listen for, and how to update the attribute when the underlying data changes.
+     *
+     * @param scope
+     */
+    transform(scope?: A_Scope): void;
+    /**
+     * Compiles the attribute. This method should transform attribute details into a set of SceneInstructions. It may also modify attribute value, since this field is editable during runtime.
+     *
+     * @param scope
+     */
+    compile(scope?: A_Scope): void;
+    /**
+     * Updates the attribute based on changes in the store or other dependencies. This method is called during the update phase of the ARE component and should perform any necessary updates to the attribute based on changes in the underlying data or context. This can include tasks such as updating DOM properties, re-evaluating expressions, or modifying event listeners to ensure that the attribute remains in sync with the current state of the application.
+     *
+     * @param scope
+     */
+    update(scope?: A_Scope): void;
+    /**
+     * Validates the attribute's content and context. This method is called during the validation phase of the ARE component and should check whether the attribute's content is valid based on its expected format, type, or other constraints. If the content is invalid, this method should throw an error with a descriptive message to help developers identify and fix the issue.
+     *
+     * @param scope
+     */
+    validate(scope?: A_Scope): void;
 }
+
+interface AreSyntaxTokenRules<T extends AreNode$1 = AreNode$1> {
+    /** Opening delimiter e.g. '<', '{{', '<!--', '{' */
+    opening?: string;
+    /** Closing delimiter e.g. '>', '}}', '-->', '}' */
+    closing?: string;
+    /** Optional self-closing marker e.g. '/>' */
+    selfClosing?: string;
+    /** Regex that must match content immediately before the opening delimiter */
+    prefix?: RegExp;
+    /** Replaces open/close entirely — matches entire pattern via RegExp */
+    pattern?: RegExp;
+    /**
+     * Fully custom matcher — complete control over how a token is found.
+     * Receives (source, from, to, build) where build(raw, content, position, closing)
+     * constructs the AreSyntaxTokenMatch. Return null if no match found.
+     */
+    matcher?: (source: string, from: number, to: number, build: (raw: string, content: string, position: number, closing: string) => AreSyntaxTokenMatch) => AreSyntaxTokenMatch | null;
+    /** Constructor to instantiate when this rule matches */
+    component: A_TYPES__Entity_Constructor<T>;
+    /** Higher = checked first. Default: 0 */
+    priority?: number;
+    /** Whether this token can contain nested tokens of same open/close. Default: true */
+    nested?: boolean;
+    /** Custom data extractor — called after match, result stored in match.meta */
+    extract?: (raw: string, match: AreSyntaxTokenMatch) => Record<string, any>;
+}
+type AreSyntaxTokenPayload = {
+    /**
+     * Allows to override ASEID generation for this token match. Useful when the token corresponds to an existing entity or needs a stable ID across parses. If not provided, ASEID will be generated based on position and content.
+     */
+    id?: string;
+    /**
+     * Allows to override the entity type for this token match. Useful when the token corresponds to an existing entity or needs a specific entity type across parses. If not provided, the entity type will be inferred from the token.
+     */
+    entity?: string;
+    /**
+     * Allows to override the scope for this token match. Useful when the token corresponds to an existing entity or needs a specific scope across parses. If not provided, the scope will be generated based on position and content.
+     */
+    scope?: string;
+    [key: string]: any;
+};
+interface AreSyntaxTokenMatch {
+    /** Full matched string including delimiters */
+    raw: string;
+    /** Content between delimiters */
+    content: string;
+    /** The opening delimiter that matched */
+    opening: string;
+    /** The closing delimiter that matched */
+    closing: string;
+    /** Start position in source string */
+    position: number;
+    /** Data extracted via rule.extract */
+    payload: AreSyntaxTokenPayload;
+    /** @internal – the rule that produced this match (used by instantiate) */
+    _rule?: AreSyntaxTokenRules;
+}
+interface AreSyntaxInitOptions {
+    /**
+     * Array of token rules defining the syntax to be parsed. Each rule specifies how to identify and process a particular type of token (e.g. interpolation, directive, comment) within templates. The rules are checked in order of priority, allowing for flexible and customizable parsing behavior.
+     */
+    rules: AreSyntaxTokenRules[];
+    /**
+     * Whether to trim leading/trailing whitespace from token content. Default: true. When enabled, any whitespace at the start or end of the content captured by a token will be removed before further processing. This can help prevent issues with unintended spaces affecting rendering or logic, especially in cases like interpolations or directives where extra whitespace may be common.
+     */
+    trimWhitespace?: boolean;
+    /** Throw on unclosed tokens. Default: true */
+    strictMode?: boolean;
+}
+type AreSyntaxCompiledExpression = {
+    execute: (store: AreStore$1, scope?: Record<string, any>) => any;
+    isCallable: boolean;
+};
 
 declare class AreSyntax extends A_Fragment {
     /**
@@ -1286,7 +852,7 @@ declare class AreSyntax extends A_Fragment {
      *       $handleClick: (...args) => node.emit(new AreEvent('handleClick', args)),
      *   })
      */
-    evaluate(expr: string, store: AreStore, scope?: Record<string, any>): any;
+    evaluate(expr: string, store: AreStore$1, scope?: Record<string, any>): any;
     /**
      * Extracts $-prefixed handler names from an expression.
      * These represent event emission targets, not store references.
@@ -1316,7 +882,7 @@ declare class AreTokenizer extends A_Component {
     /**
      * Get the AreSyntax from the current scope. The AreSyntax defines the syntax rules and structures for tokenizing templates. It provides mechanisms for parsing and interpreting templates, attributes, directives, interpolations, and event listeners, enabling dynamic and interactive UI rendering within the ARE framework. If no AreSyntax is found in the scope, an error is thrown indicating that AreTokenizer requires an AreSyntax to function properly.
      */
-    protected get config(): AreSyntax;
+    protected get config(): AreSyntax$1;
     /**
      * Instantiate AreNodes based on the token matches obtained from scanning the source template. This method takes the raw source string from the context, scans it for tokens using the defined syntax rules, and creates corresponding AreNode instances for each matched token. The resulting array of AreNodes represents the structured representation of the template, which can then be used for further processing, such as rendering or applying scene instructions.
      *
@@ -1324,17 +890,17 @@ declare class AreTokenizer extends A_Component {
      * @param context
      * @returns
      */
-    instantiate<T extends AreNode>(context: AreContext): void;
-    tokenize(node: AreNode, context: AreContext, logger?: A_Logger): void;
-    protected scan(source: string, from: number, to: number, context: AreContext): AreSyntaxTokenMatch[];
-    protected findNextMatch(source: string, from: number, to: number): AreSyntaxTokenMatch | null;
-    protected matchRule(source: string, rule: AreSyntaxTokenRules, from: number, to: number): AreSyntaxTokenMatch | null;
-    protected matchStandardRule(source: string, rule: AreSyntaxTokenRules, from: number, to: number): AreSyntaxTokenMatch | null;
-    protected matchPrefixedRule(source: string, rule: AreSyntaxTokenRules, from: number, to: number): AreSyntaxTokenMatch | null;
+    instantiate<T extends AreNode$1>(context: AreContext$1): void;
+    tokenize(node: AreNode$1, context: AreContext$1, logger?: A_Logger): void;
+    protected scan(source: string, from: number, to: number, context: AreContext$1): AreSyntaxTokenMatch$1[];
+    protected findNextMatch(source: string, from: number, to: number): AreSyntaxTokenMatch$1 | null;
+    protected matchRule(source: string, rule: AreSyntaxTokenRules$1, from: number, to: number): AreSyntaxTokenMatch$1 | null;
+    protected matchStandardRule(source: string, rule: AreSyntaxTokenRules$1, from: number, to: number): AreSyntaxTokenMatch$1 | null;
+    protected matchPrefixedRule(source: string, rule: AreSyntaxTokenRules$1, from: number, to: number): AreSyntaxTokenMatch$1 | null;
     protected findMatchingClose(source: string, opening: string, closing: string, from: number, to: number): number;
-    protected buildMatch(rule: AreSyntaxTokenRules, raw: string, content: string, position: number, closingUsed: string): AreSyntaxTokenMatch;
-    protected tryPlainText(raw: string, position: number): AreSyntaxTokenMatch | null;
-    protected findRuleForMatch(match: AreSyntaxTokenMatch): AreSyntaxTokenRules | undefined;
+    protected buildMatch(rule: AreSyntaxTokenRules$1, raw: string, content: string, position: number, closingUsed: string): AreSyntaxTokenMatch$1;
+    protected tryPlainText(raw: string, position: number): AreSyntaxTokenMatch$1 | null;
+    protected findRuleForMatch(match: AreSyntaxTokenMatch$1): AreSyntaxTokenRules$1 | undefined;
 }
 
 declare class AreTokenizerError extends A_Error {
@@ -1346,14 +912,14 @@ declare class AreCompiler extends A_Component {
      *
      * @param node
      */
-    static Compile<T extends AreNode>(node: A_TYPES__Entity_Constructor<T>): any;
+    static Compile<T extends AreNode$1>(node: A_TYPES__Entity_Constructor<T>): any;
     /**
      * Defines a custom method for compiling an attribute into a set of SceneInstructions. This method is called during the compilation phase of the ARE component and should perform any necessary transformations on the attribute to generate the appropriate instructions for rendering. This can include tasks such as processing directives, evaluating expressions, and generating instructions for dynamic content based on the attribute's properties and context.
      *
      * @param attribute
      */
-    static Compile<T extends AreAttribute>(attribute: A_TYPES__Entity_Constructor<T>): any;
-    compile(node: AreNode, scene: AreScene, logger?: A_Logger, ...args: any[]): void;
+    static Compile<T extends AreAttribute$1>(attribute: A_TYPES__Entity_Constructor<T>): any;
+    compile(node: AreNode$1, scene: AreScene$1, logger?: A_Logger, ...args: any[]): void;
 }
 
 declare class AreCompilerError extends A_Error {
@@ -1362,7 +928,7 @@ declare class AreCompilerError extends A_Error {
 }
 
 declare class AreTransformer extends A_Component {
-    transform(node: AreNode, scope: A_Scope, scene: AreScene, ...args: any[]): void;
+    transform(node: AreNode$1, scope: A_Scope, scene: AreScene$1, ...args: any[]): void;
 }
 
 declare class AreInterpreter extends A_Component {
@@ -1392,13 +958,72 @@ declare class AreInterpreter extends A_Component {
      *
      * @param scene
      */
-    interpret(scene: AreScene): void;
-    protected applyInstruction(instruction: AreInstruction, interpreter: AreInterpreter, store: AreStore, scope: A_Scope, feature: A_Feature, ...args: any[]): void;
-    protected updateInstruction(instruction: AreInstruction, interpreter: AreInterpreter, store: AreStore, scope: A_Scope, feature: A_Feature, ...args: any[]): void;
-    protected revertInstruction(instruction: AreInstruction, interpreter: AreInterpreter, store: AreStore, scope: A_Scope, feature: A_Feature, ...args: any[]): void;
+    interpret(scene: AreScene$1): void;
+    protected applyInstruction(instruction: AreInstruction$1, interpreter: AreInterpreter, store: AreStore$1, scope: A_Scope, feature: A_Feature, ...args: any[]): void;
+    protected updateInstruction(instruction: AreInstruction$1, interpreter: AreInterpreter, store: AreStore$1, scope: A_Scope, feature: A_Feature, ...args: any[]): void;
+    protected revertInstruction(instruction: AreInstruction$1, interpreter: AreInterpreter, store: AreStore$1, scope: A_Scope, feature: A_Feature, ...args: any[]): void;
 }
 
 declare class AreInterpreterError extends A_Error {
+}
+
+declare const AreStoreAreComponentMetaKeys: {
+    readonly StoreExtensions: "_AreStore_StoreExtensions";
+};
+
+type AreStorePathValue<T, P extends string> = P extends `${infer K}.${infer Rest}` ? K extends keyof T ? AreStorePathValue<T[K], Rest> : never : P extends keyof T ? T[P] : never;
+type AreStoreWatchingEntity = {
+    update(...args: any[]): void;
+};
+type AreStoreAreComponentMetaKeyNames = typeof AreStoreAreComponentMetaKeys[keyof typeof AreStoreAreComponentMetaKeys];
+
+declare class AreStore<T extends Record<string, any> = Record<string, any>> extends A_ExecutionContext<T> {
+    protected dependencies: Map<string, Set<AreStoreWatchingEntity>>;
+    protected _keys: Set<keyof T>;
+    /**
+     * Allows to define a pure function that will be executed in the context of the store, so it can access the store's data and methods, but it won't have access to the component's scope or other features. This can be useful for example for defining a function that will update the store's data based on some logic, without having access to the component's scope or other features, so we can keep the store's logic separate from the component's logic.
+     */
+    static get Function(): <T extends Are$1>(target: T, propertyKey: string, descriptor: PropertyDescriptor) => PropertyDescriptor;
+    get owner(): AreNode$1;
+    get parent(): AreStore | undefined;
+    get context(): AreContext$1;
+    constructor(aseid: ASEID | string);
+    get watchers(): Set<AreStoreWatchingEntity>;
+    get keys(): Set<keyof T>;
+    watch(instruction: AreStoreWatchingEntity): void;
+    unwatch(instruction: AreStoreWatchingEntity): void;
+    set<K extends keyof T>(values: Partial<T>): this;
+    set<P extends A_TYPES__Paths<T>>(key: P, value: AreStorePathValue<T, P>): this;
+    get<K extends keyof T>(key: K): T[K] | undefined;
+    protected setAsObject(values: Partial<T>): this;
+    protected setAsKeyValue<K extends keyof T, P extends A_TYPES__Paths<T>>(key: K | P, value: T[K] | AreStorePathValue<T, P>): this;
+    /**
+     * Notifies instructions — immediately or deferred if inside a batch.
+     */
+    private notify;
+    /**
+     * Removes an instruction from all dependency sets.
+     * Called when an instruction is reverted/destroyed.
+     */
+    unregister(instruction: AreStoreWatchingEntity): void;
+    /**
+     * Normalizes a path once — reused in both get and set.
+     */
+    private normalizePath;
+    /**
+     * Extracts direct children of the current markup level into typed instances.
+     * No tree walking, recursion, or nested parsing — just direct children.
+     */
+    extractPathSegments(path: string): string[];
+    /**
+     * Method allows to initialize all extensions defined in the component with @AreStore.Function decorator, so we can use them in the store's context. This method should be called in the component's constructor after super() call, so the store will have access to the component's instance and its properties.
+     *
+     * @param component
+     */
+    loadExtensions(component: Are$1): void;
+}
+
+declare class AreEvent<T extends Record<string, any> = Record<string, any>> extends A_ExecutionContext<T> {
 }
 
 /**
@@ -1416,6 +1041,188 @@ type AreEventProps<T = any> = {
     event: string;
 };
 
+declare const AreSceneStatuses: {
+    Active: string;
+    Inactive: string;
+    Destroyed: string;
+};
+
+type AreSceneChanges = {
+    /**
+     * An array of instructions that are planned to be applied to the scene. These instructions represent the changes that will be made to the scene when they
+     */
+    toApply: AreInstruction$1[];
+    /**
+     * An array of instructions that are planned to be reverted from the scene. These instructions represent the changes that will be undone from the scene when they are reverted, allowing for a rollback of changes if needed.
+     */
+    toRevert: AreInstruction$1[];
+};
+type AreScene_Serialized = {
+    instructions: AreInstructionSerialized$1[];
+} & A_TYPES__Fragment_Serialized;
+type AreSceneStatusNames = typeof AreSceneStatuses[keyof typeof AreSceneStatuses];
+
+declare class AreScene extends A_Fragment {
+    protected _groupToInstructionsMap: Map<string, Set<AreInstruction$1>>;
+    /**
+     * Plan is a queue of changes that should be applied to render the node
+     *
+     * It works as FIFO, so the first instruction that should be applied is the first one in the queue, and so on.
+     */
+    protected _plan: Array<AreInstruction$1>;
+    /**
+     * State is a list of instructions that are currently applied to the node,
+     * so it represents the current state of the node in the scene.
+     *
+     * It always in a reverse order of the plan, so the last instruction in the state is the first one that should be reverted when we need to revert the changes, and so on.
+     *
+     * For example, if we have a node with two instructions in the plan: [Instruction A, Instruction B], and both of them are applied to the node, then the state will be [Instruction B, Instruction A], so when we need to revert the changes, we will revert Instruction B first, and then Instruction A.
+     */
+    protected _state: Array<AreInstruction$1>;
+    protected _host: AreDeclaration$1 | undefined;
+    /**
+     * Scene status is used to determine the current lifecycle stage of the scene, which can be 'active', 'inactive' or 'destroyed'. This status can be used to control the behavior of the scene and its instructions, for example, we can prevent applying new instructions to an inactive or destroyed scene, or we can trigger certain actions when the scene becomes active or inactive. The default status of the scene is 'inactive', which means that the scene is not yet rendered and its instructions are not applied, and it will become 'active' when it is mounted and its instructions are applied, and it will become 'destroyed' when it is unmounted and its instructions are reverted.
+     */
+    protected _status: AreSceneStatusNames;
+    constructor(
+    /**
+     * Scene identity will be used to identify mounting point in the parent scene
+     */
+    id: string | ASEID);
+    /**
+     * Scene ID that corresponds to the root node's ID (part of ASEID)
+     */
+    get id(): string;
+    /**
+     * The scope where scene is registered. This scope is owned by AreNode
+     */
+    get scope(): A_Scope;
+    /**
+     * The owner node of the scene, which is the node that registered the scene in its scope.
+     * This is typically the node that is responsible for rendering the scene and managing its lifecycle.
+     */
+    get owner(): AreNode$1;
+    /**
+     * It's a primary declaration instruction that represents the node in the scene, so it should be registered as a host instruction for the scene, and it will be used to keep track of the node in the scene and to manage its lifecycle.
+     */
+    get host(): AreDeclaration$1 | undefined;
+    /**
+     * Scene status is used to determine the current lifecycle stage of the scene, which can be 'active', 'inactive' or 'destroyed'. This status can be used to control the behavior of the scene and its instructions, for example, we can prevent applying new instructions to an inactive or destroyed scene, or we can trigger certain actions when the scene becomes active or inactive. The default status of the scene is 'inactive', which means that the scene is not yet rendered and its instructions are not applied, and it will become 'active' when it is mounted and its instructions are applied, and it will become 'destroyed' when it is unmounted and its instructions are reverted.
+     */
+    get status(): AreSceneStatusNames;
+    get isActive(): boolean;
+    get isInactive(): boolean;
+    /**
+     * Returns All declaration instructions are registered in the scene scope. Since declaration instructions are the main instructions that represent the structure of the node, we have a separate getter for them to easily access and manage them in the scene.
+     */
+    get declarations(): AreDeclaration$1[];
+    /**
+     * Returns All mutation instructions are registered in the scene scope. Mutation instructions are the instructions that represent the changes to be applied to the node, so we have a separate getter for them to easily access and manage them in the scene, especially when we want to apply or revert changes based on the mutations.
+     */
+    get mutations(): AreMutation$1[];
+    /**
+     * Returns All instructions are registered in the scene scope.
+     */
+    get instructions(): AreInstruction$1[];
+    /**
+     * Plan is a queue of changes that should be applied to render the node
+     *
+     * It works as FIFO, so the first instruction that should be applied is the first one in the queue, and so on.
+     */
+    get planned(): AreInstruction$1[];
+    /**
+     * State is a list of instructions that are currently applied to the node,
+     * so it represents the current state of the node in the scene.
+     *
+     * It always in a reverse order of the plan, so the last instruction in the state is the first one that should be reverted when we need to revert the changes, and so on.
+     *
+     * For example, if we have a node with two instructions in the plan: [Instruction A, Instruction B], and both of them are applied to the node, then the state will be [Instruction B, Instruction A], so when we need to revert the changes, we will revert Instruction B first, and then Instruction A.
+     */
+    get applied(): AreInstruction$1[];
+    /**
+     * Should return instructions to be reverted and to be applied.
+     * A difference between plan vs state is that plan is what should be applied to the scene,
+     * while state is what currently applied to the scene.
+     *
+     */
+    get changes(): AreSceneChanges;
+    activate(): void;
+    deactivate(): void;
+    /**
+     * Each scene has a primary declaration instruction that represents the node in the scene, so it should be registered as a host instruction for the scene, and it will be used to keep track of the node in the scene and to manage its lifecycle. This method allows to set the host instruction for the scene, but it will throw an error if we try to set another host instruction while there is already a host instruction set, so we can ensure that there is only one host instruction for the scene at any given time.
+     *
+     * @param instruction
+     */
+    setHost(instruction: AreDeclaration$1): void;
+    /**
+     * Unsets the current host instruction from the scene.
+     *
+     * This method should be used when we want to remove the primary declaration instruction that represents the node in the scene, for example, when we want to unmount the node or when we want to replace it with another node. Unsetting the host instruction will allow us to set a new host instruction for the scene if needed.
+     */
+    removeHost(): void;
+    /**
+     * Method that should register the instruction in the plan, so it will be rendered in the next render cycle.
+     *
+     * @param instruction
+     */
+    plan(instruction: AreInstruction$1): void;
+    planBefore(instruction: AreInstruction$1, beforeInstruction: AreInstruction$1): void;
+    planAfter(instruction: AreInstruction$1, afterInstruction: AreInstruction$1): void;
+    moveBefore(instruction: AreInstruction$1, beforeInstruction: AreInstruction$1): void;
+    moveAfter(instruction: AreInstruction$1, afterInstruction: AreInstruction$1): void;
+    /**
+     * Allows to remove instruction from the plan, so it will not be rendered anymore, but it will still be registered in the scene scope, so it can be planned again if needed.
+     *
+     * @param instruction
+     */
+    unPlan(instruction: AreInstruction$1): void;
+    /**
+     * Checks if the instruction is already in the plan, so it will be rendered in the next render cycle.
+     *
+     * @param instruction
+     * @returns
+     */
+    getPlanned(instruction: AreInstruction$1): AreInstruction$1 | undefined;
+    /**
+     * Checks if the instruction is already in the plan, so it will be rendered in the next render cycle.
+     *
+     * @param instruction
+     * @returns
+     */
+    isInPlan(instruction: AreInstruction$1): boolean;
+    /**
+     * Method moves the instruction to state to keep it applied and to be able to revert it later if needed. The instruction should be already registered in the scene scope and planned to be applied, otherwise it will not be applied.
+     *
+     * @param instruction
+     */
+    apply(instruction: AreInstruction$1): void;
+    /**
+     * Method moves the instruction from state to unapply it and to be able to apply it later if needed. The instruction should be already registered in the scene scope and applied, otherwise it will not be unapplied.
+     *
+     * @param instruction
+     */
+    unApply(instruction: AreInstruction$1): void;
+    /**
+     * Checks if the instruction is already in the state, so it is currently applied to the scene.
+     *
+     * @param instruction
+     * @returns
+     */
+    getApplied(instruction: AreInstruction$1): AreInstruction$1 | undefined;
+    /**
+     * Checks if the instruction is already in the state, so it is currently applied to the scene.
+     *
+     * @param instruction
+     * @returns
+     */
+    isApplied(instruction: AreInstruction$1): boolean;
+    /**
+     * Method that should reset the scene to the initial state, so it will clear the plan and state, but it will not deregister the instructions from the scene scope, so they will still be registered in the scene and can be planned and applied again if needed.
+     *
+     */
+    reset(): void;
+}
+
 declare class AreSceneError extends A_Error {
     static readonly SceneAlreadyInactive = "AreSceneError.SceneAlreadyInactive";
     static readonly SceneAlreadyActive = "AreSceneError.SceneAlreadyActive";
@@ -1429,6 +1236,164 @@ declare class AreSceneError extends A_Error {
     static readonly MountPointNotFound = "AreSceneError.MountPointNotFound";
     static readonly InvalidTemplate = "AreSceneError.InvalidTemplate";
     static readonly RenderFailed = "AreSceneError.RenderFailed";
+}
+
+type AreInstructionNewProps<T extends any = Record<string, any>> = {
+    /**
+     * The deduplication ID that prevents duplicated instruction within the same node.
+     *
+     * For example to prevent duplicated AddAttribute instruction for the same attribute, we can use the attribute name as the deduplication ID, so if we have two AddAttribute instructions with the same attribute name, only the first one will be applied, and the second one will be ignored.
+     *
+     *
+     * [!] Note; By default it uses action name and group if provided
+     */
+    /**
+     * the Host operation to be performed. Exactly this name will be used to call a method from the Host class.
+     */
+    name: string;
+    /**
+     * The parent instruction that created this instruction. For example, if we have a CreateElement instruction that creates a new element, and then we have an AddAttribute instruction that adds an attribute to that element, the AddAttribute instruction would have the CreateElement instruction as its parent. This can be used to track the hierarchy of instructions and their dependencies.
+     */
+    parent?: AreInstruction | undefined;
+    /**
+     * Group is an optional property that can be used to group instructions together.
+     *
+     * For example a set of instructions that depend on create CreateElement instruction can be grouped together with the same group name, so if the CreateElement instruction is reverted, all the instructions in the same group will be reverted as well, and so on.
+     *
+     * This can be useful to manage complex changes that involve multiple instructions.
+     *
+     * [!] Note, the best option is to use ASEID of the Instruction as a group, so all instructions with the same ASEID will be treated as a single change, and will be applied and reverted together.
+     */
+    group?: AreInstruction | undefined;
+    /**
+     * A set of additional parameters that may be needed for the rendering purpose.
+     *
+     * For example: for AddAttribute instruction, we may need to provide the attribute name and value as a payload, so the Host can use this information to add the attribute to the node.
+     */
+    payload?: T;
+};
+type AreInstructionSerialized<T extends any = Record<string, any>> = {
+    /**
+     * The name of the instruction, which corresponds to the operation that should be performed in the Host. This name is used to identify the specific method in the Host that should be called to execute the instruction, allowing for a clear mapping between instructions and their corresponding actions in the rendering process.
+     */
+    name: string;
+    /**
+     * The type of the instruction, which can be used to categorize instructions and determine how they should be processed. For example, we can have different types for declaration instructions (e.g., DeclarationInstruction or CreateElement) and mutation instructions (e.g., AddAttribute), allowing for better organization and management of instructions based on their purpose and behavior in the scene.
+     */
+    type: string;
+    /**
+     * The parent instruction that created this instruction. For example, if we have a CreateElement instruction that creates a new element, and then we have an AddAttribute instruction that adds an attribute to that element, the AddAttribute instruction would have the CreateElement instruction as its parent. This can be used to track the hierarchy of instructions and their dependencies.
+     */
+    parent?: string | undefined;
+    /**
+     * Group is an optional property that can be used to group instructions together. For example a set of instructions that depend on create CreateElement instruction can be grouped together with the same group name, so if the CreateElement instruction is reverted, all the instructions in the same group will be reverted as well, and so on. This can be useful to manage complex changes that involve multiple instructions. The best option is to use ASEID of the Instruction as a group, so all instructions with the same ASEID will be treated as a single change, and will be applied and reverted together.
+     */
+    group?: string | undefined;
+    /**
+     * A set of additional parameters that may be needed for the rendering purpose. For example: for AddAttribute instruction, we may need to provide the attribute name and value as a payload, so the Host can use this information to add the attribute to the node.
+     */
+    payload: T;
+} & A_TYPES__Entity_Serialized;
+
+declare class AreInstruction<T extends Record<string, any> = Record<string, any>, S extends AreInstructionSerialized<T> = AreInstructionSerialized<T>> extends A_Entity<AreInstructionNewProps<T>, S> implements AreStoreWatchingEntity$1 {
+    /**
+     * The name of the instruction, for example "CreateElement", "AddAttribute", "RemoveNode", etc. This is used to identify the type of the instruction and how to process it. The name should be in PascalCase format, and should be unique across all instruction types. It is recommended to use a prefix that indicates the category of the instruction, for example "CreateElement" for instructions that create new elements, "UpdateAttribute" for instructions that update attributes, etc.
+     */
+    protected _name: string;
+    /**
+     * The payload of the instruction, which can contain any additional information that may be needed for the rendering purpose. For example, for CreateElement instruction, the payload can contain the tag name and parent information, so the Host can use this information to create the element in the correct place in the scene. The payload is optional and can be an empty object if no additional information is needed.
+     */
+    protected _payload?: T;
+    /**
+     * Group is an optional property that can be used to group instructions together. For example a set of instructions that depend on create CreateElement instruction can be grouped together with the same group name, so if the CreateElement instruction is reverted, all the instructions in the same group will be reverted as well, and so on. This can be useful to manage complex changes that involve multiple instructions.
+     *
+     * [!] Note, the best option is to use ASEID of the Instruction as a group, so all instructions with the same ASEID will be treated as a single change, and will be applied and reverted together.
+     */
+    protected _group: string | undefined;
+    /**
+     * The parent instruction that created this instruction. For example, if we have a CreateElement instruction that creates a new element, and then we have an AddAttribute instruction that adds an attribute to that element, the AddAttribute instruction would have the CreateElement instruction as its parent. This can be used to track the hierarchy of instructions and their dependencies.
+     */
+    protected _parent: string | undefined;
+    /**
+     * A set of properties that influence the behavior of the instruction, for example, for AddTextInstruction, we can interpolation dependent on some key in the store, so we can have a property called "interpolationKey" that will be used to track the dependencies of the instruction, and when the value of this key changes in the scope, we can update the instruction accordingly.
+     */
+    protected _props: Set<string>;
+    /**
+     * The name of the instruction, for example "CreateElement", "AddAttribute", "RemoveNode", etc. This is used to identify the type of the instruction and how to process it. The name should be in PascalCase format, and should be unique across all instruction types. It is recommended to use a prefix that indicates the category of the instruction, for example "CreateElement" for instructions that create new elements, "UpdateAttribute" for instructions that update attributes, etc.
+     */
+    get name(): string;
+    /**
+     * The payload of the instruction, which can contain any additional information that may be needed for the rendering purpose. For example, for CreateElement instruction, the payload can contain the tag name and parent information, so the Host can use this information to create the element in the correct place in the scene. The payload is optional and can be an empty object if no additional information is needed.
+     *
+     * [!] Note, the payload should be serializable, so it can be stored and transmitted easily. It is recommended to use simple data structures for the payload, such as objects, arrays, strings, numbers, etc., and avoid using complex data types that may not be easily serializable.
+     */
+    get payload(): T;
+    /**
+     * Group is an optional property that can be used to group instructions together. For example a set of instructions that depend on create CreateElement instruction can be grouped together with the same group name, so if the CreateElement instruction is reverted, all the instructions in the same group will be reverted as well, and so on. This can be useful to manage complex changes that involve multiple instructions.
+     *
+     * [!] Note, the best option is to use ASEID of the Instruction as a group, so all instructions with the same ASEID will be treated as a single change, and will be applied and reverted together.
+     */
+    get group(): string | undefined;
+    /**
+     * The parent instruction ASEID that created this instruction. For example, if we have a CreateElement instruction that creates a new element, and then we have an AddAttribute instruction that adds an attribute to that element, the AddAttribute instruction would have the CreateElement instruction as its parent. This can be used to track the hierarchy of instructions and their dependencies.
+     *
+     * [!] Note, the parent should be provided as an ASEID string, so it can be easily referenced and tracked across different contexts and times.
+     */
+    get parent(): string | undefined;
+    get id(): string;
+    get owner(): AreNode$1;
+    fromNew(newEntity: AreInstructionNewProps<T>): void;
+    fromUndefined(): void;
+    /**
+     * Group this instruction with another instruction. This means that when one of the instructions in the group is applied or reverted, all the instructions in the same group will be applied or reverted together. This can be useful to manage complex changes that involve multiple instructions.
+     *
+     * For example, if we have a CreateElement instruction that creates a new element, and then we have an AddAttribute instruction that adds an attribute to that element, we can group them together with the same group name, so if we revert the CreateElement instruction, the AddAttribute instruction will be reverted as well, and so on.
+     *
+     * @param instruction
+     * @returns
+     */
+    groupWith(instruction: AreInstruction): this;
+    /**
+     * Ungroup this instruction from any group. This means that this instruction will be treated as an independent instruction, and will not be applied or reverted together with any other instructions. This can be useful when you want to separate an instruction from a group, so it can be applied or reverted independently.
+     *
+     * @returns
+     */
+    unGroup(): this;
+    /**
+     * Attach this instruction to a parent instruction. This means that this instruction will be considered as a child of the parent instruction, and can be used to track the hierarchy of instructions and their dependencies.
+     *
+     * For example, if we have a CreateElement instruction that creates a new element, and then we have an AddAttribute instruction that adds an attribute to that element, we can attach the AddAttribute instruction to the CreateElement instruction as its parent, so we can track that the AddAttribute instruction is related to the CreateElement instruction.
+     *
+     * @param parent
+     * @returns
+     */
+    attachTo(parent: AreInstruction): this;
+    /**
+     * Detach this instruction from its parent instruction. This means that this instruction will no longer be considered as a child of the parent instruction, and will not be related to it in any way. This can be useful when you want to separate an instruction from its parent, so it can be treated as an independent instruction.
+     *
+     * @returns
+     */
+    detach(): this;
+    /**
+     * Apply this instruction to the scene. This means that the changes represented by this instruction will be applied to the scene, and the Host will perform the necessary operations to reflect these changes in the rendered output.
+     *
+     * For example, if this instruction is a CreateElement instruction, when we apply it, the Host will create a new element in the scene according to the information provided in the payload of the instruction. If this instruction is an AddAttribute instruction, when we apply it, the Host will add the specified attribute to the target element in the scene. The apply method can also accept an optional scope parameter, which can be used to provide additional context or information that may be needed for applying the instruction.
+     *
+     * @param scope
+     */
+    apply(scope?: A_Scope): void;
+    /**
+     * Update this instruction in the scene. This means that the changes represented by this instruction will be updated in the scene, and the Host will perform the necessary operations to reflect these changes in the rendered output. This is particularly useful for instructions that have dynamic properties or effects that may change over time, allowing for adjustments to be made to the instruction's behavior or effects without needing to revert and reapply it entirely. The update method can also accept an optional scope parameter, which can be used to provide additional context or information that may be needed for updating the instruction.
+     *
+     * @param scope
+     */
+    update(scope?: A_Scope): void;
+    /**
+     * Revert this instruction from the scene. This means that the changes represented by this instruction will be reverted from the scene, and the Host will perform the necessary operations to undo these changes in the rendered output.
+     *
+     * @param scope
+     */
+    revert(scope?: A_Scope): void;
 }
 
 declare const AreInstructionFeatures: {
@@ -1454,9 +1419,66 @@ declare const AreInstructionDefaultNames: {
 declare class AreInstructionError extends A_Error {
 }
 
+/**
+ * This is a top-level instruction that represents the creation of a new element in the scene. It contains all the necessary information to create a new element, such as its tag and parent. This instruction can be applied to the scene to create a new element and can be reverted to remove the created element.
+ */
+declare class AreDeclaration<T extends Record<string, any> = Record<string, any>, S extends AreInstructionSerialized$1<T> = AreInstructionSerialized$1<T>> extends AreInstruction$1<T, S> {
+    constructor(
+    /**
+     * Serialized form of the instruction, used for deserialization and reconstruction of the instruction instance. This allows for the instruction to be easily stored, transmitted, and recreated in different contexts or at different times, while maintaining all the necessary information and relationships intact.
+     */
+    serialized: AreInstructionSerialized$1);
+    constructor(
+    /**
+     * The name of the operation to be performed in Host. For example, for CreateElement instruction, the name can be "createElement", so the Host can have a method with the same name to handle this instruction.
+     */
+    name: string, 
+    /**
+     * In case this is a child instruction that is related to a declaration instruction, we can pass the parent declaration instruction to establish the relationship between them. This allows us to manage related instructions together and ensure that they are executed in the correct order in the scene.
+     */
+    parent: AreDeclaration, 
+    /**
+     * A set of additional parameters that may be needed for the rendering purpose. For example, for CreateElement instruction, the payload can contain the tag name and parent information, so the Host can use this information to create the element in the correct place in the scene.
+     */
+    payload: T);
+    constructor(
+    /**
+     * The name of the operation to be performed in Host. For example, for CreateElement instruction, the name can be "createElement", so the Host can have a method with the same name to handle this instruction.
+     */
+    name?: string, 
+    /**
+     * A set of additional parameters that may be needed for the rendering purpose. For example, for CreateElement instruction, the payload can contain the tag name and parent information, so the Host can use this information to create the element in the correct place in the scene.
+     */
+    payload?: T);
+}
+
+declare class AreMutation<T extends Record<string, any> = Record<string, any>, S extends AreInstructionSerialized$1<T> = AreInstructionSerialized$1<T>> extends AreInstruction$1<T, S> {
+    get parent(): string;
+    get group(): string;
+    constructor(
+    /**
+     * Serialized form of the instruction, used for deserialization and reconstruction of the instruction instance. This allows for the instruction to be easily stored, transmitted, and recreated in different contexts or at different times, while maintaining all the necessary information and relationships intact.
+     */
+    serialized: S);
+    constructor(
+    /**
+     * The name of the operation to be performed in Host.
+     */
+    name: string, 
+    /**
+     * Parent instruction for grouping in case of mutations related to a specific declaration. This allows for better organization and management of instructions in the scene, as all mutations related to the same declaration will be executed together.
+     */
+    parent: AreDeclaration, 
+    /**
+     * A set of additional parameters that may be needed for the rendering purpose. For example, for AddAttribute instruction, the payload can contain the attribute name and value as a payload, so the Host can use this information to add the attribute to the node.
+     */
+    payload?: T);
+    fromNew(newEntity: AreInstructionNewProps$1<T>): void;
+}
+
 declare class AreLifecycle extends A_Component {
-    static Init<T extends AreNode>(node: A_TYPES__Entity_Constructor<T>): any;
-    static Init<T extends AreAttribute>(attribute: A_TYPES__Entity_Constructor<T>): any;
+    static Init<T extends AreNode$1>(node: A_TYPES__Entity_Constructor<T>): any;
+    static Init<T extends AreAttribute$1>(attribute: A_TYPES__Entity_Constructor<T>): any;
     /**
      *  Handles before init lifecycle of the AreNode
      *
@@ -1466,7 +1488,7 @@ declare class AreLifecycle extends A_Component {
      * @param feature
      * @param args
      */
-    beforeInit(node: AreNode, scope: A_Scope, scene: AreScene, feature: A_Feature, ...args: any[]): void;
+    beforeInit(node: AreNode$1, scope: A_Scope, scene: AreScene$1, feature: A_Feature, ...args: any[]): void;
     /**
      * Initializes the AreNode and prepares it for mounting
      *
@@ -1477,7 +1499,7 @@ declare class AreLifecycle extends A_Component {
      * @param logger
      * @param args
      */
-    init(node: AreNode, scope: A_Scope, context: AreContext, logger?: A_Logger, ...args: any[]): void;
+    init(node: AreNode$1, scope: A_Scope, context: AreContext$1, logger?: A_Logger, ...args: any[]): void;
     /**
      * Handles after init lifecycle of the AreNode
      *
@@ -1491,7 +1513,7 @@ declare class AreLifecycle extends A_Component {
     /**
      * Node to be mounted
      */
-    node: AreNode, scope: A_Scope, scene: AreScene, feature: A_Feature, ...args: any[]): void;
+    node: AreNode$1, scope: A_Scope, scene: AreScene$1, feature: A_Feature, ...args: any[]): void;
     /**
      *  Handles before mount lifecycle of the AreNode
      *
@@ -1501,7 +1523,7 @@ declare class AreLifecycle extends A_Component {
      * @param feature
      * @param args
      */
-    beforeMount(node: AreNode, scope: A_Scope, scene: AreScene, feature: A_Feature, ...args: any[]): void;
+    beforeMount(node: AreNode$1, scope: A_Scope, scene: AreScene$1, feature: A_Feature, ...args: any[]): void;
     /**
      * Mount the AreNode into the Host
      *
@@ -1514,11 +1536,11 @@ declare class AreLifecycle extends A_Component {
     /**
      * Node to be mounted
      */
-    node: AreNode, 
+    node: AreNode$1, 
     /**
      * Node Content
      */
-    scene: AreScene, logger?: A_Logger, ...args: any[]): void;
+    scene: AreScene$1, logger?: A_Logger, ...args: any[]): void;
     /**
      * Handles after mount lifecycle of the AreNode
      *
@@ -1532,7 +1554,7 @@ declare class AreLifecycle extends A_Component {
     /**
      * Node to be mounted
      */
-    node: AreNode, scope: A_Scope, scene: AreScene, feature: A_Feature, ...args: any[]): void;
+    node: AreNode$1, scope: A_Scope, scene: AreScene$1, feature: A_Feature, ...args: any[]): void;
     /**
      * Handles before update lifecycle of the AreNode
      *
@@ -1542,7 +1564,7 @@ declare class AreLifecycle extends A_Component {
      * @param feature
      * @param args
      */
-    beforeUpdate(node: AreNode, scope: A_Scope, scene: AreScene, feature: A_Feature, ...args: any[]): void;
+    beforeUpdate(node: AreNode$1, scope: A_Scope, scene: AreScene$1, feature: A_Feature, ...args: any[]): void;
     /**
      * Updates the AreNode in the AreScene
      *
@@ -1554,7 +1576,7 @@ declare class AreLifecycle extends A_Component {
     /**
      * Node to be updated
      */
-    node: AreNode, context: AreContext, logger?: A_Logger, ...args: any[]): void;
+    node: AreNode$1, context: AreContext$1, logger?: A_Logger, ...args: any[]): void;
     /**
      * Handles after update lifecycle of the AreNode
      *
@@ -1564,7 +1586,7 @@ declare class AreLifecycle extends A_Component {
      * @param feature
      * @param args
      */
-    afterUpdate(node: AreNode, scope: A_Scope, scene: AreScene, feature: A_Feature, ...args: any[]): void;
+    afterUpdate(node: AreNode$1, scope: A_Scope, scene: AreScene$1, feature: A_Feature, ...args: any[]): void;
     /**
      * Handles before unmount lifecycle of the AreNode
      *
@@ -1574,7 +1596,7 @@ declare class AreLifecycle extends A_Component {
      * @param feature
      * @param args
      */
-    beforeUnmount(node: AreNode, scope: A_Scope, scene: AreScene, feature: A_Feature, ...args: any[]): void;
+    beforeUnmount(node: AreNode$1, scope: A_Scope, scene: AreScene$1, feature: A_Feature, ...args: any[]): void;
     /**
      * Unmounts the AreNode from the Host
      *
@@ -1583,7 +1605,7 @@ declare class AreLifecycle extends A_Component {
      * @param args
      *
      */
-    unmount(node: AreNode, scene: AreScene, ...args: any[]): void;
+    unmount(node: AreNode$1, scene: AreScene$1, ...args: any[]): void;
     /**
      * Handles after unmount lifecycle of the AreNode
      *
@@ -1593,7 +1615,7 @@ declare class AreLifecycle extends A_Component {
      * @param feature
      * @param args
      */
-    afterUnmount(node: AreNode, scope: A_Scope, scene: AreScene, feature: A_Feature, ...args: any[]): void;
+    afterUnmount(node: AreNode$1, scope: A_Scope, scene: AreScene$1, feature: A_Feature, ...args: any[]): void;
     /**
      * Handles before destroy lifecycle of the AreNode
      *
@@ -1603,7 +1625,7 @@ declare class AreLifecycle extends A_Component {
      * @param feature
      * @param args
      */
-    beforeDestroy(node: AreNode, scope: A_Scope, feature: A_Feature, ...args: any[]): void;
+    beforeDestroy(node: AreNode$1, scope: A_Scope, feature: A_Feature, ...args: any[]): void;
     /**
      * Destroys the AreNode from the Host
      *
@@ -1612,7 +1634,7 @@ declare class AreLifecycle extends A_Component {
      * @param args
      *
      */
-    destroy(node: AreNode, scene: AreScene, ...args: any[]): void;
+    destroy(node: AreNode$1, scene: AreScene$1, ...args: any[]): void;
     /**
      * Handles after destroy lifecycle of the AreNode
      *
@@ -1622,7 +1644,7 @@ declare class AreLifecycle extends A_Component {
      * @param feature
      * @param args
      */
-    afterDestroy(node: AreNode, scope: A_Scope, feature: A_Feature, ...args: any[]): void;
+    afterDestroy(node: AreNode$1, scope: A_Scope, feature: A_Feature, ...args: any[]): void;
 }
 
 declare class AreLifecycleError extends A_Error {
@@ -1640,7 +1662,7 @@ declare class AreLoader extends A_Component {
      * @param logger
      * @param args
      */
-    load(node: AreNode, scope: A_Scope, feature: A_Feature, logger?: A_Logger, context?: AreContext, ...args: any[]): Promise<void>;
+    load(node: AreNode$1, scope: A_Scope, feature: A_Feature, logger?: A_Logger, context?: AreContext$1, ...args: any[]): Promise<void>;
 }
 
 declare class AreLoaderError extends A_Error {
@@ -1666,7 +1688,7 @@ declare class AreWatcher extends A_Component {
 declare class AreSignal<_TSignalDataType extends Record<string, any> = Record<string, any>> extends A_Signal<_TSignalDataType> {
 }
 
-type AreSignalsContextConfig<T extends Are> = {
+type AreSignalsContextConfig<T extends Are$1> = {
     [key in string]: {
         default: A_TYPES__Ctor<T>;
         pool: Array<A_TYPES__Ctor<T>>;
@@ -1678,14 +1700,14 @@ type AreSignalsContextConfig<T extends Are> = {
 };
 
 declare class AreSignalsMeta extends A_ComponentMeta<{
-    vectorToComponent: Map<A_SignalVector, A_TYPES__Ctor<Are>>;
-    componentToVector: Map<A_TYPES__Ctor<Are>, Set<A_SignalVector>>;
+    vectorToComponent: Map<A_SignalVector, A_TYPES__Ctor<Are$1>>;
+    componentToVector: Map<A_TYPES__Ctor<Are$1>, Set<A_SignalVector>>;
 } & A_TYPES__ComponentMeta> {
-    registerCondition<T extends Are>(component: A_TYPES__Ctor<T>, vector: A_SignalVector): void;
-    findComponentByVector(vector: A_SignalVector): A_TYPES__Ctor<Are> | undefined;
+    registerCondition<T extends Are$1>(component: A_TYPES__Ctor<T>, vector: A_SignalVector): void;
+    findComponentByVector(vector: A_SignalVector): A_TYPES__Ctor<Are$1> | undefined;
 }
 
-declare class AreSignalsContext<T extends Are = Are> extends A_Fragment {
+declare class AreSignalsContext<T extends Are$1 = Are$1> extends A_Fragment {
     /**
      * Where key is the root ID and the value is an Array of components that participate in conditional compilation.
      */
@@ -1695,11 +1717,11 @@ declare class AreSignalsContext<T extends Are = Are> extends A_Fragment {
         vector: Array<any>;
         component: A_TYPES__Ctor<T>;
     }>>;
-    protected _subscribers: Set<AreNode>;
+    protected _subscribers: Set<AreNode$1>;
     protected signalsMeta(): AreSignalsMeta;
-    subscribe<S extends AreNode>(subscriber: S): void;
-    unsubscribe<S extends AreNode>(subscriber: S): void;
-    get subscribers(): Set<AreNode>;
+    subscribe<S extends AreNode$1>(subscriber: S): void;
+    unsubscribe<S extends AreNode$1>(subscriber: S): void;
+    get subscribers(): Set<AreNode$1>;
     constructor(
     /**
      * Where key is the root ID and the value is an Array of components that participate in conditional compilation.
@@ -1718,7 +1740,7 @@ declare class AreSignalsContext<T extends Are = Are> extends A_Fragment {
      * @param node The AreNode whose root ID is used to retrieve the components.
      * @returns An array of component constructors.
      */
-    getComponentByRoot(node: AreNode): Array<A_TYPES__Ctor<T>>;
+    getComponentByRoot(node: AreNode$1): Array<A_TYPES__Ctor<T>>;
     /**
      * Adds a new component to the specified root ID. If the root ID does not exist, it will be created.
      *
@@ -1765,18 +1787,88 @@ declare class AreSignals extends A_Component {
      * @param feature
      * @param args
      */
-    propagateEvent(node: AreNode, scope: A_Scope, event: AreEvent, feature: A_Feature, logger?: A_Logger, ...args: any[]): Promise<void>;
+    propagateEvent(node: AreNode$1, scope: A_Scope, event: AreEvent$1, feature: A_Feature, logger?: A_Logger, ...args: any[]): Promise<void>;
 }
 
-declare class AreInit extends AreSignal {
+declare class AreInit extends AreSignal$1 {
     static default(): AreInit | undefined;
 }
 
-declare class AreRoute extends AreSignal<A_Route> {
+declare class AreRoute extends AreSignal$1<A_Route> {
     constructor(path: string | RegExp);
     get route(): A_Route;
     static default(): AreRoute | undefined;
     compare(other: A_Signal<A_Route>): boolean;
 }
 
-export { Are, AreAttribute, type AreAttributeFeatureNames, AreAttributeFeatures, type AreAttribute_Init, type AreAttribute_Serialized, AreCompiler, AreCompilerError, AreContext, type AreContextInit, AreDeclaration, AreEvent, type AreEventProps, type AreFeatureNames, AreFeatures, AreInit, AreInstruction, AreInstructionDefaultNames, AreInstructionError, AreInstructionFeatures, type AreInstructionNewProps, type AreInstructionSerialized, AreInterpreter, AreInterpreterError, AreLifecycle, AreLifecycleError, AreLoader, AreLoaderError, AreMutation, AreNode, type AreNodeFeatureNames, AreNodeFeatures, type AreNodeNewProps, type AreNodeStatusNames, AreNodeStatuses, type ArePropDefinition, AreRoute, AreScene, type AreSceneChanges, AreSceneError, type AreSceneStatusNames, AreSceneStatuses, type AreScene_Serialized, AreSignal, AreSignals, AreSignalsContext, type AreSignalsContextConfig, AreStore, type AreStoreAreComponentMetaKeyNames, AreStoreAreComponentMetaKeys, type AreStorePathValue, type AreStoreWatchingEntity, AreSyntax, type AreSyntaxCompiledExpression, AreSyntaxError, type AreSyntaxInitOptions, type AreSyntaxTokenMatch, type AreSyntaxTokenPayload, type AreSyntaxTokenRules, AreTokenizer, AreTokenizerError, AreTransformer, AreWatcher };
+type AreEngineDependencies = {
+    context: AreContext$1;
+    syntax: AreSyntax$1;
+    loader: A_TYPES__Component_Constructor<AreLoader$1>;
+    tokenizer: A_TYPES__Component_Constructor<AreTokenizer$1>;
+    compiler: A_TYPES__Component_Constructor<AreCompiler$1>;
+    transformer: A_TYPES__Component_Constructor<AreTransformer$1>;
+    interpreter: A_TYPES__Component_Constructor<AreInterpreter$1>;
+    lifecycle: A_TYPES__Component_Constructor<AreLifecycle$1>;
+    signals: A_TYPES__Component_Constructor<AreSignals$1>;
+};
+
+declare class AreEngine extends A_Component {
+    /**
+     * Feature decorator for the load method, which is responsible for the initial loading phase of the engine. This method is where the engine reads the source template, tokenizes it, and prepares the initial context for building the scene. The decorator allows for extending or overriding the default loading behavior by attaching additional functionality before or after the load process.
+     */
+    static get Load(): (target: any, propertyKey: string, descriptor: PropertyDescriptor) => any;
+    /**
+     * Feature decorator for the build method, which is responsible for constructing the scene based on the loaded context. This method typically involves initializing root nodes, applying transformations, and compiling the scene into a format that can be executed by the interpreter. The decorator allows for customizing the build process by adding additional steps or modifying the existing behavior.
+     */
+    static get Build(): (target: any, propertyKey: string, descriptor: PropertyDescriptor) => any;
+    /**
+     * Feature decorator for the execute method, which is responsible for the final execution phase of the engine. This method typically involves mounting the root nodes to the DOM and starting the reactive update cycle based on signals and state changes. The decorator allows for customizing the execution process by adding additional steps or modifying the existing behavior.
+     */
+    static get Execute(): (target: any, propertyKey: string, descriptor: PropertyDescriptor) => any;
+    /**
+     * Method to start the engine, which involves loading necessary resources, building the scene, and executing the rendering process. It accepts an optional scope parameter that can be used to provide a custom scope for the engine's operations, allowing for greater flexibility in how dependencies are managed and accessed during the rendering lifecycle.
+     *
+     * @param scope
+     * @returns
+     */
+    load(scope?: A_Scope): Promise<void>;
+    /**
+     * Method responsible for building the scene, which includes initializing root nodes, loading necessary data, applying transformations, and compiling the scene into a format that can be executed by the interpreter.
+     *
+     * @param context
+     * @param logger
+     */
+    build(scope?: A_Scope): Promise<void>;
+    /**
+     * Method responsible for executing the rendering process, which involves mounting the root nodes to the DOM and starting the reactive update cycle based on signals and state changes.
+     *
+     * @param context
+     * @param logger
+     */
+    execute(scope?: A_Scope): Promise<void>;
+    protected defaultBuild(context: AreContext$1, logger?: A_Logger): Promise<void>;
+    protected defaultExecute(context: AreContext$1, bus?: A_SignalBus, logger?: A_Logger): Promise<void>;
+    init(scope: A_Scope): Promise<void>;
+    verify(scope: A_Scope, syntax?: AreSyntax$1, syntaxContext?: AreSyntax$1, transformer?: AreTransformer$1, loader?: AreLoader$1, compiler?: AreCompiler$1, interpreter?: AreInterpreter$1, lifecycle?: AreLifecycle$1, logger?: A_Logger): Promise<void>;
+    /**
+     * Method to pack all necessary dependencies for the engine. This method is called during the initialization phase of the engine and ensures that all required components are registered in the container scope, allowing for proper dependency injection and management throughout the engine's lifecycle.
+     *
+     * @param scope
+     * @param dependencies
+     */
+    protected package(scope: A_Scope, dependencies?: Partial<AreEngineDependencies>): void;
+    protected packDependency<T extends A_TYPES__A_DependencyInjectable>(scope: A_Scope, dependency: T | A_TYPES__Ctor<T>, existed?: A_TYPES__Ctor<T>): T | A_TYPES__Ctor<T>;
+}
+
+declare const AreEngineFeatures: {
+    Load: string;
+    Build: string;
+    Execute: string;
+};
+
+declare class AreEngineError extends A_Error {
+    static readonly MissedRequiredDependency = "A Required Dependency is missing in AreEngine";
+}
+
+export { Are, AreAttribute, type AreAttributeFeatureNames, AreAttributeFeatures, type AreAttribute_Init, type AreAttribute_Serialized, AreCompiler, AreCompilerError, AreContext, type AreContextInit, AreDeclaration, AreEngine, type AreEngineDependencies, AreEngineError, AreEngineFeatures, AreEvent, type AreEventProps, type AreFeatureNames, AreFeatures, AreInit, AreInstruction, AreInstructionDefaultNames, AreInstructionError, AreInstructionFeatures, type AreInstructionNewProps, type AreInstructionSerialized, AreInterpreter, AreInterpreterError, AreLifecycle, AreLifecycleError, AreLoader, AreLoaderError, AreMutation, AreNode, type AreNodeFeatureNames, AreNodeFeatures, type AreNodeNewProps, type AreNodeStatusNames, AreNodeStatuses, type ArePropDefinition, AreRoute, AreScene, type AreSceneChanges, AreSceneError, type AreSceneStatusNames, AreSceneStatuses, type AreScene_Serialized, AreSignal, AreSignals, AreSignalsContext, type AreSignalsContextConfig, AreStore, type AreStoreAreComponentMetaKeyNames, AreStoreAreComponentMetaKeys, type AreStorePathValue, type AreStoreWatchingEntity, AreSyntax, type AreSyntaxCompiledExpression, AreSyntaxError, type AreSyntaxInitOptions, type AreSyntaxTokenMatch, type AreSyntaxTokenPayload, type AreSyntaxTokenRules, AreTokenizer, AreTokenizerError, AreTransformer, AreWatcher };

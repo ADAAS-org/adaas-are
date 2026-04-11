@@ -1,18 +1,9 @@
 import { A_Component, A_TYPES__Entity_Constructor, A_Scope, A_Feature } from '@adaas/a-concept';
-import { g as AreNode, A as AreAttribute, k as AreScene, a as AreContext } from '../../Are.context-D7w32H1G.mjs';
+import { AreScene } from '@adaas/are/scene/AreScene.context';
+import { AreNode } from '@adaas/are/node/AreNode.entity';
 import { A_Logger } from '@adaas/a-utils/a-logger';
-import '@adaas/a-utils/a-signal';
-import '../AreEvent/AreEvent.context.mjs';
-import '@adaas/a-utils/a-execution';
-import '../AreStore/AreStore.types.mjs';
-import '../AreStore/AreStore.constants.mjs';
-import '../AreScene/AreScene.constants.mjs';
-import '../AreAttribute/AreAttribute.types.mjs';
-import '../AreAttribute/AreAttribute.constants.mjs';
-import '../AreComponent/Are.component.mjs';
-import '../AreComponent/Are.types.mjs';
-import '../AreComponent/Are.constants.mjs';
-import '../AreNode/AreNode.constants.mjs';
+import { AreAttribute } from '@adaas/are/attribute/AreAttribute.entity';
+import { AreContext } from '@adaas/are/component/Are.context';
 
 declare class AreLifecycle extends A_Component {
     static Init<T extends AreNode>(node: A_TYPES__Entity_Constructor<T>): any;

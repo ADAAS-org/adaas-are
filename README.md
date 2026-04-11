@@ -1,5 +1,15 @@
-# # @adaas/are &mdash; A-Concept Rendering Engine
+<img align="left" style="margin-right:40px; margin-bottom:80px;" width="180" height="80" src="./docs/a-logo-docs.png" alt="ADAAS Logo">
 
+# A-Concept Rendering Engine
+
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)
+![npm](https://img.shields.io/badge/npm-CB3837?style=for-the-badge&logo=npm&logoColor=white)
+
+![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)
+![Version](https://img.shields.io/npm/v/@adaas/a-utils)
+![Downloads](https://img.shields.io/npm/dm/@adaas/a-utils)
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
 [![npm version](https://img.shields.io/npm/v/@adaas/are.svg)](https://www.npmjs.com/package/@adaas/are)
 [![license](https://img.shields.io/npm/l/@adaas/are.svg)](./LICENSE)
 [![build](https://img.shields.io/github/actions/workflow/status/ADAAS-org/adaas-are/ci.yml?branch=main)](https://github.com/ADAAS-org/adaas-are/actions)

@@ -1,14 +1,8 @@
-export { h as AreNodeFeatureNames, i as AreNodeNewProps, j as AreNodeStatusNames } from '../../Are.context-D7w32H1G.mjs';
-import './AreNode.constants.mjs';
-import '@adaas/a-concept';
-import '@adaas/a-utils/a-signal';
-import '../AreEvent/AreEvent.context.mjs';
-import '@adaas/a-utils/a-execution';
-import '../AreStore/AreStore.types.mjs';
-import '../AreStore/AreStore.constants.mjs';
-import '../AreScene/AreScene.constants.mjs';
-import '../AreAttribute/AreAttribute.types.mjs';
-import '../AreAttribute/AreAttribute.constants.mjs';
-import '../AreComponent/Are.component.mjs';
-import '../AreComponent/Are.types.mjs';
-import '../AreComponent/Are.constants.mjs';
+import { AreSyntaxTokenMatch } from '@adaas/are/syntax/AreSyntax.types';
+import { AreNodeStatuses, AreNodeFeatures } from './AreNode.constants.mjs';
+
+type AreNodeNewProps = AreSyntaxTokenMatch;
+type AreNodeFeatureNames = typeof AreNodeFeatures[keyof typeof AreNodeFeatures];
+type AreNodeStatusNames = typeof AreNodeStatuses[keyof typeof AreNodeStatuses];
+
+export type { AreNodeFeatureNames, AreNodeNewProps, AreNodeStatusNames };

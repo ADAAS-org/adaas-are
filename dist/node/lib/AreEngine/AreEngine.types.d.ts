@@ -1,29 +1,13 @@
 import { A_TYPES__Component_Constructor } from '@adaas/a-concept';
-import { AreCompiler } from '../AreCompiler/AreCompiler.component.js';
-import { a as AreContext } from '../../Are.context-9Ija_fdC.js';
-import { AreLoader } from '../AreLoader/AreLoader.component.js';
-import { AreSyntax } from '../AreSyntax/AreSyntax.context.js';
-import { AreTokenizer } from '../AreTokenizer/AreTokenizer.component.js';
-import { AreTransformer } from '../AreTransformer/AreTransformer.component.js';
-import { AreInterpreter } from '../AreInterpreter/AreInterpreter.component.js';
-import { AreLifecycle } from '../AreLifecycle/AreLifecycle.component.js';
-import { AreSignals } from '../AreSignals/AreSignals.component.js';
-import '@adaas/a-utils/a-logger';
-import '@adaas/a-utils/a-signal';
-import '../AreEvent/AreEvent.context.js';
-import '@adaas/a-utils/a-execution';
-import '../AreStore/AreStore.types.js';
-import '../AreStore/AreStore.constants.js';
-import '../AreScene/AreScene.constants.js';
-import '../AreAttribute/AreAttribute.types.js';
-import '../AreAttribute/AreAttribute.constants.js';
-import '../AreComponent/Are.component.js';
-import '../AreComponent/Are.types.js';
-import '../AreComponent/Are.constants.js';
-import '../AreNode/AreNode.constants.js';
-import '../AreSignals/AreSignals.context.js';
-import '../AreSignals/AreSignals.types.js';
-import '../AreSignals/AreSignals.meta.js';
+import { AreCompiler } from '@adaas/are/compiler/AreCompiler.component';
+import { AreContext } from '@adaas/are/component/Are.context';
+import { AreLoader } from '@adaas/are/loader/AreLoader.component';
+import { AreSyntax } from '@adaas/are/syntax/AreSyntax.context';
+import { AreTokenizer } from '@adaas/are/tokenizer/AreTokenizer.component';
+import { AreTransformer } from '@adaas/are/transformer/AreTransformer.component';
+import { AreInterpreter } from '@adaas/are/interpreter/AreInterpreter.component';
+import { AreLifecycle } from '@adaas/are/lifecycle/AreLifecycle.component';
+import { AreSignals } from '@adaas/are/signals/AreSignals.component';
 
 type AreEngineDependencies = {
     context: AreContext;

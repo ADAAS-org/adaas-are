@@ -1,6 +1,6 @@
 import { A_Route } from '@adaas/a-utils/a-route';
 import { A_Signal } from '@adaas/a-utils/a-signal';
-import { AreSignal } from '../AreSignal.entity.js';
+import { AreSignal } from '@adaas/are/signals/AreSignal.entity';
 
 declare class AreRoute extends AreSignal<A_Route> {
     constructor(path: string | RegExp);

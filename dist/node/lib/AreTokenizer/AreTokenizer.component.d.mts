@@ -1,19 +1,9 @@
 import { A_Component } from '@adaas/a-concept';
-import { g as AreNode, a as AreContext, r as AreSyntaxTokenMatch, t as AreSyntaxTokenRules } from '../../Are.context-D7w32H1G.mjs';
-import { AreSyntax } from '../AreSyntax/AreSyntax.context.mjs';
+import { AreNode } from '@adaas/are/node/AreNode.entity';
+import { AreSyntaxTokenMatch, AreSyntaxTokenRules } from '@adaas/are/syntax/AreSyntax.types';
+import { AreSyntax } from '@adaas/are/syntax/AreSyntax.context';
+import { AreContext } from '@adaas/are/component/Are.context';
 import { A_Logger } from '@adaas/a-utils/a-logger';
-import '@adaas/a-utils/a-signal';
-import '../AreEvent/AreEvent.context.mjs';
-import '@adaas/a-utils/a-execution';
-import '../AreStore/AreStore.types.mjs';
-import '../AreStore/AreStore.constants.mjs';
-import '../AreScene/AreScene.constants.mjs';
-import '../AreAttribute/AreAttribute.types.mjs';
-import '../AreAttribute/AreAttribute.constants.mjs';
-import '../AreComponent/Are.component.mjs';
-import '../AreComponent/Are.types.mjs';
-import '../AreComponent/Are.constants.mjs';
-import '../AreNode/AreNode.constants.mjs';
 
 declare class AreTokenizer extends A_Component {
     /**

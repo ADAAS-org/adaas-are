@@ -1,14 +1,21 @@
-import '@adaas/a-concept';
-export { l as AreSceneChanges, m as AreSceneStatusNames, n as AreScene_Serialized } from '../../Are.context-D7w32H1G.mjs';
-import './AreScene.constants.mjs';
-import '@adaas/a-utils/a-signal';
-import '../AreEvent/AreEvent.context.mjs';
-import '@adaas/a-utils/a-execution';
-import '../AreStore/AreStore.types.mjs';
-import '../AreStore/AreStore.constants.mjs';
-import '../AreAttribute/AreAttribute.types.mjs';
-import '../AreAttribute/AreAttribute.constants.mjs';
-import '../AreComponent/Are.component.mjs';
-import '../AreComponent/Are.types.mjs';
-import '../AreComponent/Are.constants.mjs';
-import '../AreNode/AreNode.constants.mjs';
+import { A_TYPES__Fragment_Serialized } from '@adaas/a-concept';
+import { AreInstruction } from '@adaas/are/instruction/AreInstruction.entity';
+import { AreInstructionSerialized } from '@adaas/are/instruction/AreInstruction.types';
+import { AreSceneStatuses } from './AreScene.constants.mjs';
+
+type AreSceneChanges = {
+    /**
+     * An array of instructions that are planned to be applied to the scene. These instructions represent the changes that will be made to the scene when they
+     */
+    toApply: AreInstruction[];
+    /**
+     * An array of instructions that are planned to be reverted from the scene. These instructions represent the changes that will be undone from the scene when they are reverted, allowing for a rollback of changes if needed.
+     */
+    toRevert: AreInstruction[];
+};
+type AreScene_Serialized = {
+    instructions: AreInstructionSerialized[];
+} & A_TYPES__Fragment_Serialized;
+type AreSceneStatusNames = typeof AreSceneStatuses[keyof typeof AreSceneStatuses];
+
+export type { AreSceneChanges, AreSceneStatusNames, AreScene_Serialized };

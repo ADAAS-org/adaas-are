@@ -1,14 +1,4 @@
 import '@adaas/a-concept';
-export { d as AreInstructionNewProps, e as AreInstructionSerialized } from '../../Are.context-D7w32H1G.mjs';
-import '@adaas/a-utils/a-signal';
-import '../AreEvent/AreEvent.context.mjs';
-import '@adaas/a-utils/a-execution';
-import '../AreStore/AreStore.types.mjs';
-import '../AreStore/AreStore.constants.mjs';
-import '../AreScene/AreScene.constants.mjs';
-import '../AreAttribute/AreAttribute.types.mjs';
-import '../AreAttribute/AreAttribute.constants.mjs';
-import '../AreComponent/Are.component.mjs';
-import '../AreComponent/Are.types.mjs';
-import '../AreComponent/Are.constants.mjs';
-import '../AreNode/AreNode.constants.mjs';
+export { a as AreInstructionNewProps, b as AreInstructionSerialized } from '../../AreInstruction.entity-Ceyy0tbf.mjs';
+import '@adaas/are/node/AreNode.entity';
+import '@adaas/are/store/AreStore.types';

@@ -1,30 +1,16 @@
 import { A_Component, A_Scope, A_TYPES__A_DependencyInjectable, A_TYPES__Ctor } from '@adaas/a-concept';
-import { AreSyntax } from '../AreSyntax/AreSyntax.context.mjs';
+import { AreSyntax } from '@adaas/are/syntax/AreSyntax.context';
 import { A_Logger } from '@adaas/a-utils/a-logger';
-import { AreCompiler } from '../AreCompiler/AreCompiler.component.mjs';
-import { AreTransformer } from '../AreTransformer/AreTransformer.component.mjs';
-import { AreLoader } from '../AreLoader/AreLoader.component.mjs';
-import { AreInterpreter } from '../AreInterpreter/AreInterpreter.component.mjs';
-import { AreLifecycle } from '../AreLifecycle/AreLifecycle.component.mjs';
-import { a as AreContext } from '../../Are.context-D7w32H1G.mjs';
+import { AreCompiler } from '@adaas/are/compiler/AreCompiler.component';
+import { AreTransformer } from '@adaas/are/transformer/AreTransformer.component';
+import { AreLoader } from '@adaas/are/loader/AreLoader.component';
+import { AreInterpreter } from '@adaas/are/interpreter/AreInterpreter.component';
+import { AreLifecycle } from '@adaas/are/lifecycle/AreLifecycle.component';
+import { AreContext } from '@adaas/are/component/Are.context';
 import { AreEngineDependencies } from './AreEngine.types.mjs';
 import { A_SignalBus } from '@adaas/a-utils/a-signal';
-import '../AreEvent/AreEvent.context.mjs';
-import '@adaas/a-utils/a-execution';
-import '../AreStore/AreStore.types.mjs';
-import '../AreStore/AreStore.constants.mjs';
-import '../AreScene/AreScene.constants.mjs';
-import '../AreAttribute/AreAttribute.types.mjs';
-import '../AreAttribute/AreAttribute.constants.mjs';
-import '../AreComponent/Are.component.mjs';
-import '../AreComponent/Are.types.mjs';
-import '../AreComponent/Are.constants.mjs';
-import '../AreNode/AreNode.constants.mjs';
-import '../AreTokenizer/AreTokenizer.component.mjs';
-import '../AreSignals/AreSignals.component.mjs';
-import '../AreSignals/AreSignals.context.mjs';
-import '../AreSignals/AreSignals.types.mjs';
-import '../AreSignals/AreSignals.meta.mjs';
+import '@adaas/are/tokenizer/AreTokenizer.component';
+import '@adaas/are/signals/AreSignals.component';
 
 declare class AreEngine extends A_Component {
     /**
