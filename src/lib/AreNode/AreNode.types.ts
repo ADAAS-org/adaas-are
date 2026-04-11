@@ -1,19 +1,8 @@
+import { AreSyntaxTokenMatch } from "@adaas/are/syntax/AreSyntax.types";
 import { AreNodeFeatures, AreNodeStatuses } from "./AreNode.constants";
 
 
-export type AreNodeProps = {
-    component: string,
-    scope: string,
-    markup: string,
-}
-
-export type AreNodeOptionalProps = {
-    id?: string,
-    styles?: string
-    template?: string
-}
-
-export type AreNodeNewProps = AreNodeProps & AreNodeOptionalProps;
+export type AreNodeNewProps = AreSyntaxTokenMatch;
 
 
 export type AreNodeFeatureNames = typeof AreNodeFeatures[keyof typeof AreNodeFeatures];

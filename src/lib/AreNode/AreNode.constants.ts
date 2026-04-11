@@ -2,52 +2,21 @@
 
 export const AreNodeFeatures = {
 
+    // ==============================================================================
+    // Lifecycle features
+    // ==============================================================================
     /**
-     * Event fired when the element node is about to be rendered
+     * Feature that is called to handle before init lifecycle of the element node
      */
-    onBeforeRender: '_AreNode_onBeforeRender',
+    onBeforeInit: '_AreNode_onBeforeInit',
     /**
-     * Event fired when the element node is rendered
+     * Feature that is called to init the element node
      */
-    onRender: '_AreNode_onRender',
+    onInit: '_AreNode_onInit',
     /**
-     * Event fired when the element node is after rendered
+     * 
      */
-    onAfterRender: '_AreNode_onAfterRender',
-
-
-    /**
-     * Feature that is called to handle before compile lifecycle of the element node
-     */
-    onBeforeCompile: '_AreNode_onBeforeCompile',
-    /**
-     * Feature that is called to compile the element node
-     */
-    onCompile: '_AreNode_onCompile',
-    /**
-     * Feature that is called to handle after compile lifecycle of the element node
-     */
-    onAfterCompile: '_AreNode_onAfterCompile',
-
-
-    /**
-     * Feature that is called to handle events
-     */
-    onEvent: '_AreNode_onEvent',
-
-
-    /**
-     * Feature that is called to handle before update lifecycle of the element node
-     */
-    onBeforeUpdate: '_AreNode_onBeforeUpdate',
-    /**
-     * Feature that is called to handle update lifecycle of the element node
-     */
-    onUpdate: '_AreNode_onUpdate',
-    /**
-     * Feature that is called to handle after update lifecycle of the element node
-     */
-    onAfterUpdate: '_AreNode_onAfterUpdate',
+    onAfterInit: '_AreNode_onAfterInit',
 
 
     /**
@@ -65,6 +34,20 @@ export const AreNodeFeatures = {
 
 
     /**
+     * Feature that is called to handle before update lifecycle of the element node
+     */
+    onBeforeUpdate: '_AreNode_onBeforeUpdate',
+    /**
+     * Feature that is called to handle update lifecycle of the element node
+     */
+    onUpdate: '_AreNode_onUpdate',
+    /**
+     * Feature that is called to handle after update lifecycle of the element node
+     */
+    onAfterUpdate: '_AreNode_onAfterUpdate',
+
+
+    /**
      * Feature that is called to handle before unmount lifecycle of the element node
      */
     onBeforeUnmount: '_AreNode_onBeforeUnmount',
@@ -77,6 +60,48 @@ export const AreNodeFeatures = {
      */
     onAfterUnmount: '_AreNode_onAfterUnmount',
 
+
+    /**
+     * Feature that is called to handle before destroy lifecycle of the element node
+     */
+    onBeforeDestroy: '_AreNode_onBeforeDestroy',
+    /**
+     * Feature that is called to handle before destroy lifecycle of the element node
+     */
+    onDestroy: '_AreNode_onDestroy',
+    /**
+     * Feature that is called to handle after destroy lifecycle of the element node
+     */
+    onAfterDestroy: '_AreNode_onAfterDestroy',
+
+
+
+    //=============================================================================
+    // Build features
+    // ==============================================================================
+    /**
+     * Feature that is called to tokenize the element node template and extract its content, attributes, and child nodes. 
+     */
+    onTokenize: '_AreNode_onTokenize',
+    /**
+     * Feature that is called to transform the element node template, markup, styles, and data into a format that can be used for compilation. This feature is responsible for processing the raw template and extracting the necessary information to create the render plan and instructions for the node.
+     */
+    onTransform: '_AreNode_onTransform',
+    /**
+     * Event fired when the element node is interpreted
+     */
+    onInterpret: '_AreNode_onInterpret',
+    /**
+     * Feature that is called to compile the element node
+     */
+    onCompile: '_AreNode_onCompile',
+
+
+
+    /**
+     * Feature that is called to handle events
+     */
+    onEmit: '_AreNode_onEmit',
 
 
 } as const;

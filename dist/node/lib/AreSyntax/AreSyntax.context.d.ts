@@ -1,80 +1,128 @@
 import { A_Fragment } from '@adaas/a-concept';
-import { AreSyntaxInitOptions } from './AreSyntax.types.js';
+import { q as AreSyntaxInitOptions, t as AreSyntaxTokenRules, g as AreNode, p as AreSyntaxCompiledExpression, o as AreStore } from '../../Are.context-9Ija_fdC.js';
+import '@adaas/a-utils/a-signal';
+import '../AreEvent/AreEvent.context.js';
+import '@adaas/a-utils/a-execution';
+import '../AreStore/AreStore.types.js';
+import '../AreStore/AreStore.constants.js';
+import '../AreScene/AreScene.constants.js';
+import '../AreAttribute/AreAttribute.types.js';
+import '../AreAttribute/AreAttribute.constants.js';
+import '../AreComponent/Are.component.js';
+import '../AreComponent/Are.types.js';
+import '../AreComponent/Are.constants.js';
+import '../AreNode/AreNode.constants.js';
 
-declare class AreSyntaxContext extends A_Fragment {
+declare class AreSyntax extends A_Fragment {
     /**
-     * Initialization options for configuring the AreSyntax context.
+     * Max allowed length of an expression string to prevent excessively long inputs that could lead to performance issues or abuse.
      */
-    protected readonly config: Partial<AreSyntaxInitOptions>;
-    constructor(
+    private readonly MAX_LENGTH;
     /**
-     * Initialization options for configuring the AreSyntax context.
+     * Max allowed nesting depth of parentheses, brackets, and braces in expressions to prevent excessively complex inputs that could lead to performance issues or abuse. Default is 5 levels of nesting.
      */
-    config?: Partial<AreSyntaxInitOptions>);
+    private readonly MAX_DEPTH;
     /**
-     * identifier of the root tag to use when compiling in browser context.
-     *
-     * @return {string} The root tag identifier.
+     * List of regex patterns that are blocked in expressions to prevent access to unsafe or sensitive features. This includes patterns for global objects, functions, and syntax that could be used for malicious purposes (e.g. "eval", "Function", "fetch", "XMLHttpRequest", "import", "require", "document", "window", "globalThis", "global", "process", "__proto__", "constructor", "prototype"). Expressions containing any of these patterns will be rejected during validation.
      */
-    get rootTag(): string;
+    private readonly BLOCKED_PATTERNS;
     /**
-     * List of standard HTML tags to recognize.
-     * [!] This is a set of tags that can be ignored when determining if a node is a custom component.
-     *
-     * @return {Set<string>} A set of standard HTML tag names.
+     * Set of global identifiers that are blocked in expressions to prevent access to unsafe or sensitive features. This includes global objects and functions that could be used for malicious purposes (e.g. "eval", "Function", "fetch", "XMLHttpRequest", "document", "window", "globalThis", "global", "process", "setTimeout", "setInterval", "localStorage", "sessionStorage", "indexedDB", "WebSocket", "Worker"). Accessing any of these identifiers in an expression will be rejected during validation.
      */
-    get standardTags(): Set<string>;
+    private readonly BLOCKED_GLOBALS;
     /**
-     * Enable or disable debug mode for syntax parsing.
-     * When enabled, additional debug information will be logged during parsing.
-     *
-     * @return {boolean} True if debug mode is enabled, false otherwise.
+     * Regex pattern that defines the allowed characters in expressions. This pattern allows letters, digits, whitespace, and common operators and punctuation used in JavaScript expressions. Expressions containing characters that do not match this pattern will be rejected during validation to prevent injection of potentially harmful code.
      */
-    get debugMode(): boolean;
+    private readonly ALLOWED_CHARS;
     /**
-     * Custom interpolation delimiters for template parsing.
-     * Default is ['{{', '}}'].
-     *
-     * @return {[string, string]} The opening and closing interpolation delimiters.
+     * Simple dot-path identifier pattern (e.g. "name", "user.name", "user.profile.name").
+     * Matches strings that consist solely of identifier characters separated by dots.
      */
-    get interpolationDelimiters(): [string, string];
+    private readonly SIMPLE_PATH;
     /**
-     * Custom binding delimiter for data binding parsing.
-     * Default is ':'.
-     * @return {string} The binding delimiter.
+     * Compiled expression — a pre-parsed function ready for repeated execution.
+     * Created once via compile(), reused on every apply/click.
      */
-    get bindingDelimiter(): string;
+    private readonly _rules;
+    private readonly _trimWhitespace;
+    private readonly _strictMode;
+    constructor(config?: Partial<AreSyntaxInitOptions>);
     /**
-     * Custom listener delimiter for event binding parsing.
-     * Default is '@'.
-     *
-     * @return {string} The listener delimiter.
+     * Get the array of token rules that define the syntax for parsing templates. Each rule specifies how to identify and process a particular type of token (e.g. interpolation, directive, comment) within templates. The rules are checked in order of priority, allowing for flexible and customizable parsing behavior.
      */
-    get listenerDelimiter(): string;
+    get rules(): AreSyntaxTokenRules<AreNode>[];
     /**
-     * Enable or disable strict mode for syntax parsing.
-     * When enabled, the parser will throw errors for any syntax violations.
-     * Default is true.
-     *
-     * @return {boolean} True if strict mode is enabled, false otherwise.
-     */
-    get strictMode(): boolean;
-    /**
-     * Enable or disable whitespace trimming in templates.
-     * When enabled, leading and trailing whitespace in template expressions will be trimmed.
-     * Default is true.
-     *
-     * @return {boolean} True if whitespace trimming is enabled, false otherwise.
+     * Indicates whether leading and trailing whitespace should be trimmed from token content. When enabled, any whitespace at the start or end of the content captured by a token will be removed before further processing. This can help prevent issues with unintended spaces affecting rendering or logic, especially in cases like interpolations or directives where extra whitespace may be common. Default is true.
      */
     get trimWhitespace(): boolean;
     /**
-     * Custom directive delimiter for directive parsing.
-     * Default is '$'.
-     *
-     * @return {string} The directive delimiter.
+     * Indicates whether the parser should throw an error when it encounters unclosed tokens. When enabled, if the parser finds an opening delimiter without a corresponding closing delimiter (e.g. an unclosed interpolation or directive), it will throw an error instead of silently ignoring it. This can help catch syntax errors and ensure that templates are well-formed. Default is true.
      */
-    get directiveDelimiter(): string;
-    get customDirectives(): string[];
+    get strictMode(): boolean;
+    /**
+     * Compiles an expression string into a reusable executor.
+     * Performs validation and Function construction once.
+     * Use when the same expression will be evaluated multiple times
+     * e.g. event handlers, instructions that re-apply on store changes.
+     *
+     * @example
+     *   // compile once at apply() time
+     *   const compiled = AreCommonHelper.compile('(e) => !!pageTitle ? $testHandler(e, item) : null')
+     *
+     *   // execute on every click — no re-parsing, no re-validation
+     *   element.addEventListener('click', (e) => {
+     *       const fn = compiled.execute(store, { $testHandler: handler, item })
+     *       if (typeof fn === 'function') fn(e)
+     *   })
+     */
+    compile(expr: string): AreSyntaxCompiledExpression;
+    /**
+     * Evaluates an expression string against the provided store.
+     * Automatically determines whether the result should be callable
+     * based on the shape of the expression.
+     *
+     * Returns the raw value for plain expressions (interpolations, bindings).
+     * Returns a bound function for callable expressions (event handlers).
+     *
+     * @param expr  Expression string to evaluate.
+     * @param store AreStore used for identifier resolution.
+     * @param scope Optional extra bindings checked **before** the store.
+     *              Useful for injecting event-specific values (`$event`, `element`)
+     *              or emit wrappers (`$handleClick`).
+     *
+     * @example
+     *   // simple value
+     *   evaluate('user.name', store)
+     *
+     *   // with emit wrapper
+     *   evaluate('$handleClick($event, user.name)', store, {
+     *       $event: domEvent,
+     *       $handleClick: (...args) => node.emit(new AreEvent('handleClick', args)),
+     *   })
+     *
+     *   // arrow with conditional
+     *   evaluate('(e) => isValid(user.name) ? $handleClick(e) : null', store, {
+     *       $handleClick: (...args) => node.emit(new AreEvent('handleClick', args)),
+     *   })
+     */
+    evaluate(expr: string, store: AreStore, scope?: Record<string, any>): any;
+    /**
+     * Extracts $-prefixed handler names from an expression.
+     * These represent event emission targets, not store references.
+     *
+     * Examples:
+     *   "$handleClick"                                     → Set(["handleClick"])
+     *   "$handleClick(user.name)"                           → Set(["handleClick"])
+     *   "(e) => isValid(user.name) ? $handleClick(e) : null" → Set(["handleClick"])
+     */
+    extractEmitHandlers(expr: string): Set<string>;
+    private isCallableExpression;
+    private validate;
+    private checkDepth;
+    private createSandbox;
+    private nestedHandler;
+    private assertSafeKey;
+    private execute;
 }
 
-export { AreSyntaxContext };
+export { AreSyntax };

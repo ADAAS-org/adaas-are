@@ -41,11 +41,13 @@
   "scripts": {
     "test": "jest",
     "example:jumpstart": "nodemon ./examples/jumpstart/concept.ts",
+    "example:dashboard": "nodemon ./examples/dashboard/concept.ts",
+    "example:auxta": "nodemon ./examples/auxta/concept.ts",
     "test:test": "nodemon ./src/test/app.ts",
-    "release": " npm run build && git add . && git commit -m \"new version created :: $(cat package.json | grep version | head -1  | awk -F: '{ print $2 }'  | sed 's/[\",]//g')\" && npm version patch && npm publish --access public",
-    "preversion": "echo test",
-    "version": "echo git add .",
-    "postversion": "git push --no-verify && git push --tags --no-verify && echo \"\n======Version Pushed Successfully=====\n\" ",
+    "release": "npm test && npm run build && git add . && git commit -m \"chore: prepare release $npm_package_version\" && npm version patch",
+    "preversion": "",
+    "version": "git add -A",
+    "postversion": "git push --no-verify && git push --tags --no-verify && npm publish --access public && echo \"\\n======Version Published Successfully=====\\n\"",
     "echo-version": "echo $npm_package_version",
     "build": "tsup --config tsup.config.ts"
   },
@@ -63,9 +65,9 @@
   },
   "homepage": "https://github.com/ADAAS-org/adaas-are#readme",
   "dependencies": {
-    "@adaas/a-concept": "^0.3.2",
-    "@adaas/a-frame": "^0.0.11",
-    "@adaas/a-utils": "^0.3.4"
+    "@adaas/a-concept": "^0.3.13",
+    "@adaas/a-frame": "^0.0.22",
+    "@adaas/a-utils": "^0.3.18"
   },
   "devDependencies": {
     "@types/chai": "^4.3.14",

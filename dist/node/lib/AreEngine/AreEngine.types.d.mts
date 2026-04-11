@@ -1,0 +1,40 @@
+import { A_TYPES__Component_Constructor } from '@adaas/a-concept';
+import { AreCompiler } from '../AreCompiler/AreCompiler.component.mjs';
+import { a as AreContext } from '../../Are.context-D7w32H1G.mjs';
+import { AreLoader } from '../AreLoader/AreLoader.component.mjs';
+import { AreSyntax } from '../AreSyntax/AreSyntax.context.mjs';
+import { AreTokenizer } from '../AreTokenizer/AreTokenizer.component.mjs';
+import { AreTransformer } from '../AreTransformer/AreTransformer.component.mjs';
+import { AreInterpreter } from '../AreInterpreter/AreInterpreter.component.mjs';
+import { AreLifecycle } from '../AreLifecycle/AreLifecycle.component.mjs';
+import { AreSignals } from '../AreSignals/AreSignals.component.mjs';
+import '@adaas/a-utils/a-logger';
+import '@adaas/a-utils/a-signal';
+import '../AreEvent/AreEvent.context.mjs';
+import '@adaas/a-utils/a-execution';
+import '../AreStore/AreStore.types.mjs';
+import '../AreStore/AreStore.constants.mjs';
+import '../AreScene/AreScene.constants.mjs';
+import '../AreAttribute/AreAttribute.types.mjs';
+import '../AreAttribute/AreAttribute.constants.mjs';
+import '../AreComponent/Are.component.mjs';
+import '../AreComponent/Are.types.mjs';
+import '../AreComponent/Are.constants.mjs';
+import '../AreNode/AreNode.constants.mjs';
+import '../AreSignals/AreSignals.context.mjs';
+import '../AreSignals/AreSignals.types.mjs';
+import '../AreSignals/AreSignals.meta.mjs';
+
+type AreEngineDependencies = {
+    context: AreContext;
+    syntax: AreSyntax;
+    loader: A_TYPES__Component_Constructor<AreLoader>;
+    tokenizer: A_TYPES__Component_Constructor<AreTokenizer>;
+    compiler: A_TYPES__Component_Constructor<AreCompiler>;
+    transformer: A_TYPES__Component_Constructor<AreTransformer>;
+    interpreter: A_TYPES__Component_Constructor<AreInterpreter>;
+    lifecycle: A_TYPES__Component_Constructor<AreLifecycle>;
+    signals: A_TYPES__Component_Constructor<AreSignals>;
+};
+
+export type { AreEngineDependencies };

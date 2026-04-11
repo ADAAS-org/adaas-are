@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../../src/lib/AreInstruction/AreInstruction.error.ts"],"names":[],"mappings":";;;AAIO,MAAM,4BAA4B,OAAA,CAAO;AAEhD","file":"AreInstruction.error.mjs","sourcesContent":["import { A_Error } from \"@adaas/a-concept\"\n\n\n\nexport class AreInstructionError extends A_Error{\n    \n}"]}

@@ -4,6 +4,10 @@ var aConcept = require('@adaas/a-concept');
 
 class AreSceneError extends aConcept.A_Error {
 }
+AreSceneError.SceneAlreadyInactive = "AreSceneError.SceneAlreadyInactive";
+AreSceneError.SceneAlreadyActive = "AreSceneError.SceneAlreadyActive";
+AreSceneError.HostInstructionHasConnectedInstructions = "AreSceneError.HostInstructionHasConnectedInstructions";
+AreSceneError.SingleHostInstruction = "AreSceneError.SingleHostInstruction";
 AreSceneError.SceneError = "AreSceneError.SceneError";
 AreSceneError.RootNotFound = "AreSceneError.RootNotFound";
 AreSceneError.UpdateFailed = "AreSceneError.UpdateFailed";

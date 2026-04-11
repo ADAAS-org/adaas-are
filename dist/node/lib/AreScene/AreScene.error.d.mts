@@ -1,6 +1,10 @@
 import { A_Error } from '@adaas/a-concept';
 
 declare class AreSceneError extends A_Error {
+    static readonly SceneAlreadyInactive = "AreSceneError.SceneAlreadyInactive";
+    static readonly SceneAlreadyActive = "AreSceneError.SceneAlreadyActive";
+    static readonly HostInstructionHasConnectedInstructions = "AreSceneError.HostInstructionHasConnectedInstructions";
+    static readonly SingleHostInstruction = "AreSceneError.SingleHostInstruction";
     static readonly SceneError = "AreSceneError.SceneError";
     static readonly RootNotFound = "AreSceneError.RootNotFound";
     static readonly UpdateFailed = "AreSceneError.UpdateFailed";

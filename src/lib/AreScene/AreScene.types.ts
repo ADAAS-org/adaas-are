@@ -1,14 +1,25 @@
 import { A_TYPES__Fragment_Serialized } from "@adaas/a-concept";
-import type { AreSceneInstruction } from "../AreSceneInstruction";
+import type { AreInstruction } from "@adaas/are/instruction/AreInstruction.entity";
+import { AreInstructionSerialized } from "@adaas/are/instruction/AreInstruction.types";
+import { AreSceneStatuses } from "./AreScene.constants";
 
 
 
 export type AreSceneChanges = {
-    toApply: AreSceneInstruction[];
-    toRevert: AreSceneInstruction[];
+    /**
+     * An array of instructions that are planned to be applied to the scene. These instructions represent the changes that will be made to the scene when they
+     */
+    toApply: AreInstruction[];
+    /**
+     * An array of instructions that are planned to be reverted from the scene. These instructions represent the changes that will be undone from the scene when they are reverted, allowing for a rollback of changes if needed.
+     */
+    toRevert: AreInstruction[];
 }
 
 
-export type AreSCene_Serialized = {
-    children: { [id: string]: AreSCene_Serialized }
+export type AreScene_Serialized = {
+    instructions: AreInstructionSerialized[];
 } & A_TYPES__Fragment_Serialized;
+
+
+export type AreSceneStatusNames = typeof AreSceneStatuses[keyof typeof AreSceneStatuses]

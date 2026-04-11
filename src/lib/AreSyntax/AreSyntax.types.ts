@@ -1,166 +1,92 @@
-export type AreSyntaxAttributeType = 'directive'
-    | 'binding'
-    | 'event'
-    | 'static'
-    | 'custom';
+import { A_TYPES__Entity_Constructor } from "@adaas/a-concept";
+import { AreAttribute } from "@adaas/are/attribute/AreAttribute.entity";
+import { AreNode } from "@adaas/are/node/AreNode.entity";
+import { AreStore } from "@adaas/are/store/AreStore.context";
+// ── Token Rule ────────────────────────────────────────────────────────────────
 
-
-
-export type AreSyntaxInitOptions = {
+export interface AreSyntaxTokenRules<T extends AreNode = AreNode> {
+    /** Opening delimiter e.g. '<', '{{', '<!--', '{' */
+    opening?: string
+    /** Closing delimiter e.g. '>', '}}', '-->', '}' */
+    closing?: string
+    /** Optional self-closing marker e.g. '/>' */
+    selfClosing?: string
+    /** Regex that must match content immediately before the opening delimiter */
+    prefix?: RegExp
+    /** Replaces open/close entirely — matches entire pattern via RegExp */
+    pattern?: RegExp
     /**
-     * Enable or disable debug mode for AreSyntax.
-     * When enabled, additional logging and debugging information will be available.
-     * Default is false.
+     * Fully custom matcher — complete control over how a token is found.
+     * Receives (source, from, to, build) where build(raw, content, position, closing)
+     * constructs the AreSyntaxTokenMatch. Return null if no match found.
      */
-    debugMode?: boolean;
-
+    matcher?: (
+        source: string,
+        from: number,
+        to: number,
+        build: (raw: string, content: string, position: number, closing: string) => AreSyntaxTokenMatch
+    ) => AreSyntaxTokenMatch | null
+    /** Constructor to instantiate when this rule matches */
+    component: A_TYPES__Entity_Constructor<T>
+    /** Higher = checked first. Default: 0 */
+    priority?: number
+    /** Whether this token can contain nested tokens of same open/close. Default: true */
+    nested?: boolean
+    /** Custom data extractor — called after match, result stored in match.meta */
+    extract?: (raw: string, match: AreSyntaxTokenMatch) => Record<string, any>
+}
+// ── Token Payload  ───────────────────────────────────────────────────────────────
+export type AreSyntaxTokenPayload = {
     /**
-     * Custom interpolation delimiters for template parsing.
-     * Default is ['{{', '}}'].
+     * Allows to override ASEID generation for this token match. Useful when the token corresponds to an existing entity or needs a stable ID across parses. If not provided, ASEID will be generated based on position and content.
      */
-    interpolationDelimiters?: [string, string];
-
+    id?: string;
     /**
-     * Custom tag delimiters for template parsing.
-     * Default is ['<', '>'].
+     * Allows to override the entity type for this token match. Useful when the token corresponds to an existing entity or needs a specific entity type across parses. If not provided, the entity type will be inferred from the token.
      */
-    tagDelimiters: [string, string];
-
+    entity?: string;
     /**
-     * Custom binding delimiters for data binding parsing.
-     * Default is ':'.
+     * Allows to override the scope for this token match. Useful when the token corresponds to an existing entity or needs a specific scope across parses. If not provided, the scope will be generated based on position and content.
      */
-    bindingDelimiter?: string;
-
-    /**
-     * Custom events delimiters for event binding parsing.
-     * Default is '@'.
-     */
-    eventDelimiter?: string;
-
-    /**
-     * Enable or disable strict mode for syntax parsing.
-     * When enabled, the parser will throw errors for any syntax violations.
-     * Default is true.
-     */
-    strictMode?: boolean;
-
-    /**
-     * A list of custom directives to be recognized by the syntax parser.
-     * Each directive should be a string representing the directive name.
-     * Default is an empty array.
-     */
-    customDirectives?: string[];
-
-    /**
-     * Enable or disable whitespace trimming in templates.
-     * When enabled, leading and trailing whitespace in template expressions will be trimmed.
-     * Default is true.    
-     */
-    trimWhitespace?: boolean;
-
-
-    /**
-     * identifier of the root tag to use when compiling in browser context.
-     */
-    rootTag?: string;
-
-    /**
-     * Custom directive delimiter for directive parsing.
-     * Default is '$'.
-     */
-    directiveDelimiter?: string;
-
-    /**
-     * List of standard HTML tags to recognize.
-     */
-    standardTags?: string[]
-};
-
-
-// ==================================================================================
-// ========================= SYNTAX Structures TYPES ================================
-// ==================================================================================
-
-export type AreAttributeTemplate = {
-    /**
-     * Property name (e.g. "label")
-     */
-    name: string;
-    /**
-     * Full raw attribute (e.g. ' :label="buttonLabel" ')
-     */
-    raw: string;
-    /**
-     * Attribute value (e.g. "buttonLabel")
-     */
-    value: string;
-    /**
-     * The prefix used in the attribute (e.g. ":" for bindings, "@" for listeners, "$" for directives)
-     */
-    prefix: string;
-    /**
-     * The type of the attribute based on its prefix (e.g. "binding", "event", "directive", "static")
-     */
-    type: AreSyntaxAttributeType;
-
-};
-
-export type AreInterpolationTemplate = {
-    /**
-     * Tag name where the interpolation was found
-     */
-    raw: string;
-    /**
-     * The key inside the interpolation (e.g. "user.name" for {{ user.name }})
-     */
-    key: string;
-    /**
-     * Position in the template where this interpolation was found 
-     */
-    position: number;
+    scope?: string;
+    [key: string]: any
 }
 
+// ── Token Match ───────────────────────────────────────────────────────────────
 
-export type AreListener = {
+export interface AreSyntaxTokenMatch {
+    /** Full matched string including delimiters */
+    raw: string
+    /** Content between delimiters */
+    content: string
+    /** The opening delimiter that matched */
+    opening: string
+    /** The closing delimiter that matched */
+    closing: string
+    /** Start position in source string */
+    position: number
+    /** Data extracted via rule.extract */
+    payload: AreSyntaxTokenPayload
+    /** @internal – the rule that produced this match (used by instantiate) */
+    _rule?: AreSyntaxTokenRules
+}
+
+export interface AreSyntaxInitOptions {
     /**
-     * tag name where listener was found
+     * Array of token rules defining the syntax to be parsed. Each rule specifies how to identify and process a particular type of token (e.g. interpolation, directive, comment) within templates. The rules are checked in order of priority, allowing for flexible and customizable parsing behavior.
      */
-    tag: string;
+    rules: AreSyntaxTokenRules[]
     /**
-     * event name (e.g. "input")
+     * Whether to trim leading/trailing whitespace from token content. Default: true. When enabled, any whitespace at the start or end of the content captured by a token will be removed before further processing. This can help prevent issues with unintended spaces affecting rendering or logic, especially in cases like interpolations or directives where extra whitespace may be common.
      */
-    name: string;
-    /**
-     * full raw attribute (e.g. ' @input="onChange"')
-     */
-    raw: string;
-    /**
-     * handler expression (e.g. "onChange")
-     */
-    handler: string;
+    trimWhitespace?: boolean
+    /** Throw on unclosed tokens. Default: true */
+    strictMode?: boolean
 };
 
 
-export type AreDirectiveTemplate = {
-    /**
-     * The tag name where the directive was found
-     */
-    tag: string;
-    /**
-     * The name of the directive (e.g. "$if")
-     */
-    name: string;
-    /**
-     * The full raw attribute text (e.g. '$if="condition"')
-     */
-    raw: string;
-    /**
-     * The value expression associated with the directive (e.g. "condition")
-     */
-    value?: string;
-    /**
-     * The full tag template where the directive was found
-     */
-    template: string;
-};
+
+export type AreSyntaxCompiledExpression = {
+    execute: (store: AreStore, scope?: Record<string, any>) => any
+    isCallable: boolean
+}

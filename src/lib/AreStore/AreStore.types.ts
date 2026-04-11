@@ -1,5 +1,4 @@
-import type { AreAttribute } from "@adaas/are/attribute";
-import type { AreInterpolation } from "@adaas/are/interpolation";
+import { AreStoreAreComponentMetaKeys } from "./AreStore.constants";
 
 
 // Helper type to extract the value type from a nested path
@@ -11,4 +10,10 @@ export type AreStorePathValue<T, P extends string> = P extends `${infer K}.${inf
     ? T[P]
     : never;
 
-export type AreStoreWatchingEntity = AreAttribute | AreInterpolation;
+
+
+export type AreStoreWatchingEntity = {
+    update(...args: any[]): void;
+};
+
+export type AreStoreAreComponentMetaKeyNames = typeof AreStoreAreComponentMetaKeys[keyof typeof AreStoreAreComponentMetaKeys];

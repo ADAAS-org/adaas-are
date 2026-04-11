@@ -1,13 +1,14 @@
-type AreNodeProps = {
-    component: string;
-    scope: string;
-    markup: string;
-};
-type AreNodeOptionalProps = {
-    id?: string;
-    styles?: string;
-    template?: string;
-};
-type AreNodeNewProps = AreNodeProps & AreNodeOptionalProps;
-
-export type { AreNodeNewProps, AreNodeOptionalProps, AreNodeProps };
+export { h as AreNodeFeatureNames, i as AreNodeNewProps, j as AreNodeStatusNames } from '../../Are.context-9Ija_fdC.js';
+import './AreNode.constants.js';
+import '@adaas/a-concept';
+import '@adaas/a-utils/a-signal';
+import '../AreEvent/AreEvent.context.js';
+import '@adaas/a-utils/a-execution';
+import '../AreStore/AreStore.types.js';
+import '../AreStore/AreStore.constants.js';
+import '../AreScene/AreScene.constants.js';
+import '../AreAttribute/AreAttribute.types.js';
+import '../AreAttribute/AreAttribute.constants.js';
+import '../AreComponent/Are.component.js';
+import '../AreComponent/Are.types.js';
+import '../AreComponent/Are.constants.js';

@@ -1,13 +1,14 @@
-type AreNodeProps = {
-    component: string;
-    scope: string;
-    markup: string;
-};
-type AreNodeOptionalProps = {
-    id?: string;
-    styles?: string;
-    template?: string;
-};
-type AreNodeNewProps = AreNodeProps & AreNodeOptionalProps;
-
-export type { AreNodeNewProps, AreNodeOptionalProps, AreNodeProps };
+export { h as AreNodeFeatureNames, i as AreNodeNewProps, j as AreNodeStatusNames } from '../../Are.context-D7w32H1G.mjs';
+import './AreNode.constants.mjs';
+import '@adaas/a-concept';
+import '@adaas/a-utils/a-signal';
+import '../AreEvent/AreEvent.context.mjs';
+import '@adaas/a-utils/a-execution';
+import '../AreStore/AreStore.types.mjs';
+import '../AreStore/AreStore.constants.mjs';
+import '../AreScene/AreScene.constants.mjs';
+import '../AreAttribute/AreAttribute.types.mjs';
+import '../AreAttribute/AreAttribute.constants.mjs';
+import '../AreComponent/Are.component.mjs';
+import '../AreComponent/Are.types.mjs';
+import '../AreComponent/Are.constants.mjs';

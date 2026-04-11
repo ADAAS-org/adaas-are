@@ -1,18 +1,8 @@
 import { __decorateClass } from '../../chunk-EQQGB2QZ.mjs';
-import { A_Fragment } from '@adaas/a-concept';
 import { A_Frame } from '@adaas/a-frame';
+import { A_ExecutionContext } from '@adaas/a-utils/a-execution';
 
-let AreEvent = class extends A_Fragment {
-  constructor(eventName, props) {
-    super({ name: eventName });
-    this._props = props;
-  }
-  get data() {
-    return this._props.data;
-  }
-  get event() {
-    return this._props.event;
-  }
+let AreEvent = class extends A_ExecutionContext {
 };
 AreEvent = __decorateClass([
   A_Frame.Fragment({

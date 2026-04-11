@@ -1,7 +1,7 @@
 'use strict';
 
-var aConcept = require('@adaas/a-concept');
 var aFrame = require('@adaas/a-frame');
+var aExecution = require('@adaas/a-utils/a-execution');
 
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __decorateClass = (decorators, target, key, kind) => {
@@ -11,17 +11,7 @@ var __decorateClass = (decorators, target, key, kind) => {
       result = (decorator(result)) || result;
   return result;
 };
-exports.AreEvent = class AreEvent extends aConcept.A_Fragment {
-  constructor(eventName, props) {
-    super({ name: eventName });
-    this._props = props;
-  }
-  get data() {
-    return this._props.data;
-  }
-  get event() {
-    return this._props.event;
-  }
+exports.AreEvent = class AreEvent extends aExecution.A_ExecutionContext {
 };
 exports.AreEvent = __decorateClass([
   aFrame.A_Frame.Fragment({

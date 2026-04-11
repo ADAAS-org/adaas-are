@@ -1,10 +1,14 @@
-import { ASEID } from '@adaas/a-concept';
-import { A_ExecutionContext } from '@adaas/a-utils/a-execution';
-
-declare class AreStore<T extends Record<string, any> = Record<string, any>> extends A_ExecutionContext<T> {
-    constructor(aseid: ASEID);
-    set<K extends keyof T>(values: Partial<T>): this;
-    set<K extends keyof T>(key: K, value: T[K]): this;
-}
-
-export { AreStore };
+import '@adaas/a-concept';
+import '@adaas/a-utils/a-execution';
+export { o as AreStore } from '../../Are.context-D7w32H1G.mjs';
+import '../AreComponent/Are.component.mjs';
+import './AreStore.types.mjs';
+import '@adaas/a-utils/a-signal';
+import '../AreEvent/AreEvent.context.mjs';
+import '../AreScene/AreScene.constants.mjs';
+import '../AreAttribute/AreAttribute.types.mjs';
+import '../AreAttribute/AreAttribute.constants.mjs';
+import '../AreNode/AreNode.constants.mjs';
+import '../AreComponent/Are.types.mjs';
+import '../AreComponent/Are.constants.mjs';
+import './AreStore.constants.mjs';

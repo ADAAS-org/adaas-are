@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../../src/lib/AreInterpreter/AreInterpreter.error.ts"],"names":["A_Error"],"mappings":";;;;AAGO,MAAM,4BAA4BA,gBAAA,CAAQ;AAEjD","file":"AreInterpreter.error.js","sourcesContent":["import { A_Error } from \"@adaas/a-concept\";\n\n\nexport class AreInterpreterError extends A_Error {\n\n}"]}

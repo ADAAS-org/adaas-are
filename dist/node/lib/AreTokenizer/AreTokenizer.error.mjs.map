@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../../src/lib/AreTokenizer/AreTokenizer.error.ts"],"names":[],"mappings":";;;AAIO,MAAM,0BAA0B,OAAA,CAAQ;AAE/C","file":"AreTokenizer.error.mjs","sourcesContent":["import { A_Error } from \"@adaas/a-concept\";\n\n\n\nexport class AreTokenizerError extends A_Error {\n\n}"]}

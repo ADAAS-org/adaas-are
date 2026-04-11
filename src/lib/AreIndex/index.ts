@@ -1,1 +1,0 @@
-export { AreIndex } from './AreIndex.context'

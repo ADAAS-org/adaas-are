@@ -1,6 +1,5 @@
 {
   "extends": "./.conf/tsconfig.base.json",
-
   "compilerOptions": {
     "rootDir": "./",
     "baseUrl": ".",
@@ -13,7 +12,7 @@
       "@adaas/are/constants/*": ["src/constants/*"],
 
       //  A-Concept specific paths aliases
-      "@adaas/are/channels/*": ["src/channels/*"],
+      // "@adaas/are/channels/*": ["src/channels/*"],
       // "@adaas/are/entities/*": ["src/entities/*"],
       // "@adaas/are/context/*": ["src/context/*"],
       // "@adaas/are/components/*": ["src/components/*"],
@@ -21,34 +20,26 @@
 
 
       //  main library exports
-      "@adaas/are/app": ["src/lib/AreApp/index.ts"],
-      "@adaas/are/compiler": ["src/lib/AreCompiler/index.ts"],
-      "@adaas/are/component": ["src/lib/AreComponent/index.ts"],
-      "@adaas/are/event": ["src/lib/AreEvent/index.ts"],
-      "@adaas/are/index": ["src/lib/AreIndex/index.ts"],
-      "@adaas/are/node": ["src/lib/AreNode/index.ts"],
-      "@adaas/are/props": ["src/lib/AreProps/index.ts"],
-      "@adaas/are/store": ["src/lib/AreStore/index.ts"],
-      "@adaas/are/root": ["src/lib/AreRoot/index.ts"],
-      "@adaas/are/router": ["src/lib/AreRouter/index.ts"],
-      "@adaas/are/scene": ["src/lib/AreScene/index.ts"],
-      "@adaas/are/scene-instruction": ["src/lib/AreSceneInstruction/index.ts"],
-      "@adaas/are/slot": ["src/lib/AreSlot/index.ts"],
-      "@adaas/are/syntax": ["src/lib/AreSyntax/index.ts"],
-      "@adaas/are/attribute": ["src/lib/AreAttribute/index.ts"],
-      "@adaas/are/interpolation": ["src/lib/AreInterpolation/index.ts"],
-      "@adaas/are/directive": ["src/lib/AreDirective/index.ts"],
-      "@adaas/are/queue": ["src/lib/AreQueue/index.ts"],
-      "@adaas/are/host": ["src/lib/AreHost/index.ts"],
-
-
-
-
-      "@adaas/are/signals": ["src/signals/index.ts"],
-
+      "@adaas/are/loader/*": ["src/lib/AreLoader/*"],
+      "@adaas/are/tokenizer/*": ["src/lib/AreTokenizer/*"],
+      "@adaas/are/compiler/*": ["src/lib/AreCompiler/*"],
+      "@adaas/are/transformer/*": ["src/lib/AreTransformer/*"],
+      "@adaas/are/interpreter/*": ["src/lib/AreInterpreter/*"],
+      "@adaas/are/lifecycle/*": ["src/lib/AreLifecycle/*"],
+      "@adaas/are/component/*": ["src/lib/AreComponent/*"],
+      "@adaas/are/event/*": ["src/lib/AreEvent/*"],
+      "@adaas/are/node/*": ["src/lib/AreNode/*"],
+      "@adaas/are/store/*": ["src/lib/AreStore/*"],
+      "@adaas/are/scene/*": ["src/lib/AreScene/*"],
+      "@adaas/are/instruction/*": ["src/lib/AreInstruction/*"],
+      "@adaas/are/syntax/*": ["src/lib/AreSyntax/*"],
+      "@adaas/are/attribute/*": ["src/lib/AreAttribute/*"],
+      "@adaas/are/watcher/*": ["src/lib/AreWatcher/*"],
+      "@adaas/are/signals/*": ["src/lib/AreSignals/*"],
+      "@adaas/are/engine/*": ["src/lib/AreEngine/*"],
 
       //  exported engines
-      "@adaas/are/engines/html": ["src/engines/html/index.ts"],
+      "@adaas/are/engines/html/*": ["src/engines/html/*"],
     },
 
     /* ===============================

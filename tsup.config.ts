@@ -38,6 +38,9 @@ export default defineConfig([
 
     // Emit .d.ts files
     dts: true,
+
+    // Exclude peer dependencies from the bundle
+    external: ['@adaas/a-concept', '@adaas/a-frame', '@adaas/a-utils'],
   },
 
   /**
@@ -74,5 +77,8 @@ export default defineConfig([
 
     // Emit .d.ts files (shared shape)
     dts: true,
+
+    // Exclude peer dependencies from the bundle
+    external: ['@adaas/a-concept', '@adaas/a-frame', '@adaas/a-utils'],
   },
 ]);

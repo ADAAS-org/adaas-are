@@ -1,1 +1,0 @@
-{"version":3,"sources":["../../../../src/lib/AreApp/AreApp.error.ts"],"names":["A_Error"],"mappings":";;;;AAGO,MAAM,oBAAoBA,gBAAA,CAAQ;AAGzC","file":"AreApp.error.js","sourcesContent":["import { A_Error } from \"@adaas/a-concept\";\n\n\nexport class AreAppError extends A_Error {\n\n\n}"]}

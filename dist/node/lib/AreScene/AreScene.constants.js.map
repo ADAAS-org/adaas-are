@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../../src/lib/AreScene/AreScene.constants.ts"],"names":[],"mappings":";;AAEO,MAAM,gBAAA,GAAmB;AAAA,EAC5B,MAAA,EAAQ,QAAA;AAAA,EACR,QAAA,EAAU,UAAA;AAAA,EACV,SAAA,EAAW;AACf","file":"AreScene.constants.js","sourcesContent":["\n\nexport const AreSceneStatuses = {\n    Active: 'active',\n    Inactive: 'inactive',\n    Destroyed: 'destroyed',\n}"]}

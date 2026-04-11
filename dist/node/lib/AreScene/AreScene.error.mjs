@@ -3,6 +3,10 @@ import { A_Error } from '@adaas/a-concept';
 
 class AreSceneError extends A_Error {
 }
+AreSceneError.SceneAlreadyInactive = "AreSceneError.SceneAlreadyInactive";
+AreSceneError.SceneAlreadyActive = "AreSceneError.SceneAlreadyActive";
+AreSceneError.HostInstructionHasConnectedInstructions = "AreSceneError.HostInstructionHasConnectedInstructions";
+AreSceneError.SingleHostInstruction = "AreSceneError.SingleHostInstruction";
 AreSceneError.SceneError = "AreSceneError.SceneError";
 AreSceneError.RootNotFound = "AreSceneError.RootNotFound";
 AreSceneError.UpdateFailed = "AreSceneError.UpdateFailed";

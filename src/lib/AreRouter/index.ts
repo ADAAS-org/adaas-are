@@ -1,1 +1,0 @@
-export { AreRouter } from './AreRouter.componeent'

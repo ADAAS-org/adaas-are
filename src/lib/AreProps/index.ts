@@ -1,1 +1,0 @@
-export { AreProps } from './AreProps.context'
