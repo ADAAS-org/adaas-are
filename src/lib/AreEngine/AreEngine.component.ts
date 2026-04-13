@@ -1,6 +1,5 @@
 import { A_CommonHelper, A_Component, A_Context, A_Dependency, A_Feature, A_FormatterHelper, A_Inject, A_Scope, A_TYPES__A_DependencyInjectable, A_TYPES__Ctor } from "@adaas/a-concept";
 import { AreSyntax } from "@adaas/are/syntax/AreSyntax.context";
-import { A_ServiceFeatures } from "@adaas/a-utils/a-service";
 import { A_Logger } from "@adaas/a-utils/a-logger";
 import { AreCompiler } from "@adaas/are/compiler/AreCompiler.component";
 import { AreTransformer } from "@adaas/are/transformer/AreTransformer.component";

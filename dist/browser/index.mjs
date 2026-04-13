@@ -1,8 +1,9 @@
-import { A_Feature, A_Inject, A_Scope, A_Caller, A_Meta, A_TYPES__EntityFeatures, A_Dependency, A_Error, A_Fragment, A_Context, A_Entity, A_FormatterHelper, A_TypeGuards, A_ComponentMeta, A_Component, A_CommonHelper } from '@adaas/a-concept';
+import { A_Feature, A_Inject, A_Scope, A_Caller, A_Meta, A_TYPES__EntityFeatures, A_Dependency, A_Concept, A_Error, A_Fragment, A_Context, A_Entity, A_FormatterHelper, A_TypeGuards, A_ComponentMeta, A_Component, A_CommonHelper } from '@adaas/a-concept';
 import { A_Frame } from '@adaas/a-frame';
 import { A_SignalBusFeatures, A_SignalVector, A_SignalState, A_SignalBus, A_Signal } from '@adaas/a-utils/a-signal';
 import { A_Logger } from '@adaas/a-utils/a-logger';
 import { A_ExecutionContext } from '@adaas/a-utils/a-execution';
+import { A_Service, A_ServiceFeatures } from '@adaas/a-utils/a-service';
 import { A_UtilsHelper } from '@adaas/a-utils/helpers';
 import { A_Route } from '@adaas/a-utils/a-route';
 
@@ -2170,233 +2171,6 @@ AreSyntax = __decorateClass([
     description: "Context that defines the syntax rules and structures for the A-Concept Rendering Engine (ARE). It provides mechanisms for parsing and interpreting templates, attributes, directives, interpolations, and event listeners, enabling dynamic and interactive UI rendering within the ARE framework."
   })
 ], AreSyntax);
-var AreSyntaxError = class extends A_Error {
-};
-AreSyntaxError.SyntaxParseError = "Are Syntax Parse Error";
-AreSyntaxError.SyntaxNotSupportedError = "Are Syntax Not Supported Error";
-AreSyntaxError.MethodNotImplementedError = "Are Syntax Method Not Implemented Error";
-
-// src/lib/AreEngine/AreEngine.constants.ts
-var AreEngineFeatures = {
-  Load: "_AreEngine_Load",
-  Build: "_AreEngine_Build",
-  Execute: "_AreEngine_Execute"
-};
-var AreTokenizerError = class extends A_Error {
-};
-var AreTokenizer = class extends A_Component {
-  /**
-   * Get the AreSyntax from the current scope. The AreSyntax defines the syntax rules and structures for tokenizing templates. It provides mechanisms for parsing and interpreting templates, attributes, directives, interpolations, and event listeners, enabling dynamic and interactive UI rendering within the ARE framework. If no AreSyntax is found in the scope, an error is thrown indicating that AreTokenizer requires an AreSyntax to function properly.
-   */
-  get config() {
-    const syntax = A_Context.scope(this).resolve(AreSyntax);
-    if (!syntax) throw new AreTokenizerError({
-      title: "Syntax Context Not Found",
-      description: "AreTokenizer requires an AreSyntax to be present in the same scope. Ensure that an AreSyntax fragment is included in the concept and is accessible from the scope where AreTokenizer is used."
-    });
-    return syntax;
-  }
-  instantiate(context) {
-    context.startPerformance("Tokenizer Instantiate");
-    const source = context.source;
-    const nodes = this.scan(source, 0, source.length, context).map((match) => {
-      const rule = this.findRuleForMatch(match);
-      if (!rule) throw new Error(`No rule found for match at position ${match.position}`);
-      return new rule.component(match);
-    });
-    for (const node of nodes) {
-      context.addRoot(node);
-    }
-    context.endPerformance("Tokenizer Instantiate");
-  }
-  tokenize(node, context, logger) {
-    context.startPerformance(`Tokenize method`);
-    const source = node.content;
-    const content = this.scan(source, 0, source.length, context).map((match) => {
-      const rule = this.findRuleForMatch(match);
-      if (!rule) throw new Error(`No rule found for match at position ${match.position}`);
-      return new rule.component(match);
-    });
-    logger?.debug("red", `Tokenized node <${node.aseid.toString()}> with content:`, content.length);
-    context.endPerformance(`Tokenize method`);
-    context.startPerformance(`Tokenize node Create Children`);
-    for (const child of content) {
-      node.addChild(child);
-      context.startPerformance("AreTokenizer.tokenize child init");
-      child.init();
-      context.endPerformance("AreTokenizer.tokenize child init");
-    }
-    context.endPerformance(`Tokenize node Create Children`);
-  }
-  scan(source, from, to, context) {
-    context.startPerformance("Tokenizer Scan");
-    const tokens = [];
-    let index = from;
-    let hasMatchBefore = false;
-    while (index < to) {
-      const match = this.findNextMatch(source, index, to);
-      if (!match) {
-        const rest = source.slice(index, to);
-        const t = this.tryPlainText(rest, index);
-        if (t && !(this.config.trimWhitespace && !rest.trim())) tokens.push(t);
-        break;
-      }
-      if (match.position > index) {
-        const plain = source.slice(index, match.position);
-        const t = this.tryPlainText(plain, index);
-        if (t) {
-          if (this.config.trimWhitespace && !plain.trim()) {
-            if (hasMatchBefore) {
-              t.content = " ";
-              tokens.push(t);
-            }
-          } else {
-            tokens.push(t);
-          }
-        }
-      }
-      tokens.push(match);
-      hasMatchBefore = true;
-      index = match.position + match.raw.length;
-    }
-    context.endPerformance("Tokenizer Scan");
-    return tokens;
-  }
-  findNextMatch(source, from, to) {
-    let earliest = null;
-    for (const rule of this.config.rules) {
-      if (!rule.opening && !rule.closing && !rule.pattern && !rule.matcher) continue;
-      const match = this.matchRule(source, rule, from, to);
-      if (!match) continue;
-      if (!earliest || match.position < earliest.position) earliest = match;
-    }
-    return earliest;
-  }
-  matchRule(source, rule, from, to) {
-    if (rule.matcher) {
-      return rule.matcher(
-        source,
-        from,
-        to,
-        (raw, content, position, closing) => this.buildMatch(rule, raw, content, position, closing)
-      );
-    }
-    if (rule.pattern) {
-      const slice = source.slice(from, to);
-      rule.pattern.lastIndex = 0;
-      const m = rule.pattern.exec(slice);
-      if (!m) return null;
-      return this.buildMatch(rule, m[0], m[0], from + m.index, "");
-    }
-    if (!rule.opening || !rule.closing) return null;
-    if (rule.prefix) return this.matchPrefixedRule(source, rule, from, to);
-    return this.matchStandardRule(source, rule, from, to);
-  }
-  matchStandardRule(source, rule, from, to) {
-    const opening = rule.opening;
-    const closing = rule.closing;
-    const openPos = source.indexOf(opening, from);
-    if (openPos === -1 || openPos >= to) return null;
-    const contentStart = openPos + opening.length;
-    if (rule.selfClosing) {
-      const selfClosePos = source.indexOf(rule.selfClosing, contentStart);
-      const normalClosePos = source.indexOf(closing, contentStart);
-      if (selfClosePos !== -1 && (normalClosePos === -1 || selfClosePos < normalClosePos)) {
-        const closeEnd = selfClosePos + rule.selfClosing.length;
-        return this.buildMatch(rule, source.slice(openPos, closeEnd), source.slice(contentStart, selfClosePos), openPos, rule.selfClosing);
-      }
-    }
-    const closePos = rule.nested !== false ? this.findMatchingClose(source, opening, closing, contentStart, to) : source.indexOf(closing, contentStart);
-    if (closePos === -1) {
-      if (this.config.strictMode) throw new Error(`Unclosed token '${opening}' at position ${openPos}`);
-      return null;
-    }
-    return this.buildMatch(rule, source.slice(openPos, closePos + closing.length), source.slice(contentStart, closePos), openPos, closing);
-  }
-  matchPrefixedRule(source, rule, from, to) {
-    const opening = rule.opening;
-    const closing = rule.closing;
-    let searchFrom = from;
-    while (searchFrom < to) {
-      const openPos = source.indexOf(opening, searchFrom);
-      if (openPos === -1 || openPos >= to) return null;
-      const before = source.slice(from, openPos);
-      const prefixRe = new RegExp(rule.prefix.source + "$");
-      const prefixM = prefixRe.exec(before);
-      if (prefixM) {
-        const actualStart = openPos - prefixM[0].length;
-        const contentStart = openPos + opening.length;
-        const closePos = rule.nested !== false ? this.findMatchingClose(source, opening, closing, contentStart, to) : source.indexOf(closing, contentStart);
-        if (closePos === -1) {
-          if (this.config.strictMode) throw new Error(`Unclosed token '${opening}' at position ${openPos}`);
-          return null;
-        }
-        return this.buildMatch(rule, source.slice(actualStart, closePos + closing.length), source.slice(contentStart, closePos), actualStart, closing);
-      }
-      searchFrom = openPos + 1;
-    }
-    return null;
-  }
-  findMatchingClose(source, opening, closing, from, to) {
-    let level = 1;
-    let index = from;
-    while (index < to) {
-      const nextOpen = source.indexOf(opening, index);
-      const nextClose = source.indexOf(closing, index);
-      if (nextClose === -1) return -1;
-      if (nextOpen !== -1 && nextOpen < nextClose) {
-        level++;
-        index = nextOpen + opening.length;
-        continue;
-      }
-      level--;
-      if (level === 0) return nextClose;
-      index = nextClose + closing.length;
-    }
-    return -1;
-  }
-  buildMatch(rule, raw, content, position, closingUsed) {
-    const trimmed = this.config.trimWhitespace ? content.trim() : content;
-    const match = { raw, content: trimmed, opening: rule.opening ?? "", closing: closingUsed, position, payload: {}, _rule: rule };
-    if (rule.extract) match.payload = rule.extract(raw, match);
-    return match;
-  }
-  tryPlainText(raw, position) {
-    if (!raw) return null;
-    const rule = this.config.rules.find((r) => !r.opening && !r.closing && !r.pattern && !r.matcher);
-    if (!rule) return null;
-    const match = this.buildMatch(rule, raw, raw, position, "");
-    match._rule = rule;
-    return match;
-  }
-  findRuleForMatch(match) {
-    if (match._rule) return match._rule;
-    return this.config.rules.find((r) => (r.opening ?? "") === match.opening && (r.closing ?? "") === match.closing);
-  }
-};
-__decorateClass([
-  A_Feature.Extend({
-    name: AreEngineFeatures.Load
-    // scope: [AreEngine]
-  }),
-  __decorateParam(0, A_Inject(AreContext))
-], AreTokenizer.prototype, "instantiate", 1);
-__decorateClass([
-  A_Feature.Extend({
-    name: AreNodeFeatures.onTokenize,
-    scope: [AreNode]
-  }),
-  __decorateParam(0, A_Inject(A_Caller)),
-  __decorateParam(1, A_Inject(AreContext)),
-  __decorateParam(2, A_Inject(A_Logger))
-], AreTokenizer.prototype, "tokenize", 1);
-AreTokenizer = __decorateClass([
-  A_Frame.Component({
-    namespace: "A-ARE",
-    name: "AreTokenizer",
-    description: "AreTokenizer is responsible for scanning and tokenizing template source strings using the syntax rules defined in AreSyntax. It converts raw template strings into AreNode instances that represent the structured AST of the template, enabling downstream compilation and rendering within the ARE framework."
-  })
-], AreTokenizer);
 var AreCompiler = class extends A_Component {
   static Compile(param1) {
     return (target, propertyKey, descriptor) => {
@@ -2444,10 +2218,6 @@ AreCompiler = __decorateClass([
     description: "Walks the transformed AreNode tree and emits a Scene. Translates each node, binding, directive and interpolation into a typed instruction. Knows nothing about the DOM or any rendering target \u2014 its only concern is producing a complete and ordered set of instructions that fully describes how the tree should be rendered."
   })
 ], AreCompiler);
-var AreCompilerError = class extends A_Error {
-};
-AreCompilerError.RenderError = "Are Compiler Render Error";
-AreCompilerError.CompilationError = "Are Compiler Compilation Error";
 var AreTransformer = class extends A_Component {
   transform(node, scope, scene, ...args) {
     const queue = [node];
@@ -2475,6 +2245,48 @@ AreTransformer = __decorateClass([
     description: "Reshapes the AreNode tree before compilation without changing its abstraction level. Responsible for structural rewrites that would complicate the compiler if left unhandled \u2014 converting $for nodes into AreGroupNode, extracting AreText and AreInterpolation from raw text, sorting directives via TopologicalSorter, and flagging static nodes."
   })
 ], AreTransformer);
+var AreLoader = class extends A_Component {
+  async load(node, scope, feature, logger, context, ...args) {
+    logger?.debug("red", `Loading node <${node.aseid.toString()}> with content:`, scope);
+    if (node.component) {
+      context?.startPerformance("Total AreFeatures.onData");
+      await feature.chain(node.component, AreFeatures.onData, scope);
+      context?.endPerformance("Total AreFeatures.onData");
+      context?.startPerformance("Total AreFeatures.onLoad");
+      await feature.chain(node.component, AreFeatures.onStyles, scope);
+      context?.endPerformance("Total AreFeatures.onLoad");
+      context?.startPerformance("Total AreFeatures.onTemplate");
+      await feature.chain(node.component, AreFeatures.onTemplate, scope);
+      context?.endPerformance("Total AreFeatures.onTemplate");
+    }
+    context?.startPerformance("Tokenization");
+    node.tokenize();
+    context?.endPerformance("Tokenization");
+    for (let i = 0; i < node.children.length; i++) {
+      const childNode = node.children[i];
+      const res = childNode.load();
+      if (res instanceof Promise) {
+        await res;
+      }
+    }
+  }
+};
+__decorateClass([
+  A_Feature.Extend({
+    name: A_TYPES__EntityFeatures.LOAD,
+    scope: [AreNode]
+  }),
+  __decorateParam(0, A_Inject(A_Caller)),
+  __decorateParam(1, A_Inject(A_Scope)),
+  __decorateParam(2, A_Inject(A_Feature)),
+  __decorateParam(3, A_Inject(A_Logger)),
+  __decorateParam(4, A_Inject(AreContext))
+], AreLoader.prototype, "load", 1);
+AreLoader = __decorateClass([
+  A_Frame.Component({
+    description: "Entry point of the pipeline. Accepts a raw template string and orchestrates the initial processing by delegating to Syntax. Returns a structured AreNode tree ready for transformation. Knows nothing about the template content or grammar rules."
+  })
+], AreLoader);
 
 // src/lib/AreStore/AreStore.constants.ts
 var AreStoreAreComponentMetaKeys = {
@@ -2794,8 +2606,9 @@ AreInterpreter = __decorateClass([
     description: "Stateless executor that reads the Scene and translates its instructions into operations on a rendering target. Computes the diff between applied and planned, calls revert on removed instructions and apply on added ones. Owns no state of its own \u2014 all state lives in the Scene. Can be swapped for any target implementation (DOMInterpreter, SSRInterpreter, CanvasInterpreter) without touching any other part of the pipeline."
   })
 ], AreInterpreter);
-var AreInterpreterError = class extends A_Error {
+var AreEngineError = class extends A_Error {
 };
+AreEngineError.MissedRequiredDependency = "A Required Dependency is missing in AreEngine";
 var AreLifecycle = class extends A_Component {
   static Init(param1) {
     return (target, propertyKey, descriptor) => {
@@ -3119,118 +2932,228 @@ AreLifecycle = __decorateClass([
     description: "Handles the lifecycle of the AreNode and related entities such as interpolations, directives, attributes, and so on. It provides lifecycle hooks for initialization, mounting, updating, and unmounting of the nodes, allowing to manage the state and behavior of the nodes throughout their lifecycle in a structured and consistent way."
   })
 ], AreLifecycle);
-var AreLifecycleError = class extends A_Error {
+
+// src/lib/AreEngine/AreEngine.constants.ts
+var AreEngineFeatures = {
+  Load: "_AreEngine_Load",
+  Build: "_AreEngine_Build",
+  Execute: "_AreEngine_Execute"
 };
-AreLifecycleError.InvalidLifecycleMethod = "Invalid lifecycle method. Lifecycle method must be one of the following: onBeforeLoad, onLoad, onUpdate, onDestroy.";
-var AreLoader = class extends A_Component {
-  async load(node, scope, feature, logger, context, ...args) {
-    logger?.debug("red", `Loading node <${node.aseid.toString()}> with content:`, scope);
-    if (node.component) {
-      context?.startPerformance("Total AreFeatures.onData");
-      await feature.chain(node.component, AreFeatures.onData, scope);
-      context?.endPerformance("Total AreFeatures.onData");
-      context?.startPerformance("Total AreFeatures.onLoad");
-      await feature.chain(node.component, AreFeatures.onStyles, scope);
-      context?.endPerformance("Total AreFeatures.onLoad");
-      context?.startPerformance("Total AreFeatures.onTemplate");
-      await feature.chain(node.component, AreFeatures.onTemplate, scope);
-      context?.endPerformance("Total AreFeatures.onTemplate");
+var AreTokenizerError = class extends A_Error {
+};
+var AreTokenizer = class extends A_Component {
+  /**
+   * Get the AreSyntax from the current scope. The AreSyntax defines the syntax rules and structures for tokenizing templates. It provides mechanisms for parsing and interpreting templates, attributes, directives, interpolations, and event listeners, enabling dynamic and interactive UI rendering within the ARE framework. If no AreSyntax is found in the scope, an error is thrown indicating that AreTokenizer requires an AreSyntax to function properly.
+   */
+  get config() {
+    const syntax = A_Context.scope(this).resolve(AreSyntax);
+    if (!syntax) throw new AreTokenizerError({
+      title: "Syntax Context Not Found",
+      description: "AreTokenizer requires an AreSyntax to be present in the same scope. Ensure that an AreSyntax fragment is included in the concept and is accessible from the scope where AreTokenizer is used."
+    });
+    return syntax;
+  }
+  instantiate(context) {
+    context.startPerformance("Tokenizer Instantiate");
+    const source = context.source;
+    const nodes = this.scan(source, 0, source.length, context).map((match) => {
+      const rule = this.findRuleForMatch(match);
+      if (!rule) throw new Error(`No rule found for match at position ${match.position}`);
+      return new rule.component(match);
+    });
+    for (const node of nodes) {
+      context.addRoot(node);
     }
-    context?.startPerformance("Tokenization");
-    node.tokenize();
-    context?.endPerformance("Tokenization");
-    for (let i = 0; i < node.children.length; i++) {
-      const childNode = node.children[i];
-      const res = childNode.load();
-      if (res instanceof Promise) {
-        await res;
+    context.endPerformance("Tokenizer Instantiate");
+  }
+  tokenize(node, context, logger) {
+    context.startPerformance(`Tokenize method`);
+    const source = node.content;
+    const content = this.scan(source, 0, source.length, context).map((match) => {
+      const rule = this.findRuleForMatch(match);
+      if (!rule) throw new Error(`No rule found for match at position ${match.position}`);
+      return new rule.component(match);
+    });
+    logger?.debug("red", `Tokenized node <${node.aseid.toString()}> with content:`, content.length);
+    context.endPerformance(`Tokenize method`);
+    context.startPerformance(`Tokenize node Create Children`);
+    for (const child of content) {
+      node.addChild(child);
+      context.startPerformance("AreTokenizer.tokenize child init");
+      child.init();
+      context.endPerformance("AreTokenizer.tokenize child init");
+    }
+    context.endPerformance(`Tokenize node Create Children`);
+  }
+  scan(source, from, to, context) {
+    context.startPerformance("Tokenizer Scan");
+    const tokens = [];
+    let index = from;
+    let hasMatchBefore = false;
+    while (index < to) {
+      const match = this.findNextMatch(source, index, to);
+      if (!match) {
+        const rest = source.slice(index, to);
+        const t = this.tryPlainText(rest, index);
+        if (t && !(this.config.trimWhitespace && !rest.trim())) tokens.push(t);
+        break;
+      }
+      if (match.position > index) {
+        const plain = source.slice(index, match.position);
+        const t = this.tryPlainText(plain, index);
+        if (t) {
+          if (this.config.trimWhitespace && !plain.trim()) {
+            if (hasMatchBefore) {
+              t.content = " ";
+              tokens.push(t);
+            }
+          } else {
+            tokens.push(t);
+          }
+        }
+      }
+      tokens.push(match);
+      hasMatchBefore = true;
+      index = match.position + match.raw.length;
+    }
+    context.endPerformance("Tokenizer Scan");
+    return tokens;
+  }
+  findNextMatch(source, from, to) {
+    let earliest = null;
+    for (const rule of this.config.rules) {
+      if (!rule.opening && !rule.closing && !rule.pattern && !rule.matcher) continue;
+      const match = this.matchRule(source, rule, from, to);
+      if (!match) continue;
+      if (!earliest || match.position < earliest.position) earliest = match;
+    }
+    return earliest;
+  }
+  matchRule(source, rule, from, to) {
+    if (rule.matcher) {
+      return rule.matcher(
+        source,
+        from,
+        to,
+        (raw, content, position, closing) => this.buildMatch(rule, raw, content, position, closing)
+      );
+    }
+    if (rule.pattern) {
+      const slice = source.slice(from, to);
+      rule.pattern.lastIndex = 0;
+      const m = rule.pattern.exec(slice);
+      if (!m) return null;
+      return this.buildMatch(rule, m[0], m[0], from + m.index, "");
+    }
+    if (!rule.opening || !rule.closing) return null;
+    if (rule.prefix) return this.matchPrefixedRule(source, rule, from, to);
+    return this.matchStandardRule(source, rule, from, to);
+  }
+  matchStandardRule(source, rule, from, to) {
+    const opening = rule.opening;
+    const closing = rule.closing;
+    const openPos = source.indexOf(opening, from);
+    if (openPos === -1 || openPos >= to) return null;
+    const contentStart = openPos + opening.length;
+    if (rule.selfClosing) {
+      const selfClosePos = source.indexOf(rule.selfClosing, contentStart);
+      const normalClosePos = source.indexOf(closing, contentStart);
+      if (selfClosePos !== -1 && (normalClosePos === -1 || selfClosePos < normalClosePos)) {
+        const closeEnd = selfClosePos + rule.selfClosing.length;
+        return this.buildMatch(rule, source.slice(openPos, closeEnd), source.slice(contentStart, selfClosePos), openPos, rule.selfClosing);
       }
     }
+    const closePos = rule.nested !== false ? this.findMatchingClose(source, opening, closing, contentStart, to) : source.indexOf(closing, contentStart);
+    if (closePos === -1) {
+      if (this.config.strictMode) throw new Error(`Unclosed token '${opening}' at position ${openPos}`);
+      return null;
+    }
+    return this.buildMatch(rule, source.slice(openPos, closePos + closing.length), source.slice(contentStart, closePos), openPos, closing);
+  }
+  matchPrefixedRule(source, rule, from, to) {
+    const opening = rule.opening;
+    const closing = rule.closing;
+    let searchFrom = from;
+    while (searchFrom < to) {
+      const openPos = source.indexOf(opening, searchFrom);
+      if (openPos === -1 || openPos >= to) return null;
+      const before = source.slice(from, openPos);
+      const prefixRe = new RegExp(rule.prefix.source + "$");
+      const prefixM = prefixRe.exec(before);
+      if (prefixM) {
+        const actualStart = openPos - prefixM[0].length;
+        const contentStart = openPos + opening.length;
+        const closePos = rule.nested !== false ? this.findMatchingClose(source, opening, closing, contentStart, to) : source.indexOf(closing, contentStart);
+        if (closePos === -1) {
+          if (this.config.strictMode) throw new Error(`Unclosed token '${opening}' at position ${openPos}`);
+          return null;
+        }
+        return this.buildMatch(rule, source.slice(actualStart, closePos + closing.length), source.slice(contentStart, closePos), actualStart, closing);
+      }
+      searchFrom = openPos + 1;
+    }
+    return null;
+  }
+  findMatchingClose(source, opening, closing, from, to) {
+    let level = 1;
+    let index = from;
+    while (index < to) {
+      const nextOpen = source.indexOf(opening, index);
+      const nextClose = source.indexOf(closing, index);
+      if (nextClose === -1) return -1;
+      if (nextOpen !== -1 && nextOpen < nextClose) {
+        level++;
+        index = nextOpen + opening.length;
+        continue;
+      }
+      level--;
+      if (level === 0) return nextClose;
+      index = nextClose + closing.length;
+    }
+    return -1;
+  }
+  buildMatch(rule, raw, content, position, closingUsed) {
+    const trimmed = this.config.trimWhitespace ? content.trim() : content;
+    const match = { raw, content: trimmed, opening: rule.opening ?? "", closing: closingUsed, position, payload: {}, _rule: rule };
+    if (rule.extract) match.payload = rule.extract(raw, match);
+    return match;
+  }
+  tryPlainText(raw, position) {
+    if (!raw) return null;
+    const rule = this.config.rules.find((r) => !r.opening && !r.closing && !r.pattern && !r.matcher);
+    if (!rule) return null;
+    const match = this.buildMatch(rule, raw, raw, position, "");
+    match._rule = rule;
+    return match;
+  }
+  findRuleForMatch(match) {
+    if (match._rule) return match._rule;
+    return this.config.rules.find((r) => (r.opening ?? "") === match.opening && (r.closing ?? "") === match.closing);
   }
 };
 __decorateClass([
   A_Feature.Extend({
-    name: A_TYPES__EntityFeatures.LOAD,
+    name: AreEngineFeatures.Load
+    // scope: [AreEngine]
+  }),
+  __decorateParam(0, A_Inject(AreContext))
+], AreTokenizer.prototype, "instantiate", 1);
+__decorateClass([
+  A_Feature.Extend({
+    name: AreNodeFeatures.onTokenize,
     scope: [AreNode]
   }),
   __decorateParam(0, A_Inject(A_Caller)),
-  __decorateParam(1, A_Inject(A_Scope)),
-  __decorateParam(2, A_Inject(A_Feature)),
-  __decorateParam(3, A_Inject(A_Logger)),
-  __decorateParam(4, A_Inject(AreContext))
-], AreLoader.prototype, "load", 1);
-AreLoader = __decorateClass([
-  A_Frame.Component({
-    description: "Entry point of the pipeline. Accepts a raw template string and orchestrates the initial processing by delegating to Syntax. Returns a structured AreNode tree ready for transformation. Knows nothing about the template content or grammar rules."
-  })
-], AreLoader);
-var AreLoaderError = class extends A_Error {
-};
-AreLoaderError.SyntaxError = "Are Loader Syntax Error";
-AreLoaderError.EmptyTemplateError = "Are Loader Empty Template Error";
-var AreWatcher = class extends A_Component {
-  constructor() {
-    super();
-    this.handlers = /* @__PURE__ */ new Set();
-    this.current = new URL(window.location.href);
-    // ── Listeners ─────────────────────────────────────────────────────────────
-    this.onPopState = () => {
-      this.notify();
-    };
-    this.onHashChange = () => {
-      this.notify();
-    };
-    this.onURLChange = () => {
-      this.notify();
-    };
-    this.patchHistory();
-    this.attachListeners();
-  }
-  // ── Public ────────────────────────────────────────────────────────────────
-  onChange(handler) {
-    this.handlers.add(handler);
-    return () => this.handlers.delete(handler);
-  }
-  get url() {
-    return this.current;
-  }
-  destroy() {
-    window.removeEventListener("popstate", this.onPopState);
-    window.removeEventListener("hashchange", this.onHashChange);
-    window.removeEventListener("urlchange", this.onURLChange);
-    this.handlers.clear();
-  }
-  attachListeners() {
-    window.addEventListener("popstate", this.onPopState);
-    window.addEventListener("hashchange", this.onHashChange);
-    window.addEventListener("urlchange", this.onURLChange);
-  }
-  // ── Patch pushState / replaceState ────────────────────────────────────────
-  patchHistory() {
-    const patch = (original) => function(...args) {
-      original.apply(this, args);
-      window.dispatchEvent(new Event("urlchange"));
-    };
-    history.pushState = patch(history.pushState);
-    history.replaceState = patch(history.replaceState);
-  }
-  // ── Notify ────────────────────────────────────────────────────────────────
-  notify() {
-    const next = new URL(window.location.href);
-    if (next.href === this.current.href) return;
-    this.current = next;
-    for (const handler of this.handlers) {
-      handler(this.current);
-    }
-  }
-};
-AreWatcher = __decorateClass([
+  __decorateParam(1, A_Inject(AreContext)),
+  __decorateParam(2, A_Inject(A_Logger))
+], AreTokenizer.prototype, "tokenize", 1);
+AreTokenizer = __decorateClass([
   A_Frame.Component({
     namespace: "A-ARE",
-    name: "AreWatcher",
-    description: "AreWatcher is a component that observes browser navigation events (history pushState, replaceState, and popstate) and notifies registered handlers when the URL changes, enabling client-side routing and reactive route-based rendering within the ARE framework."
+    name: "AreTokenizer",
+    description: "AreTokenizer is responsible for scanning and tokenizing template source strings using the syntax rules defined in AreSyntax. It converts raw template strings into AreNode instances that represent the structured AST of the template, enabling downstream compilation and rendering within the ARE framework."
   })
-], AreWatcher);
+], AreTokenizer);
 var AreSignal = class extends A_Signal {
 };
 AreSignal = __decorateClass([
@@ -3247,25 +3170,6 @@ var AreInit = class _AreInit extends AreSignal {
     return new _AreInit({ data: { ready: false } });
   }
 };
-var AreRoute = class _AreRoute extends AreSignal {
-  constructor(path) {
-    super({
-      data: new A_Route(path)
-    });
-  }
-  get route() {
-    return this.data;
-  }
-  static default() {
-    return new _AreRoute(document.location.pathname || "/");
-  }
-  compare(other) {
-    return this.route.toRegExp().test(other.data.toString());
-  }
-};
-var AreEngineError = class extends A_Error {
-};
-AreEngineError.MissedRequiredDependency = "A Required Dependency is missing in AreEngine";
 var AreEngine = class extends A_Component {
   /**
    * Feature decorator for the load method, which is responsible for the initial loading phase of the engine. This method is where the engine reads the source template, tokenizes it, and prepares the initial context for building the scene. The decorator allows for extending or overriding the default loading behavior by attaching additional functionality before or after the load process.
@@ -3493,7 +3397,107 @@ AreEngine = __decorateClass([
     description: "Core rendering engine for A-Concept Rendering Engine (ARE), responsible for orchestrating the loading, building, and execution of the rendering process. It manages the lifecycle of root nodes, coordinates the interactions between syntax, transformer, loader, compiler, and interpreter components, and ensures the proper initialization and mounting of the UI application."
   })
 ], AreEngine);
+var AreWatcher = class extends A_Component {
+  /**
+   * Initialize the watcher. This method is called once when the watcher is first created. Use this to set up any necessary state or start observing changes.
+   */
+  init() {
+  }
+  /**
+   * Start watching for changes. This method is called after the engine has executed. Use this to set up any necessary event listeners or intervals to observe changes and produce signals.
+   */
+  watch() {
+  }
+  destroy() {
+  }
+};
+__decorateClass([
+  A_Concept.Stop()
+], AreWatcher.prototype, "destroy", 1);
+AreWatcher = __decorateClass([
+  A_Frame.Component({
+    namespace: "A-ARE",
+    name: "AreWatcher",
+    description: "AreWatcher is a component that observes changes and produces A_Signals Depending on the actual handlers"
+  })
+], AreWatcher);
 
-export { Are, AreAttribute, AreAttributeFeatures, AreCompiler, AreCompilerError, AreContext, AreDeclaration, AreEngine, AreEngineError, AreEngineFeatures, AreEvent, AreFeatures, AreInit, AreInstruction, AreInstructionDefaultNames, AreInstructionError, AreInstructionFeatures, AreInterpreter, AreInterpreterError, AreLifecycle, AreLifecycleError, AreLoader, AreLoaderError, AreMutation, AreNode, AreNodeFeatures, AreNodeStatuses, AreRoute, AreScene, AreSceneError, AreSceneStatuses, AreSignal, AreSignals, AreSignalsContext, AreStore, AreStoreAreComponentMetaKeys, AreSyntax, AreSyntaxError, AreTokenizer, AreTokenizerError, AreTransformer, AreWatcher };
+// src/lib/AreComponent/Are.container.ts
+var _a;
+var AreApp = class extends A_Service {
+  async [_a = A_ServiceFeatures.onStart](engine, context, watchers, logger) {
+    try {
+      for (const watcher of watchers) {
+        await watcher.init();
+      }
+      await engine.load();
+      await engine.build();
+      await engine.execute();
+      for (const watcher of watchers) {
+        await watcher.watch();
+      }
+      logger?.info("cyan", `UI Application started at <${context.roots.map((root) => root.aseid.id).join(", ")}> with ${context.roots.length} root nodes.`);
+      logger?.debug(
+        "cyan",
+        "Performance:",
+        "------------------------------ \n",
+        ...context.performance,
+        "------------------------------ \n",
+        "Stats:",
+        "------------------------------ \n",
+        ...context.stats
+      );
+    } catch (error) {
+      logger?.error(error);
+    }
+  }
+};
+__decorateClass([
+  A_Feature.Extend(),
+  __decorateParam(0, A_Dependency.Required()),
+  __decorateParam(0, A_Inject(AreEngine)),
+  __decorateParam(1, A_Dependency.Required()),
+  __decorateParam(1, A_Inject(AreContext)),
+  __decorateParam(2, A_Dependency.All()),
+  __decorateParam(2, A_Dependency.Flat()),
+  __decorateParam(2, A_Inject(AreWatcher)),
+  __decorateParam(3, A_Inject(A_Logger))
+], AreApp.prototype, _a, 1);
+var AreSyntaxError = class extends A_Error {
+};
+AreSyntaxError.SyntaxParseError = "Are Syntax Parse Error";
+AreSyntaxError.SyntaxNotSupportedError = "Are Syntax Not Supported Error";
+AreSyntaxError.MethodNotImplementedError = "Are Syntax Method Not Implemented Error";
+var AreCompilerError = class extends A_Error {
+};
+AreCompilerError.RenderError = "Are Compiler Render Error";
+AreCompilerError.CompilationError = "Are Compiler Compilation Error";
+var AreInterpreterError = class extends A_Error {
+};
+var AreLifecycleError = class extends A_Error {
+};
+AreLifecycleError.InvalidLifecycleMethod = "Invalid lifecycle method. Lifecycle method must be one of the following: onBeforeLoad, onLoad, onUpdate, onDestroy.";
+var AreLoaderError = class extends A_Error {
+};
+AreLoaderError.SyntaxError = "Are Loader Syntax Error";
+AreLoaderError.EmptyTemplateError = "Are Loader Empty Template Error";
+var AreRoute = class _AreRoute extends AreSignal {
+  constructor(path) {
+    super({
+      data: new A_Route(path)
+    });
+  }
+  get route() {
+    return this.data;
+  }
+  static default() {
+    return new _AreRoute(document.location.pathname || "/");
+  }
+  compare(other) {
+    return this.route.toRegExp().test(other.data.toString());
+  }
+};
+
+export { Are, AreApp, AreAttribute, AreAttributeFeatures, AreCompiler, AreCompilerError, AreContext, AreDeclaration, AreEngine, AreEngineError, AreEngineFeatures, AreEvent, AreFeatures, AreInit, AreInstruction, AreInstructionDefaultNames, AreInstructionError, AreInstructionFeatures, AreInterpreter, AreInterpreterError, AreLifecycle, AreLifecycleError, AreLoader, AreLoaderError, AreMutation, AreNode, AreNodeFeatures, AreNodeStatuses, AreRoute, AreScene, AreSceneError, AreSceneStatuses, AreSignal, AreSignals, AreSignalsContext, AreSignalsMeta, AreStore, AreStoreAreComponentMetaKeys, AreSyntax, AreSyntaxError, AreTokenizer, AreTokenizerError, AreTransformer, AreWatcher };
 //# sourceMappingURL=index.mjs.map
 //# sourceMappingURL=index.mjs.map

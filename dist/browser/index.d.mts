@@ -1,8 +1,9 @@
 import * as _adaas_a_concept from '@adaas/a-concept';
-import { A_Component, A_TYPES__Entity_Serialized, A_Entity, A_Scope, A_TYPES__Fragment_Serialized, A_Fragment, ASEID, A_TYPES__Paths, A_TYPES__Entity_Constructor, A_Error, A_Feature, A_TYPES__Ctor, A_ComponentMeta, A_TYPES__ComponentMeta, A_TYPES__Component_Constructor, A_TYPES__A_DependencyInjectable } from '@adaas/a-concept';
+import { A_Component, A_TYPES__Entity_Serialized, A_Entity, A_Scope, A_TYPES__Fragment_Serialized, A_Fragment, ASEID, A_TYPES__Paths, A_TYPES__Entity_Constructor, A_Feature, A_TYPES__Ctor, A_ComponentMeta, A_TYPES__ComponentMeta, A_TYPES__Component_Constructor, A_TYPES__A_DependencyInjectable, A_Error } from '@adaas/a-concept';
 import { A_SignalVector, A_Signal, A_SignalState, A_SignalBus } from '@adaas/a-utils/a-signal';
-import { A_ExecutionContext } from '@adaas/a-utils/a-execution';
+import { A_Service, A_ServiceFeatures } from '@adaas/a-utils/a-service';
 import { A_Logger } from '@adaas/a-utils/a-logger';
+import { A_ExecutionContext } from '@adaas/a-utils/a-execution';
 import { A_Route } from '@adaas/a-utils/a-route';
 
 declare const AreFeatures: {
@@ -1306,40 +1307,6 @@ declare class AreSyntax extends A_Fragment {
     private execute;
 }
 
-declare class AreSyntaxError extends A_Error {
-    static readonly SyntaxParseError = "Are Syntax Parse Error";
-    static readonly SyntaxNotSupportedError = "Are Syntax Not Supported Error";
-    static readonly MethodNotImplementedError = "Are Syntax Method Not Implemented Error";
-}
-
-declare class AreTokenizer extends A_Component {
-    /**
-     * Get the AreSyntax from the current scope. The AreSyntax defines the syntax rules and structures for tokenizing templates. It provides mechanisms for parsing and interpreting templates, attributes, directives, interpolations, and event listeners, enabling dynamic and interactive UI rendering within the ARE framework. If no AreSyntax is found in the scope, an error is thrown indicating that AreTokenizer requires an AreSyntax to function properly.
-     */
-    protected get config(): AreSyntax;
-    /**
-     * Instantiate AreNodes based on the token matches obtained from scanning the source template. This method takes the raw source string from the context, scans it for tokens using the defined syntax rules, and creates corresponding AreNode instances for each matched token. The resulting array of AreNodes represents the structured representation of the template, which can then be used for further processing, such as rendering or applying scene instructions.
-     *
-     *
-     * @param context
-     * @returns
-     */
-    instantiate<T extends AreNode>(context: AreContext): void;
-    tokenize(node: AreNode, context: AreContext, logger?: A_Logger): void;
-    protected scan(source: string, from: number, to: number, context: AreContext): AreSyntaxTokenMatch[];
-    protected findNextMatch(source: string, from: number, to: number): AreSyntaxTokenMatch | null;
-    protected matchRule(source: string, rule: AreSyntaxTokenRules, from: number, to: number): AreSyntaxTokenMatch | null;
-    protected matchStandardRule(source: string, rule: AreSyntaxTokenRules, from: number, to: number): AreSyntaxTokenMatch | null;
-    protected matchPrefixedRule(source: string, rule: AreSyntaxTokenRules, from: number, to: number): AreSyntaxTokenMatch | null;
-    protected findMatchingClose(source: string, opening: string, closing: string, from: number, to: number): number;
-    protected buildMatch(rule: AreSyntaxTokenRules, raw: string, content: string, position: number, closingUsed: string): AreSyntaxTokenMatch;
-    protected tryPlainText(raw: string, position: number): AreSyntaxTokenMatch | null;
-    protected findRuleForMatch(match: AreSyntaxTokenMatch): AreSyntaxTokenRules | undefined;
-}
-
-declare class AreTokenizerError extends A_Error {
-}
-
 declare class AreCompiler extends A_Component {
     /**
      * Defines a custom method for compiling a node into a set of SceneInstructions. This method is called during the compilation phase of the ARE component and should perform any necessary transformations on the node and its attributes to generate the appropriate instructions for rendering. This can include tasks such as processing directives, evaluating expressions, and generating instructions for dynamic content based on the node's properties and context.
@@ -1356,13 +1323,22 @@ declare class AreCompiler extends A_Component {
     compile(node: AreNode, scene: AreScene, logger?: A_Logger, ...args: any[]): void;
 }
 
-declare class AreCompilerError extends A_Error {
-    static readonly RenderError = "Are Compiler Render Error";
-    static readonly CompilationError = "Are Compiler Compilation Error";
-}
-
 declare class AreTransformer extends A_Component {
     transform(node: AreNode, scope: A_Scope, scene: AreScene, ...args: any[]): void;
+}
+
+declare class AreLoader extends A_Component {
+    /**
+     * Loads the AreNode
+     *
+     * @param node
+     * @param scope
+     * @param syntax
+     * @param feature
+     * @param logger
+     * @param args
+     */
+    load(node: AreNode, scope: A_Scope, feature: A_Feature, logger?: A_Logger, context?: AreContext, ...args: any[]): Promise<void>;
 }
 
 declare class AreInterpreter extends A_Component {
@@ -1396,62 +1372,6 @@ declare class AreInterpreter extends A_Component {
     protected applyInstruction(instruction: AreInstruction, interpreter: AreInterpreter, store: AreStore, scope: A_Scope, feature: A_Feature, ...args: any[]): void;
     protected updateInstruction(instruction: AreInstruction, interpreter: AreInterpreter, store: AreStore, scope: A_Scope, feature: A_Feature, ...args: any[]): void;
     protected revertInstruction(instruction: AreInstruction, interpreter: AreInterpreter, store: AreStore, scope: A_Scope, feature: A_Feature, ...args: any[]): void;
-}
-
-declare class AreInterpreterError extends A_Error {
-}
-
-/**
- * Properties for the AreEvent context
- *
- */
-type AreEventProps<T = any> = {
-    /**
-     * The data associated with the event
-     */
-    data: T;
-    /**
-     * The name of the event
-     */
-    event: string;
-};
-
-declare class AreSceneError extends A_Error {
-    static readonly SceneAlreadyInactive = "AreSceneError.SceneAlreadyInactive";
-    static readonly SceneAlreadyActive = "AreSceneError.SceneAlreadyActive";
-    static readonly HostInstructionHasConnectedInstructions = "AreSceneError.HostInstructionHasConnectedInstructions";
-    static readonly SingleHostInstruction = "AreSceneError.SingleHostInstruction";
-    static readonly SceneError = "AreSceneError.SceneError";
-    static readonly RootNotFound = "AreSceneError.RootNotFound";
-    static readonly UpdateFailed = "AreSceneError.UpdateFailed";
-    static readonly MountFailed = "AreSceneError.MountFailed";
-    static readonly UnmountFailed = "AreSceneError.UnmountFailed";
-    static readonly MountPointNotFound = "AreSceneError.MountPointNotFound";
-    static readonly InvalidTemplate = "AreSceneError.InvalidTemplate";
-    static readonly RenderFailed = "AreSceneError.RenderFailed";
-}
-
-declare const AreInstructionFeatures: {
-    /**
-     * The 'Apply' feature indicates that the instruction has been applied to the scene or component, meaning that its effects have been executed and are now reflected in the state of the scene or component. This status is typically used to track the lifecycle of an instruction, allowing for proper management and potential reversal of changes if needed.
-     */
-    readonly Apply: "_AreInstruction_Apply";
-    /**
-     * The 'Update' feature indicates that the instruction has been updated, meaning that its properties or effects have been modified after it was initially applied. This status is important for managing dynamic changes in the scene or component, allowing for adjustments to be made to the instruction's behavior or effects without needing to revert and reapply it entirely.
-     */
-    readonly Update: "_AreInstruction_Update";
-    /**
-     * The 'Revert' feature indicates that the instruction has been reverted, meaning that any changes or effects that were applied by the instruction have been undone, and the scene or component has been returned to its previous state before the instruction was applied. This status is crucial for managing the state of the scene or component, especially in cases where an instruction needs to be rolled back due to errors or changes in requirements.
-     */
-    readonly Revert: "_AreInstruction_Revert";
-};
-declare const AreInstructionDefaultNames: {
-    readonly Default: "_Are_DefaultInstruction";
-    readonly Declaration: "_Are_DeclarationInstruction";
-    readonly Mutation: "_Are_MutationInstruction";
-};
-
-declare class AreInstructionError extends A_Error {
 }
 
 declare class AreLifecycle extends A_Component {
@@ -1625,45 +1545,29 @@ declare class AreLifecycle extends A_Component {
     afterDestroy(node: AreNode, scope: A_Scope, feature: A_Feature, ...args: any[]): void;
 }
 
-declare class AreLifecycleError extends A_Error {
-    static readonly InvalidLifecycleMethod = "Invalid lifecycle method. Lifecycle method must be one of the following: onBeforeLoad, onLoad, onUpdate, onDestroy.";
-}
-
-declare class AreLoader extends A_Component {
+declare class AreTokenizer extends A_Component {
     /**
-     * Loads the AreNode
-     *
-     * @param node
-     * @param scope
-     * @param syntax
-     * @param feature
-     * @param logger
-     * @param args
+     * Get the AreSyntax from the current scope. The AreSyntax defines the syntax rules and structures for tokenizing templates. It provides mechanisms for parsing and interpreting templates, attributes, directives, interpolations, and event listeners, enabling dynamic and interactive UI rendering within the ARE framework. If no AreSyntax is found in the scope, an error is thrown indicating that AreTokenizer requires an AreSyntax to function properly.
      */
-    load(node: AreNode, scope: A_Scope, feature: A_Feature, logger?: A_Logger, context?: AreContext, ...args: any[]): Promise<void>;
-}
-
-declare class AreLoaderError extends A_Error {
-    static readonly SyntaxError = "Are Loader Syntax Error";
-    static readonly EmptyTemplateError = "Are Loader Empty Template Error";
-}
-
-declare class AreWatcher extends A_Component {
-    private readonly handlers;
-    private current;
-    constructor();
-    onChange(handler: (url: URL) => void): () => void;
-    get url(): URL;
-    destroy(): void;
-    private onPopState;
-    private onHashChange;
-    private onURLChange;
-    private attachListeners;
-    private patchHistory;
-    private notify;
-}
-
-declare class AreSignal<_TSignalDataType extends Record<string, any> = Record<string, any>> extends A_Signal<_TSignalDataType> {
+    protected get config(): AreSyntax;
+    /**
+     * Instantiate AreNodes based on the token matches obtained from scanning the source template. This method takes the raw source string from the context, scans it for tokens using the defined syntax rules, and creates corresponding AreNode instances for each matched token. The resulting array of AreNodes represents the structured representation of the template, which can then be used for further processing, such as rendering or applying scene instructions.
+     *
+     *
+     * @param context
+     * @returns
+     */
+    instantiate<T extends AreNode>(context: AreContext): void;
+    tokenize(node: AreNode, context: AreContext, logger?: A_Logger): void;
+    protected scan(source: string, from: number, to: number, context: AreContext): AreSyntaxTokenMatch[];
+    protected findNextMatch(source: string, from: number, to: number): AreSyntaxTokenMatch | null;
+    protected matchRule(source: string, rule: AreSyntaxTokenRules, from: number, to: number): AreSyntaxTokenMatch | null;
+    protected matchStandardRule(source: string, rule: AreSyntaxTokenRules, from: number, to: number): AreSyntaxTokenMatch | null;
+    protected matchPrefixedRule(source: string, rule: AreSyntaxTokenRules, from: number, to: number): AreSyntaxTokenMatch | null;
+    protected findMatchingClose(source: string, opening: string, closing: string, from: number, to: number): number;
+    protected buildMatch(rule: AreSyntaxTokenRules, raw: string, content: string, position: number, closingUsed: string): AreSyntaxTokenMatch;
+    protected tryPlainText(raw: string, position: number): AreSyntaxTokenMatch | null;
+    protected findRuleForMatch(match: AreSyntaxTokenMatch): AreSyntaxTokenRules | undefined;
 }
 
 type AreSignalsContextConfig<T extends Are> = {
@@ -1768,17 +1672,6 @@ declare class AreSignals extends A_Component {
     propagateEvent(node: AreNode, scope: A_Scope, event: AreEvent, feature: A_Feature, logger?: A_Logger, ...args: any[]): Promise<void>;
 }
 
-declare class AreInit extends AreSignal {
-    static default(): AreInit | undefined;
-}
-
-declare class AreRoute extends AreSignal<A_Route> {
-    constructor(path: string | RegExp);
-    get route(): A_Route;
-    static default(): AreRoute | undefined;
-    compare(other: A_Signal<A_Route>): boolean;
-}
-
 type AreEngineDependencies = {
     context: AreContext;
     syntax: AreSyntax;
@@ -1839,6 +1732,118 @@ declare class AreEngine extends A_Component {
     protected packDependency<T extends A_TYPES__A_DependencyInjectable>(scope: A_Scope, dependency: T | A_TYPES__Ctor<T>, existed?: A_TYPES__Ctor<T>): T | A_TYPES__Ctor<T>;
 }
 
+declare class AreWatcher extends A_Component {
+    /**
+     * Initialize the watcher. This method is called once when the watcher is first created. Use this to set up any necessary state or start observing changes.
+     */
+    init(): Promise<void> | void;
+    /**
+     * Start watching for changes. This method is called after the engine has executed. Use this to set up any necessary event listeners or intervals to observe changes and produce signals.
+     */
+    watch(): Promise<void> | void;
+    /**
+     * Stop the watcher and clean up any resources. This method is called when the watcher is being destroyed. Use this to remove any event listeners or intervals that were set up in watch() to prevent memory leaks.
+     */
+    destroy(): Promise<void> | void;
+}
+
+declare class AreApp extends A_Service {
+    protected [A_ServiceFeatures.onStart](engine: AreEngine, context: AreContext, watchers: AreWatcher[], logger?: A_Logger): Promise<void>;
+}
+
+declare class AreSyntaxError extends A_Error {
+    static readonly SyntaxParseError = "Are Syntax Parse Error";
+    static readonly SyntaxNotSupportedError = "Are Syntax Not Supported Error";
+    static readonly MethodNotImplementedError = "Are Syntax Method Not Implemented Error";
+}
+
+declare class AreTokenizerError extends A_Error {
+}
+
+declare class AreCompilerError extends A_Error {
+    static readonly RenderError = "Are Compiler Render Error";
+    static readonly CompilationError = "Are Compiler Compilation Error";
+}
+
+declare class AreInterpreterError extends A_Error {
+}
+
+/**
+ * Properties for the AreEvent context
+ *
+ */
+type AreEventProps<T = any> = {
+    /**
+     * The data associated with the event
+     */
+    data: T;
+    /**
+     * The name of the event
+     */
+    event: string;
+};
+
+declare class AreSceneError extends A_Error {
+    static readonly SceneAlreadyInactive = "AreSceneError.SceneAlreadyInactive";
+    static readonly SceneAlreadyActive = "AreSceneError.SceneAlreadyActive";
+    static readonly HostInstructionHasConnectedInstructions = "AreSceneError.HostInstructionHasConnectedInstructions";
+    static readonly SingleHostInstruction = "AreSceneError.SingleHostInstruction";
+    static readonly SceneError = "AreSceneError.SceneError";
+    static readonly RootNotFound = "AreSceneError.RootNotFound";
+    static readonly UpdateFailed = "AreSceneError.UpdateFailed";
+    static readonly MountFailed = "AreSceneError.MountFailed";
+    static readonly UnmountFailed = "AreSceneError.UnmountFailed";
+    static readonly MountPointNotFound = "AreSceneError.MountPointNotFound";
+    static readonly InvalidTemplate = "AreSceneError.InvalidTemplate";
+    static readonly RenderFailed = "AreSceneError.RenderFailed";
+}
+
+declare const AreInstructionFeatures: {
+    /**
+     * The 'Apply' feature indicates that the instruction has been applied to the scene or component, meaning that its effects have been executed and are now reflected in the state of the scene or component. This status is typically used to track the lifecycle of an instruction, allowing for proper management and potential reversal of changes if needed.
+     */
+    readonly Apply: "_AreInstruction_Apply";
+    /**
+     * The 'Update' feature indicates that the instruction has been updated, meaning that its properties or effects have been modified after it was initially applied. This status is important for managing dynamic changes in the scene or component, allowing for adjustments to be made to the instruction's behavior or effects without needing to revert and reapply it entirely.
+     */
+    readonly Update: "_AreInstruction_Update";
+    /**
+     * The 'Revert' feature indicates that the instruction has been reverted, meaning that any changes or effects that were applied by the instruction have been undone, and the scene or component has been returned to its previous state before the instruction was applied. This status is crucial for managing the state of the scene or component, especially in cases where an instruction needs to be rolled back due to errors or changes in requirements.
+     */
+    readonly Revert: "_AreInstruction_Revert";
+};
+declare const AreInstructionDefaultNames: {
+    readonly Default: "_Are_DefaultInstruction";
+    readonly Declaration: "_Are_DeclarationInstruction";
+    readonly Mutation: "_Are_MutationInstruction";
+};
+
+declare class AreInstructionError extends A_Error {
+}
+
+declare class AreLifecycleError extends A_Error {
+    static readonly InvalidLifecycleMethod = "Invalid lifecycle method. Lifecycle method must be one of the following: onBeforeLoad, onLoad, onUpdate, onDestroy.";
+}
+
+declare class AreLoaderError extends A_Error {
+    static readonly SyntaxError = "Are Loader Syntax Error";
+    static readonly EmptyTemplateError = "Are Loader Empty Template Error";
+}
+
+declare class AreSignal<_TSignalDataType extends Record<string, any> = Record<string, any>> extends A_Signal<_TSignalDataType> {
+}
+
+declare class AreInit extends AreSignal {
+    static default(): AreInit | undefined;
+}
+
+declare class AreRoute extends AreSignal<A_Route> {
+    constructor(path: string | RegExp);
+    get route(): A_Route;
+    static default(): AreRoute | undefined;
+    compare(other: A_Signal<A_Route>): boolean;
+}
+
 declare const AreEngineFeatures: {
     Load: string;
     Build: string;
@@ -1849,4 +1854,4 @@ declare class AreEngineError extends A_Error {
     static readonly MissedRequiredDependency = "A Required Dependency is missing in AreEngine";
 }
 
-export { Are, AreAttribute, type AreAttributeFeatureNames, AreAttributeFeatures, type AreAttribute_Init, type AreAttribute_Serialized, AreCompiler, AreCompilerError, AreContext, type AreContextInit, AreDeclaration, AreEngine, type AreEngineDependencies, AreEngineError, AreEngineFeatures, AreEvent, type AreEventProps, type AreFeatureNames, AreFeatures, AreInit, AreInstruction, AreInstructionDefaultNames, AreInstructionError, AreInstructionFeatures, type AreInstructionNewProps, type AreInstructionSerialized, AreInterpreter, AreInterpreterError, AreLifecycle, AreLifecycleError, AreLoader, AreLoaderError, AreMutation, AreNode, type AreNodeFeatureNames, AreNodeFeatures, type AreNodeNewProps, type AreNodeStatusNames, AreNodeStatuses, type ArePropDefinition, AreRoute, AreScene, type AreSceneChanges, AreSceneError, type AreSceneStatusNames, AreSceneStatuses, type AreScene_Serialized, AreSignal, AreSignals, AreSignalsContext, type AreSignalsContextConfig, AreStore, type AreStoreAreComponentMetaKeyNames, AreStoreAreComponentMetaKeys, type AreStorePathValue, type AreStoreWatchingEntity, AreSyntax, type AreSyntaxCompiledExpression, AreSyntaxError, type AreSyntaxInitOptions, type AreSyntaxTokenMatch, type AreSyntaxTokenPayload, type AreSyntaxTokenRules, AreTokenizer, AreTokenizerError, AreTransformer, AreWatcher };
+export { Are, AreApp, AreAttribute, type AreAttributeFeatureNames, AreAttributeFeatures, type AreAttribute_Init, type AreAttribute_Serialized, AreCompiler, AreCompilerError, AreContext, type AreContextInit, AreDeclaration, AreEngine, type AreEngineDependencies, AreEngineError, AreEngineFeatures, AreEvent, type AreEventProps, type AreFeatureNames, AreFeatures, AreInit, AreInstruction, AreInstructionDefaultNames, AreInstructionError, AreInstructionFeatures, type AreInstructionNewProps, type AreInstructionSerialized, AreInterpreter, AreInterpreterError, AreLifecycle, AreLifecycleError, AreLoader, AreLoaderError, AreMutation, AreNode, type AreNodeFeatureNames, AreNodeFeatures, type AreNodeNewProps, type AreNodeStatusNames, AreNodeStatuses, type ArePropDefinition, AreRoute, AreScene, type AreSceneChanges, AreSceneError, type AreSceneStatusNames, AreSceneStatuses, type AreScene_Serialized, AreSignal, AreSignals, AreSignalsContext, type AreSignalsContextConfig, AreSignalsMeta, AreStore, type AreStoreAreComponentMetaKeyNames, AreStoreAreComponentMetaKeys, type AreStorePathValue, type AreStoreWatchingEntity, AreSyntax, type AreSyntaxCompiledExpression, AreSyntaxError, type AreSyntaxInitOptions, type AreSyntaxTokenMatch, type AreSyntaxTokenPayload, type AreSyntaxTokenRules, AreTokenizer, AreTokenizerError, AreTransformer, AreWatcher };

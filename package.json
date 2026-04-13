@@ -67,9 +67,6 @@
   },
   "scripts": {
     "test": "jest",
-    "example:jumpstart": "nodemon ./examples/jumpstart/concept.ts",
-    "example:dashboard": "nodemon ./examples/dashboard/concept.ts",
-    "example:auxta": "nodemon ./examples/auxta/concept.ts",
     "test:test": "nodemon ./src/test/app.ts",
     "release": "npm test && npm run build && git add . && git commit -m \"chore: prepare release $npm_package_version\" && npm version patch",
     "preversion": "",

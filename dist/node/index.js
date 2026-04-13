@@ -1,6 +1,7 @@
 'use strict';
 
 var Are_component = require('./lib/AreComponent/Are.component');
+var Are_container = require('./lib/AreComponent/Are.container');
 var Are_constants = require('./lib/AreComponent/Are.constants');
 var Are_context = require('./lib/AreComponent/Are.context');
 var Are_types = require('./lib/AreComponent/Are.types');
@@ -57,6 +58,7 @@ var AreWatcher_types = require('./lib/AreWatcher/AreWatcher.types');
 var AreSignal_entity = require('./lib/AreSignals/AreSignal.entity');
 var AreSignals_component = require('./lib/AreSignals/AreSignals.component');
 var AreSignals_constants = require('./lib/AreSignals/AreSignals.constants');
+var AreSignals_meta = require('./lib/AreSignals/AreSignals.meta');
 var AreSignals_context = require('./lib/AreSignals/AreSignals.context');
 var AreSignals_types = require('./lib/AreSignals/AreSignals.types');
 var AreInit_signal = require('./lib/AreSignals/entities/AreInit.signal');
@@ -72,6 +74,12 @@ Object.keys(Are_component).forEach(function (k) {
 	if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
 		enumerable: true,
 		get: function () { return Are_component[k]; }
+	});
+});
+Object.keys(Are_container).forEach(function (k) {
+	if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function () { return Are_container[k]; }
 	});
 });
 Object.keys(Are_constants).forEach(function (k) {
@@ -408,6 +416,12 @@ Object.keys(AreSignals_constants).forEach(function (k) {
 	if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
 		enumerable: true,
 		get: function () { return AreSignals_constants[k]; }
+	});
+});
+Object.keys(AreSignals_meta).forEach(function (k) {
+	if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function () { return AreSignals_meta[k]; }
 	});
 });
 Object.keys(AreSignals_context).forEach(function (k) {

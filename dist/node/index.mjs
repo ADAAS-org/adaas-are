@@ -1,4 +1,5 @@
 export * from './lib/AreComponent/Are.component';
+export * from './lib/AreComponent/Are.container';
 export * from './lib/AreComponent/Are.constants';
 export * from './lib/AreComponent/Are.context';
 export * from './lib/AreComponent/Are.types';
@@ -55,6 +56,7 @@ export * from './lib/AreWatcher/AreWatcher.types';
 export * from './lib/AreSignals/AreSignal.entity';
 export * from './lib/AreSignals/AreSignals.component';
 export * from './lib/AreSignals/AreSignals.constants';
+export * from './lib/AreSignals/AreSignals.meta';
 export * from './lib/AreSignals/AreSignals.context';
 export * from './lib/AreSignals/AreSignals.types';
 export * from './lib/AreSignals/entities/AreInit.signal';
