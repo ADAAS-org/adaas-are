@@ -3424,16 +3424,16 @@ AreWatcher = __decorateClass([
 
 // src/lib/AreComponent/Are.container.ts
 var _a;
-var AreApp = class extends A_Service {
+var AreContainer = class extends A_Service {
   async [_a = A_ServiceFeatures.onStart](engine, context, watchers, logger) {
     try {
-      for (const watcher of watchers) {
+      for (const watcher of watchers ?? []) {
         await watcher.init();
       }
       await engine.load();
       await engine.build();
       await engine.execute();
-      for (const watcher of watchers) {
+      for (const watcher of watchers ?? []) {
         await watcher.watch();
       }
       logger?.info("cyan", `UI Application started at <${context.roots.map((root) => root.aseid.id).join(", ")}> with ${context.roots.length} root nodes.`);
@@ -3462,7 +3462,7 @@ __decorateClass([
   __decorateParam(2, A_Dependency.Flat()),
   __decorateParam(2, A_Inject(AreWatcher)),
   __decorateParam(3, A_Inject(A_Logger))
-], AreApp.prototype, _a, 1);
+], AreContainer.prototype, _a, 1);
 var AreSyntaxError = class extends A_Error {
 };
 AreSyntaxError.SyntaxParseError = "Are Syntax Parse Error";
@@ -3498,6 +3498,6 @@ var AreRoute = class _AreRoute extends AreSignal {
   }
 };
 
-export { Are, AreApp, AreAttribute, AreAttributeFeatures, AreCompiler, AreCompilerError, AreContext, AreDeclaration, AreEngine, AreEngineError, AreEngineFeatures, AreEvent, AreFeatures, AreInit, AreInstruction, AreInstructionDefaultNames, AreInstructionError, AreInstructionFeatures, AreInterpreter, AreInterpreterError, AreLifecycle, AreLifecycleError, AreLoader, AreLoaderError, AreMutation, AreNode, AreNodeFeatures, AreNodeStatuses, AreRoute, AreScene, AreSceneError, AreSceneStatuses, AreSignal, AreSignals, AreSignalsContext, AreSignalsMeta, AreStore, AreStoreAreComponentMetaKeys, AreSyntax, AreSyntaxError, AreTokenizer, AreTokenizerError, AreTransformer, AreWatcher };
+export { Are, AreAttribute, AreAttributeFeatures, AreCompiler, AreCompilerError, AreContainer, AreContext, AreDeclaration, AreEngine, AreEngineError, AreEngineFeatures, AreEvent, AreFeatures, AreInit, AreInstruction, AreInstructionDefaultNames, AreInstructionError, AreInstructionFeatures, AreInterpreter, AreInterpreterError, AreLifecycle, AreLifecycleError, AreLoader, AreLoaderError, AreMutation, AreNode, AreNodeFeatures, AreNodeStatuses, AreRoute, AreScene, AreSceneError, AreSceneStatuses, AreSignal, AreSignals, AreSignalsContext, AreSignalsMeta, AreStore, AreStoreAreComponentMetaKeys, AreSyntax, AreSyntaxError, AreTokenizer, AreTokenizerError, AreTransformer, AreWatcher };
 //# sourceMappingURL=index.mjs.map
 //# sourceMappingURL=index.mjs.map

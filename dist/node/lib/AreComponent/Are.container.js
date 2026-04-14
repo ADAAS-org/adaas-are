@@ -19,16 +19,16 @@ var __decorateClass = (decorators, target, key, kind) => {
 };
 var __decorateParam = (index, decorator) => (target, key) => decorator(target, key, index);
 var _a;
-class AreApp extends aService.A_Service {
+class AreContainer extends aService.A_Service {
   async [_a = aService.A_ServiceFeatures.onStart](engine, context, watchers, logger) {
     try {
-      for (const watcher of watchers) {
+      for (const watcher of watchers ?? []) {
         await watcher.init();
       }
       await engine.load();
       await engine.build();
       await engine.execute();
-      for (const watcher of watchers) {
+      for (const watcher of watchers ?? []) {
         await watcher.watch();
       }
       logger?.info("cyan", `UI Application started at <${context.roots.map((root) => root.aseid.id).join(", ")}> with ${context.roots.length} root nodes.`);
@@ -57,8 +57,8 @@ __decorateClass([
   __decorateParam(2, aConcept.A_Dependency.Flat()),
   __decorateParam(2, aConcept.A_Inject(AreWatcher_component.AreWatcher)),
   __decorateParam(3, aConcept.A_Inject(aLogger.A_Logger))
-], AreApp.prototype, _a);
+], AreContainer.prototype, _a);
 
-exports.AreApp = AreApp;
+exports.AreContainer = AreContainer;
 //# sourceMappingURL=Are.container.js.map
 //# sourceMappingURL=Are.container.js.map

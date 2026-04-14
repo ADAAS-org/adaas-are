@@ -7,16 +7,16 @@ import { AreEngine } from '@adaas/are/engine/AreEngine.component';
 import { AreWatcher } from '@adaas/are/watcher/AreWatcher.component';
 
 var _a;
-class AreApp extends A_Service {
+class AreContainer extends A_Service {
   async [_a = A_ServiceFeatures.onStart](engine, context, watchers, logger) {
     try {
-      for (const watcher of watchers) {
+      for (const watcher of watchers ?? []) {
         await watcher.init();
       }
       await engine.load();
       await engine.build();
       await engine.execute();
-      for (const watcher of watchers) {
+      for (const watcher of watchers ?? []) {
         await watcher.watch();
       }
       logger?.info("cyan", `UI Application started at <${context.roots.map((root) => root.aseid.id).join(", ")}> with ${context.roots.length} root nodes.`);
@@ -45,8 +45,8 @@ __decorateClass([
   __decorateParam(2, A_Dependency.Flat()),
   __decorateParam(2, A_Inject(AreWatcher)),
   __decorateParam(3, A_Inject(A_Logger))
-], AreApp.prototype, _a, 1);
+], AreContainer.prototype, _a, 1);
 
-export { AreApp };
+export { AreContainer };
 //# sourceMappingURL=Are.container.mjs.map
 //# sourceMappingURL=Are.container.mjs.map

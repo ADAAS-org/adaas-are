@@ -29,8 +29,8 @@ import '../AreSignals/AreSignals.context.mjs';
 import '../AreSignals/AreSignals.types.mjs';
 import '../AreSignals/AreSignals.meta.mjs';
 
-declare class AreApp extends A_Service {
-    protected [A_ServiceFeatures.onStart](engine: AreEngine, context: AreContext, watchers: AreWatcher[], logger?: A_Logger): Promise<void>;
+declare class AreContainer extends A_Service {
+    protected [A_ServiceFeatures.onStart](engine: AreEngine, context: AreContext, watchers?: AreWatcher[], logger?: A_Logger): Promise<void>;
 }
 
-export { AreApp };
+export { AreContainer };

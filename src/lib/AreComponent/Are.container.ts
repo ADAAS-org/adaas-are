@@ -7,7 +7,7 @@ import { AreWatcher } from "@adaas/are/watcher/AreWatcher.component";
 
 
 
-export class AreApp extends A_Service {
+export class AreContainer extends A_Service {
 
     @A_Feature.Extend()
     protected async [A_ServiceFeatures.onStart](
@@ -19,13 +19,13 @@ export class AreApp extends A_Service {
 
         @A_Dependency.All()
         @A_Dependency.Flat()
-        @A_Inject(AreWatcher) watchers: AreWatcher[],
+        @A_Inject(AreWatcher) watchers?: AreWatcher[],
 
         @A_Inject(A_Logger) logger?: A_Logger,
     ): Promise<void> {
         try {
 
-            for (const watcher of watchers) {
+            for (const watcher of watchers ?? []) {
                 await watcher.init();
             }
 
@@ -33,7 +33,7 @@ export class AreApp extends A_Service {
             await engine.build();
             await engine.execute();
 
-            for (const watcher of watchers) {
+            for (const watcher of watchers ?? []) {
                 await watcher.watch();
             }
 
