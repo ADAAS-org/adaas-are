@@ -47,6 +47,139 @@
         "import": "./dist/node/index.mjs",
         "require": "./dist/node/index.cjs"
       }
+    },
+    "./helpers/*": {
+      "node": {
+        "types": "./dist/node/helpers/*.d.ts",
+        "import": "./dist/node/helpers/*.mjs",
+        "require": "./dist/node/helpers/*.js"
+      }
+    },
+    "./constants/*": {
+      "node": {
+        "types": "./dist/node/constants/*.d.ts",
+        "import": "./dist/node/constants/*.mjs",
+        "require": "./dist/node/constants/*.js"
+      }
+    },
+    "./attribute/*": {
+      "node": {
+        "types": "./dist/node/lib/AreAttribute/*.d.ts",
+        "import": "./dist/node/lib/AreAttribute/*.mjs",
+        "require": "./dist/node/lib/AreAttribute/*.js"
+      }
+    },
+    "./compiler/*": {
+      "node": {
+        "types": "./dist/node/lib/AreCompiler/*.d.ts",
+        "import": "./dist/node/lib/AreCompiler/*.mjs",
+        "require": "./dist/node/lib/AreCompiler/*.js"
+      }
+    },
+    "./component/*": {
+      "node": {
+        "types": "./dist/node/lib/AreComponent/*.d.ts",
+        "import": "./dist/node/lib/AreComponent/*.mjs",
+        "require": "./dist/node/lib/AreComponent/*.js"
+      }
+    },
+    "./engine/*": {
+      "node": {
+        "types": "./dist/node/lib/AreEngine/*.d.ts",
+        "import": "./dist/node/lib/AreEngine/*.mjs",
+        "require": "./dist/node/lib/AreEngine/*.js"
+      }
+    },
+    "./event/*": {
+      "node": {
+        "types": "./dist/node/lib/AreEvent/*.d.ts",
+        "import": "./dist/node/lib/AreEvent/*.mjs",
+        "require": "./dist/node/lib/AreEvent/*.js"
+      }
+    },
+    "./instruction/*": {
+      "node": {
+        "types": "./dist/node/lib/AreInstruction/*.d.ts",
+        "import": "./dist/node/lib/AreInstruction/*.mjs",
+        "require": "./dist/node/lib/AreInstruction/*.js"
+      }
+    },
+    "./interpreter/*": {
+      "node": {
+        "types": "./dist/node/lib/AreInterpreter/*.d.ts",
+        "import": "./dist/node/lib/AreInterpreter/*.mjs",
+        "require": "./dist/node/lib/AreInterpreter/*.js"
+      }
+    },
+    "./lifecycle/*": {
+      "node": {
+        "types": "./dist/node/lib/AreLifecycle/*.d.ts",
+        "import": "./dist/node/lib/AreLifecycle/*.mjs",
+        "require": "./dist/node/lib/AreLifecycle/*.js"
+      }
+    },
+    "./loader/*": {
+      "node": {
+        "types": "./dist/node/lib/AreLoader/*.d.ts",
+        "import": "./dist/node/lib/AreLoader/*.mjs",
+        "require": "./dist/node/lib/AreLoader/*.js"
+      }
+    },
+    "./node/*": {
+      "node": {
+        "types": "./dist/node/lib/AreNode/*.d.ts",
+        "import": "./dist/node/lib/AreNode/*.mjs",
+        "require": "./dist/node/lib/AreNode/*.js"
+      }
+    },
+    "./scene/*": {
+      "node": {
+        "types": "./dist/node/lib/AreScene/*.d.ts",
+        "import": "./dist/node/lib/AreScene/*.mjs",
+        "require": "./dist/node/lib/AreScene/*.js"
+      }
+    },
+    "./signals/*": {
+      "node": {
+        "types": "./dist/node/lib/AreSignals/*.d.ts",
+        "import": "./dist/node/lib/AreSignals/*.mjs",
+        "require": "./dist/node/lib/AreSignals/*.js"
+      }
+    },
+    "./store/*": {
+      "node": {
+        "types": "./dist/node/lib/AreStore/*.d.ts",
+        "import": "./dist/node/lib/AreStore/*.mjs",
+        "require": "./dist/node/lib/AreStore/*.js"
+      }
+    },
+    "./syntax/*": {
+      "node": {
+        "types": "./dist/node/lib/AreSyntax/*.d.ts",
+        "import": "./dist/node/lib/AreSyntax/*.mjs",
+        "require": "./dist/node/lib/AreSyntax/*.js"
+      }
+    },
+    "./tokenizer/*": {
+      "node": {
+        "types": "./dist/node/lib/AreTokenizer/*.d.ts",
+        "import": "./dist/node/lib/AreTokenizer/*.mjs",
+        "require": "./dist/node/lib/AreTokenizer/*.js"
+      }
+    },
+    "./transformer/*": {
+      "node": {
+        "types": "./dist/node/lib/AreTransformer/*.d.ts",
+        "import": "./dist/node/lib/AreTransformer/*.mjs",
+        "require": "./dist/node/lib/AreTransformer/*.js"
+      }
+    },
+    "./watcher/*": {
+      "node": {
+        "types": "./dist/node/lib/AreWatcher/*.d.ts",
+        "import": "./dist/node/lib/AreWatcher/*.mjs",
+        "require": "./dist/node/lib/AreWatcher/*.js"
+      }
     }
   },
   "sideEffects": false,
