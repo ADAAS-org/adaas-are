@@ -1,6 +1,6 @@
 {
   "name": "@adaas/are",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "A-Concept Rendering Engine (ARE) is a powerful rendering engine designed to work seamlessly with the A-Concept framework. It provides developers with the tools and capabilities needed to create dynamic and interactive user interfaces for web applications.",
   "keywords": [
     "a-concept",
