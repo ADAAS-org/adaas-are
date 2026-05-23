@@ -1,21 +1,25 @@
 
 import { A_Context, A_Entity, A_Error, A_FormatterHelper, A_Scope } from "@adaas/a-concept";
-import { A_Frame } from "@adaas/a-frame";
+import { A_Frame } from "@adaas/a-frame/core";
 import type { AreNode } from "@adaas/are/node/AreNode.entity";
 import { AreInstructionNewProps, AreInstructionSerialized } from "./AreInstruction.types";
 import { AreInstructionFeatures } from "./AreInstruction.constants";
 import { AreStoreWatchingEntity } from "@adaas/are/store/AreStore.types";
 
 
-@A_Frame.Entity({
+@A_Frame.Define({
     namespace: 'A-ARE',
-    name: 'AreInstruction',
     description: 'AreInstruction is the base entity for all rendering instructions in the ARE framework. It represents a serializable, reversible operation (such as creating or mutating a DOM element) that can be applied to and tracked within the AreScene, enabling deterministic rendering and undo/redo capabilities.'
 })
 export class AreInstruction<
     T extends Record<string, any> = Record<string, any>,
     S extends AreInstructionSerialized<T> = AreInstructionSerialized<T>
 > extends A_Entity<AreInstructionNewProps<T>, S> implements AreStoreWatchingEntity {
+
+    static get concept(): string {
+        return 'are';
+    }
+
     /**
      * The name of the instruction, for example "CreateElement", "AddAttribute", "RemoveNode", etc. This is used to identify the type of the instruction and how to process it. The name should be in PascalCase format, and should be unique across all instruction types. It is recommended to use a prefix that indicates the category of the instruction, for example "CreateElement" for instructions that create new elements, "UpdateAttribute" for instructions that update attributes, etc.
      */
@@ -174,7 +178,7 @@ export class AreInstruction<
         scope?: A_Scope
     ): void {
         this.call(AreInstructionFeatures.Apply, scope);
-    }   
+    }
     /**
      * Update this instruction in the scene. This means that the changes represented by this instruction will be updated in the scene, and the Host will perform the necessary operations to reflect these changes in the rendered output. This is particularly useful for instructions that have dynamic properties or effects that may change over time, allowing for adjustments to be made to the instruction's behavior or effects without needing to revert and reapply it entirely. The update method can also accept an optional scope parameter, which can be used to provide additional context or information that may be needed for updating the instruction.
      * 

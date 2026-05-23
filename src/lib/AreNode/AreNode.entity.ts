@@ -1,5 +1,5 @@
-import { A_Context, A_Entity, A_Error, A_Feature, A_FormatterHelper, A_Scope, A_TypeGuards, ASEID } from "@adaas/a-concept";
-import { A_Frame } from "@adaas/a-frame";
+import { A_Context, A_Entity, A_Error, A_FormatterHelper, A_Scope, A_TypeGuards, ASEID } from "@adaas/a-concept";
+import { A_Frame } from "@adaas/a-frame/core";
 import { AreEvent } from "@adaas/are/event/AreEvent.context";
 import { AreScene } from "@adaas/are/scene/AreScene.context";
 import { AreAttribute } from "@adaas/are/attribute/AreAttribute.entity";
@@ -7,16 +7,20 @@ import { Are } from "@adaas/are/component/Are.component";
 import { AreNodeFeatures, AreNodeStatuses } from "./AreNode.constants";
 import { AreNodeNewProps, AreNodeStatusNames } from "./AreNode.types";
 import { AreSyntaxTokenPayload } from "@adaas/are/syntax/AreSyntax.types";
-import { A_Logger } from "@adaas/a-utils/a-logger";
 import { AreContext } from "@adaas/are/component/Are.context";
 
 
-@A_Frame.Entity({
+@A_Frame.Define({
     namespace: 'A-ARE',
-    name: 'AreNode',
     description: 'An AreNode entity represents a node within the A-Concept Rendering Engine (ARE) framework. It encapsulates content, markup, and styles, and manages its own scope for nested fragments and entities. AreNodes are responsible for handling events, compiling, rendering, updating, and lifecycle management within the ARE context.'
 })
 export class AreNode extends A_Entity<AreNodeNewProps> {
+
+    static get concept(): string {
+        return 'are';
+    }
+
+
     /**
      * The current status of the node, which can be used to track the lifecycle and rendering state of the node within the scene. 
      */
@@ -378,7 +382,7 @@ export class AreNode extends A_Entity<AreNodeNewProps> {
             context?.startPerformance('Node Unmount');
 
             this.call(AreNodeFeatures.onBeforeUnmount, this.scope);
-            this.call(AreNodeFeatures.onUnmount, this.scope);   
+            this.call(AreNodeFeatures.onUnmount, this.scope);
             this.call(AreNodeFeatures.onAfterUnmount, this.scope);
 
             context?.endPerformance('Node Unmount');

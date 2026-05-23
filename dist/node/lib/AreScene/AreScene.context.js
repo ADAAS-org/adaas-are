@@ -1,7 +1,7 @@
 'use strict';
 
 var aConcept = require('@adaas/a-concept');
-var aFrame = require('@adaas/a-frame');
+var core = require('@adaas/a-frame/core');
 var AreDeclaration_instruction = require('@adaas/are/instruction/types/AreDeclaration.instruction');
 var AreInstruction_entity = require('@adaas/are/instruction/AreInstruction.entity');
 var AreScene_error = require('./AreScene.error');
@@ -337,9 +337,8 @@ exports.AreScene = class AreScene extends aConcept.A_Fragment {
   }
 };
 exports.AreScene = __decorateClass([
-  aFrame.A_Frame.Component({
+  core.A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreScene",
     description: "Persistent runtime structure that owns the rendering state for a component's lifetime. Maintains two sets \u2014 applied (what is currently in the DOM) and planned (what should be). Acts as the single source of truth for all rendering decisions. The Compiler produces it once, the Interpreter reads it on every update."
   })
 ], exports.AreScene);

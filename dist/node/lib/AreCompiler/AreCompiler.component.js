@@ -1,7 +1,7 @@
 'use strict';
 
 var aConcept = require('@adaas/a-concept');
-var aFrame = require('@adaas/a-frame');
+var core = require('@adaas/a-frame/core');
 var aLogger = require('@adaas/a-utils/a-logger');
 var AreScene_context = require('@adaas/are/scene/AreScene.context');
 var AreNode_entity = require('@adaas/are/node/AreNode.entity');
@@ -61,9 +61,8 @@ __decorateClass([
   __decorateParam(2, aConcept.A_Inject(aLogger.A_Logger))
 ], exports.AreCompiler.prototype, "compile", 1);
 exports.AreCompiler = __decorateClass([
-  aFrame.A_Frame.Component({
+  core.A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreCompiler",
     description: "Walks the transformed AreNode tree and emits a Scene. Translates each node, binding, directive and interpolation into a typed instruction. Knows nothing about the DOM or any rendering target \u2014 its only concern is producing a complete and ordered set of instructions that fully describes how the tree should be rendered."
   })
 ], exports.AreCompiler);

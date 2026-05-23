@@ -1,5 +1,5 @@
 import { A_Context, A_Fragment } from "@adaas/a-concept";
-import { A_Frame } from "@adaas/a-frame";
+import { A_Frame } from "@adaas/a-frame/core";
 import { A_SignalVector } from "@adaas/a-utils/a-signal";
 import { AreNode } from "@adaas/are/node/AreNode.entity";
 import { AreInstruction } from "@adaas/are/instruction/AreInstruction.entity";
@@ -7,9 +7,8 @@ import { A_ExecutionContext } from "@adaas/a-utils/a-execution";
 
 
 
-@A_Frame.Fragment({
+@A_Frame.Define({
     namespace: 'A-ARE',
-    name: 'AreContext',
     description: 'Context fragment for the A-Concept Rendering Engine (ARE) framework, serving as a foundational component for managing shared state and configurations within the ARE environment. This Context uses to encapsulate global settings, resources, and utilities that can be accessed by various ARE components and entities during the rendering and interaction processes.'
 })
 export class AreContext extends A_ExecutionContext {

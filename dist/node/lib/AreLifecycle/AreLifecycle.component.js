@@ -1,7 +1,7 @@
 'use strict';
 
 var aConcept = require('@adaas/a-concept');
-var aFrame = require('@adaas/a-frame');
+var core = require('@adaas/a-frame/core');
 var AreScene_context = require('@adaas/are/scene/AreScene.context');
 var AreNode_entity = require('@adaas/are/node/AreNode.entity');
 var AreNode_constants = require('@adaas/are/node/AreNode.constants');
@@ -341,7 +341,8 @@ __decorateClass([
   __decorateParam(2, aConcept.A_Inject(aConcept.A_Feature))
 ], exports.AreLifecycle.prototype, "afterDestroy", 1);
 exports.AreLifecycle = __decorateClass([
-  aFrame.A_Frame.Component({
+  core.A_Frame.Define({
+    namespace: "A-ARE",
     description: "Handles the lifecycle of the AreNode and related entities such as interpolations, directives, attributes, and so on. It provides lifecycle hooks for initialization, mounting, updating, and unmounting of the nodes, allowing to manage the state and behavior of the nodes throughout their lifecycle in a structured and consistent way."
   })
 ], exports.AreLifecycle);

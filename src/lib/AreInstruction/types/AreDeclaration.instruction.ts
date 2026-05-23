@@ -1,5 +1,5 @@
 import { A_IdentityHelper } from "@adaas/a-concept";
-import { A_Frame } from "@adaas/a-frame";
+import { A_Frame } from "@adaas/a-frame/core";
 import { AreInstruction } from "@adaas/are/instruction/AreInstruction.entity";
 import { AreInstructionNewProps, AreInstructionSerialized } from "@adaas/are/instruction/AreInstruction.types";
 import { AreInstructionDefaultNames } from "@adaas/are/instruction/AreInstruction.constants";
@@ -8,9 +8,8 @@ import { AreInstructionDefaultNames } from "@adaas/are/instruction/AreInstructio
 /**
  * This is a top-level instruction that represents the creation of a new element in the scene. It contains all the necessary information to create a new element, such as its tag and parent. This instruction can be applied to the scene to create a new element and can be reverted to remove the created element.
  */
-@A_Frame.Entity({
+@A_Frame.Define({
     namespace: 'A-ARE',
-    name: 'AreDeclaration',
     description: 'AreDeclaration is a top-level rendering instruction that represents the creation of a new element in the ARE scene. It carries the target tag name and parent reference needed by the Host to construct the DOM element, and can be applied or reverted to manage element creation and removal deterministically.'
 })
 export class AreDeclaration<

@@ -1,7 +1,7 @@
 'use strict';
 
 var aConcept = require('@adaas/a-concept');
-var aFrame = require('@adaas/a-frame');
+var core = require('@adaas/a-frame/core');
 var aExecution = require('@adaas/a-utils/a-execution');
 
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -124,9 +124,8 @@ exports.AreContext = class AreContext extends aExecution.A_ExecutionContext {
   }
 };
 exports.AreContext = __decorateClass([
-  aFrame.A_Frame.Fragment({
+  core.A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreContext",
     description: "Context fragment for the A-Concept Rendering Engine (ARE) framework, serving as a foundational component for managing shared state and configurations within the ARE environment. This Context uses to encapsulate global settings, resources, and utilities that can be accessed by various ARE components and entities during the rendering and interaction processes."
   })
 ], exports.AreContext);

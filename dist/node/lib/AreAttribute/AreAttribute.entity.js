@@ -1,7 +1,7 @@
 'use strict';
 
 var aConcept = require('@adaas/a-concept');
-var aFrame = require('@adaas/a-frame');
+var core = require('@adaas/a-frame/core');
 var AreAttribute_constants = require('./AreAttribute.constants');
 
 var __defProp = Object.defineProperty;
@@ -15,6 +15,9 @@ var __decorateClass = (decorators, target, key, kind) => {
   return result;
 };
 exports.AreAttribute = class AreAttribute extends aConcept.A_Entity {
+  static get concept() {
+    return "are";
+  }
   /**
    * The scope where the attribute is defined, which can be used to access other entities and features within the same scope. This is particularly useful for attributes that need to interact with other parts of the scene or component, as it allows them to access shared data and functionality without needing to pass it explicitly through parameters.
    */
@@ -98,14 +101,13 @@ exports.AreAttribute = class AreAttribute extends aConcept.A_Entity {
   }
 };
 __decorateClass([
-  aFrame.A_Frame.Method({
+  core.A_Frame.Define({
     description: "Compile the attribute. This method should transform attribute details into a set of SceneInstructions. It may also modify attribute value, since this field is editable during runtime."
   })
 ], exports.AreAttribute.prototype, "compile", 1);
 exports.AreAttribute = __decorateClass([
-  aFrame.A_Frame.Component({
+  core.A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreAttribute",
     description: "Represents an HTML attribute within the A-Concept Rendering Engine (ARE) framework, encapsulating the attribute's name, raw content, evaluated value, and associated features for initialization, transformation, compilation, updating, and validation."
   })
 ], exports.AreAttribute);

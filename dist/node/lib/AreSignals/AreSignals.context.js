@@ -1,7 +1,7 @@
 'use strict';
 
 var aConcept = require('@adaas/a-concept');
-var aFrame = require('@adaas/a-frame');
+var core = require('@adaas/a-frame/core');
 var aSignal = require('@adaas/a-utils/a-signal');
 var AreSignals_component = require('./AreSignals.component');
 
@@ -145,7 +145,8 @@ exports.AreSignalsContext = class AreSignalsContext extends aConcept.A_Fragment 
   }
 };
 exports.AreSignalsContext = __decorateClass([
-  aFrame.A_Frame.Fragment({
+  core.A_Frame.Define({
+    namespace: "A-ARE",
     description: "AreSignalsContext is a fragment that manages the set of root nodes subscribed to the signal bus. It tracks which Are components should receive signal vectors from AreSignals and provides the subscriber registry used during signal dispatch."
   })
 ], exports.AreSignalsContext);

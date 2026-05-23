@@ -1,6 +1,6 @@
 import { __decorateClass, __decorateParam } from '../../chunk-EQQGB2QZ.mjs';
 import { A_Feature, A_TYPES__EntityFeatures, A_Inject, A_Caller, A_Scope, A_Component } from '@adaas/a-concept';
-import { A_Frame } from '@adaas/a-frame';
+import { A_Frame } from '@adaas/a-frame/core';
 import { A_Logger } from '@adaas/a-utils/a-logger';
 import { AreNode } from '@adaas/are/node/AreNode.entity';
 import { AreFeatures } from '@adaas/are/component/Are.constants';
@@ -44,7 +44,8 @@ __decorateClass([
   __decorateParam(4, A_Inject(AreContext))
 ], AreLoader.prototype, "load", 1);
 AreLoader = __decorateClass([
-  A_Frame.Component({
+  A_Frame.Define({
+    namespace: "A-ARE",
     description: "Entry point of the pipeline. Accepts a raw template string and orchestrates the initial processing by delegating to Syntax. Returns a structured AreNode tree ready for transformation. Knows nothing about the template content or grammar rules."
   })
 ], AreLoader);

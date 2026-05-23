@@ -1,7 +1,7 @@
 'use strict';
 
 var aConcept = require('@adaas/a-concept');
-var aFrame = require('@adaas/a-frame');
+var core = require('@adaas/a-frame/core');
 var aLogger = require('@adaas/a-utils/a-logger');
 var AreNode_entity = require('@adaas/are/node/AreNode.entity');
 var Are_constants = require('@adaas/are/component/Are.constants');
@@ -56,7 +56,8 @@ __decorateClass([
   __decorateParam(4, aConcept.A_Inject(Are_context.AreContext))
 ], exports.AreLoader.prototype, "load", 1);
 exports.AreLoader = __decorateClass([
-  aFrame.A_Frame.Component({
+  core.A_Frame.Define({
+    namespace: "A-ARE",
     description: "Entry point of the pipeline. Accepts a raw template string and orchestrates the initial processing by delegating to Syntax. Returns a structured AreNode tree ready for transformation. Knows nothing about the template content or grammar rules."
   })
 ], exports.AreLoader);

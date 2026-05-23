@@ -1,12 +1,15 @@
 import { __decorateClass } from '../../chunk-EQQGB2QZ.mjs';
 import { A_Entity, A_Context, A_Scope, A_FormatterHelper, A_TypeGuards, A_Error } from '@adaas/a-concept';
-import { A_Frame } from '@adaas/a-frame';
+import { A_Frame } from '@adaas/a-frame/core';
 import { AreScene } from '@adaas/are/scene/AreScene.context';
 import { AreAttribute } from '@adaas/are/attribute/AreAttribute.entity';
 import { AreNodeStatuses, AreNodeFeatures } from './AreNode.constants';
 import { AreContext } from '@adaas/are/component/Are.context';
 
 let AreNode = class extends A_Entity {
+  static get concept() {
+    return "are";
+  }
   /**
    * Actual node identifier. 
    */
@@ -377,9 +380,8 @@ let AreNode = class extends A_Entity {
   }
 };
 AreNode = __decorateClass([
-  A_Frame.Entity({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreNode",
     description: "An AreNode entity represents a node within the A-Concept Rendering Engine (ARE) framework. It encapsulates content, markup, and styles, and manages its own scope for nested fragments and entities. AreNodes are responsible for handling events, compiling, rendering, updating, and lifecycle management within the ARE context."
   })
 ], AreNode);

@@ -1,7 +1,7 @@
 'use strict';
 
 var aConcept = require('@adaas/a-concept');
-var aFrame = require('@adaas/a-frame');
+var core = require('@adaas/a-frame/core');
 var AreScene_context = require('@adaas/are/scene/AreScene.context');
 var AreAttribute_entity = require('@adaas/are/attribute/AreAttribute.entity');
 var AreNode_constants = require('./AreNode.constants');
@@ -16,6 +16,9 @@ var __decorateClass = (decorators, target, key, kind) => {
   return result;
 };
 exports.AreNode = class AreNode extends aConcept.A_Entity {
+  static get concept() {
+    return "are";
+  }
   /**
    * Actual node identifier. 
    */
@@ -386,9 +389,8 @@ exports.AreNode = class AreNode extends aConcept.A_Entity {
   }
 };
 exports.AreNode = __decorateClass([
-  aFrame.A_Frame.Entity({
+  core.A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreNode",
     description: "An AreNode entity represents a node within the A-Concept Rendering Engine (ARE) framework. It encapsulates content, markup, and styles, and manages its own scope for nested fragments and entities. AreNodes are responsible for handling events, compiling, rendering, updating, and lifecycle management within the ARE context."
   })
 ], exports.AreNode);

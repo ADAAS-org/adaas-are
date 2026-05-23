@@ -1,6 +1,6 @@
 import '@adaas/a-concept';
 import '../AreEvent/AreEvent.context.js';
-export { g as AreNode } from '../../Are.context-9Ija_fdC.js';
+export { g as AreNode } from '../../Are.context-CLpFZLEm.js';
 import '../AreComponent/Are.component.js';
 import '@adaas/a-utils/a-execution';
 import '@adaas/a-utils/a-signal';

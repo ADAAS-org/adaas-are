@@ -1,6 +1,6 @@
 'use strict';
 
-var aFrame = require('@adaas/a-frame');
+var core = require('@adaas/a-frame/core');
 var aExecution = require('@adaas/a-utils/a-execution');
 
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -14,9 +14,8 @@ var __decorateClass = (decorators, target, key, kind) => {
 exports.AreEvent = class AreEvent extends aExecution.A_ExecutionContext {
 };
 exports.AreEvent = __decorateClass([
-  aFrame.A_Frame.Fragment({
+  core.A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreEvent",
     description: "Event context for managing events within the A-Concept Rendering Engine (ARE) framework, encapsulating event data and associated nodes to facilitate event-driven interactions."
   })
 ], exports.AreEvent);

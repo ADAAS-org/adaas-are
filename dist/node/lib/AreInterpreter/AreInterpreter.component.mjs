@@ -1,6 +1,6 @@
 import { __decorateClass, __decorateParam } from '../../chunk-EQQGB2QZ.mjs';
 import { A_Feature, A_Inject, A_Caller, A_Scope, A_Component } from '@adaas/a-concept';
-import { A_Frame } from '@adaas/a-frame';
+import { A_Frame } from '@adaas/a-frame/core';
 import { AreScene } from '@adaas/are/scene/AreScene.context';
 import { AreNode } from '@adaas/are/node/AreNode.entity';
 import { AreNodeFeatures } from '@adaas/are/node/AreNode.constants';
@@ -144,7 +144,8 @@ __decorateClass([
   __decorateParam(4, A_Inject(A_Feature))
 ], AreInterpreter.prototype, "revertInstruction", 1);
 AreInterpreter = __decorateClass([
-  A_Frame.Component({
+  A_Frame.Define({
+    namespace: "A-ARE",
     description: "Stateless executor that reads the Scene and translates its instructions into operations on a rendering target. Computes the diff between applied and planned, calls revert on removed instructions and apply on added ones. Owns no state of its own \u2014 all state lives in the Scene. Can be swapped for any target implementation (DOMInterpreter, SSRInterpreter, CanvasInterpreter) without touching any other part of the pipeline."
   })
 ], AreInterpreter);

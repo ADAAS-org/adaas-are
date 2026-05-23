@@ -1,7 +1,7 @@
 'use strict';
 
 var aConcept = require('@adaas/a-concept');
-var aFrame = require('@adaas/a-frame');
+var core = require('@adaas/a-frame/core');
 var aExecution = require('@adaas/a-utils/a-execution');
 var AreStore_constants = require('./AreStore.constants');
 var Are_context = require('@adaas/are/component/Are.context');
@@ -183,8 +183,9 @@ exports.AreStore = class AreStore extends aExecution.A_ExecutionContext {
   }
 };
 exports.AreStore = __decorateClass([
-  aFrame.A_Frame.Fragment({
-    description: "Are Store uses to keep AreNode related information for interpolations, runtime data, etc. This object can be injected to manipulate with data at runtime."
+  core.A_Frame.Define({
+    namespace: "A-ARE",
+    description: "Runtime data store scoped to an AreNode. Holds interpolation values, dynamic data bindings, and any per-node state that components need to read or write during rendering. Can be injected into directives, attributes, and lifecycle handlers to share mutable data across the render pipeline without exposing it globally."
   })
 ], exports.AreStore);
 //# sourceMappingURL=AreStore.context.js.map

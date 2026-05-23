@@ -1,6 +1,6 @@
 import { __decorateClass, __decorateParam } from '../../chunk-EQQGB2QZ.mjs';
 import { A_Feature, A_Inject, A_Caller, A_Component, A_Context } from '@adaas/a-concept';
-import { A_Frame } from '@adaas/a-frame';
+import { A_Frame } from '@adaas/a-frame/core';
 import { AreNode } from '@adaas/are/node/AreNode.entity';
 import { AreSyntax } from '@adaas/are/syntax/AreSyntax.context';
 import { AreContext } from '@adaas/are/component/Are.context';
@@ -216,9 +216,8 @@ __decorateClass([
   __decorateParam(2, A_Inject(A_Logger))
 ], AreTokenizer.prototype, "tokenize", 1);
 AreTokenizer = __decorateClass([
-  A_Frame.Component({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreTokenizer",
     description: "AreTokenizer is responsible for scanning and tokenizing template source strings using the syntax rules defined in AreSyntax. It converts raw template strings into AreNode instances that represent the structured AST of the template, enabling downstream compilation and rendering within the ARE framework."
   })
 ], AreTokenizer);

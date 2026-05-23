@@ -11,7 +11,7 @@ var AreEngine_error = require('./AreEngine.error');
 var AreLifecycle_component = require('@adaas/are/lifecycle/AreLifecycle.component');
 var AreEngine_constants = require('./AreEngine.constants');
 var Are_context = require('@adaas/are/component/Are.context');
-var aFrame = require('@adaas/a-frame');
+var core = require('@adaas/a-frame/core');
 var AreTokenizer_component = require('@adaas/are/tokenizer/AreTokenizer.component');
 var AreSignals_component = require('@adaas/are/signals/AreSignals.component');
 var AreInit_signal = require('@adaas/are/signals/entities/AreInit.signal');
@@ -188,17 +188,17 @@ exports.AreEngine = class AreEngine extends aConcept.A_Component {
   }
 };
 __decorateClass([
-  aFrame.A_Frame.Method({
+  core.A_Frame.Define({
     description: "Method does engine loading, first read of the source and tokenization."
   })
 ], exports.AreEngine.prototype, "load", 1);
 __decorateClass([
-  aFrame.A_Frame.Method({
+  core.A_Frame.Define({
     description: "Method responsible for building the scene, which includes initializing root nodes, loading necessary data, applying transformations, and compiling the scene into a format that can be executed by the interpreter."
   })
 ], exports.AreEngine.prototype, "build", 1);
 __decorateClass([
-  aFrame.A_Frame.Method({
+  core.A_Frame.Define({
     description: "Method responsible for executing the rendering process, which involves mounting the root nodes to the DOM and starting the reactive update cycle based on signals and state changes."
   })
 ], exports.AreEngine.prototype, "execute", 1);
@@ -244,14 +244,13 @@ __decorateClass([
   __decorateParam(8, aConcept.A_Inject(aLogger.A_Logger))
 ], exports.AreEngine.prototype, "verify", 1);
 __decorateClass([
-  aFrame.A_Frame.Method({
+  core.A_Frame.Define({
     description: "Method to pack all necessary dependencies for the engine. This method is called during the initialization phase of the engine and ensures that all required components are registered in the container scope, allowing for proper dependency injection and management throughout the engine's lifecycle."
   })
 ], exports.AreEngine.prototype, "package", 1);
 exports.AreEngine = __decorateClass([
-  aFrame.A_Frame.Component({
+  core.A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreEngine",
     description: "Core rendering engine for A-Concept Rendering Engine (ARE), responsible for orchestrating the loading, building, and execution of the rendering process. It manages the lifecycle of root nodes, coordinates the interactions between syntax, transformer, loader, compiler, and interpreter components, and ensures the proper initialization and mounting of the UI application."
   })
 ], exports.AreEngine);

@@ -1,17 +1,20 @@
 import { A_Context, A_Entity, A_Feature, A_Scope } from "@adaas/a-concept";
-import { A_Frame } from "@adaas/a-frame";
+import { A_Frame } from "@adaas/a-frame/core";
 import type { AreNode } from "@adaas/are/node/AreNode.entity";
 import { AreAttributeFeatures } from "./AreAttribute.constants";
 import { AreAttribute_Init, AreAttribute_Serialized } from "./AreAttribute.types";
 
 
 
-@A_Frame.Component({
+@A_Frame.Define({
     namespace: 'A-ARE',
-    name: 'AreAttribute',
     description: 'Represents an HTML attribute within the A-Concept Rendering Engine (ARE) framework, encapsulating the attribute\'s name, raw content, evaluated value, and associated features for initialization, transformation, compilation, updating, and validation.'
 })
 export class AreAttribute extends A_Entity<AreAttribute_Init, AreAttribute_Serialized> {
+
+    static get concept(): string {
+        return 'are';
+    }
 
     /**
      * Property name (e.g. "label")
@@ -111,7 +114,7 @@ export class AreAttribute extends A_Entity<AreAttribute_Init, AreAttribute_Seria
      * 
      * @param scope 
      */
-    @A_Frame.Method({
+    @A_Frame.Define({
         description: "Compile the attribute. This method should transform attribute details into a set of SceneInstructions. It may also modify attribute value, since this field is editable during runtime.",
     })
     compile(scope?: A_Scope) {

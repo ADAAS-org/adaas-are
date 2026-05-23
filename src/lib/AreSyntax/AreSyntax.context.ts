@@ -1,11 +1,10 @@
 import { A_Fragment } from "@adaas/a-concept";
-import { A_Frame } from "@adaas/a-frame";
+import { A_Frame } from "@adaas/a-frame/core";
 import { AreSyntaxCompiledExpression, AreSyntaxInitOptions, AreSyntaxTokenRules } from "./AreSyntax.types";
 import { AreStore } from "@adaas/are/store/AreStore.context";
 
-@A_Frame.Fragment({
+@A_Frame.Define({
     namespace: 'A-ARE',
-    name: 'AreSyntaxContext',
     description: 'Context that defines the syntax rules and structures for the A-Concept Rendering Engine (ARE). It provides mechanisms for parsing and interpreting templates, attributes, directives, interpolations, and event listeners, enabling dynamic and interactive UI rendering within the ARE framework.'
 })
 export class AreSyntax extends A_Fragment {

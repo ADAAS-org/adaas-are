@@ -1,5 +1,5 @@
 import { title } from "process";
-import { A_Frame } from "@adaas/a-frame";
+import { A_Frame } from "@adaas/a-frame/core";
 import { AreInstructionDefaultNames } from "@adaas/are/instruction/AreInstruction.constants";
 import { AreInstruction } from "@adaas/are/instruction/AreInstruction.entity";
 import { AreInstructionError } from "@adaas/are/instruction/AreInstruction.error";
@@ -8,9 +8,8 @@ import { AreDeclaration } from "./AreDeclaration.instruction";
 
 
 
-@A_Frame.Entity({
+@A_Frame.Define({
     namespace: 'A-ARE',
-    name: 'AreMutation',
     description: 'AreMutation is a rendering instruction that represents a reversible change applied to an existing declaration node in the ARE scene — such as updating an attribute, modifying content, or altering child structure. It references a parent AreDeclaration and is grouped with related mutations for coordinated apply and revert operations.'
 })
 export class AreMutation<

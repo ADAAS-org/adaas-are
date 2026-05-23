@@ -1,5 +1,5 @@
 import { A_Feature, A_Inject, A_Scope, A_Caller, A_Meta, A_TYPES__EntityFeatures, A_Dependency, A_Concept, A_Error, A_Fragment, A_Context, A_Entity, A_FormatterHelper, A_TypeGuards, A_ComponentMeta, A_Component, A_CommonHelper } from '@adaas/a-concept';
-import { A_Frame } from '@adaas/a-frame';
+import { A_Frame } from '@adaas/a-frame/core';
 import { A_SignalBusFeatures, A_SignalVector, A_SignalState, A_SignalBus, A_Signal } from '@adaas/a-utils/a-signal';
 import { A_Logger } from '@adaas/a-utils/a-logger';
 import { A_ExecutionContext } from '@adaas/a-utils/a-execution';
@@ -102,6 +102,9 @@ var AreInstructionDefaultNames = {
 
 // src/lib/AreInstruction/AreInstruction.entity.ts
 var AreInstruction = class extends A_Entity {
+  static get concept() {
+    return "are";
+  }
   /**
    * The name of the instruction, for example "CreateElement", "AddAttribute", "RemoveNode", etc. This is used to identify the type of the instruction and how to process it. The name should be in PascalCase format, and should be unique across all instruction types. It is recommended to use a prefix that indicates the category of the instruction, for example "CreateElement" for instructions that create new elements, "UpdateAttribute" for instructions that update attributes, etc.
    */
@@ -231,9 +234,8 @@ var AreInstruction = class extends A_Entity {
   }
 };
 AreInstruction = __decorateClass([
-  A_Frame.Entity({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreInstruction",
     description: "AreInstruction is the base entity for all rendering instructions in the ARE framework. It represents a serializable, reversible operation (such as creating or mutating a DOM element) that can be applied to and tracked within the AreScene, enabling deterministic rendering and undo/redo capabilities."
   })
 ], AreInstruction);
@@ -254,9 +256,8 @@ var AreDeclaration = class extends AreInstruction {
   }
 };
 AreDeclaration = __decorateClass([
-  A_Frame.Entity({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreDeclaration",
     description: "AreDeclaration is a top-level rendering instruction that represents the creation of a new element in the ARE scene. It carries the target tag name and parent reference needed by the Host to construct the DOM element, and can be applied or reverted to manage element creation and removal deterministically."
   })
 ], AreDeclaration);
@@ -307,9 +308,8 @@ var AreMutation = class extends AreInstruction {
   }
 };
 AreMutation = __decorateClass([
-  A_Frame.Entity({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreMutation",
     description: "AreMutation is a rendering instruction that represents a reversible change applied to an existing declaration node in the ARE scene \u2014 such as updating an attribute, modifying content, or altering child structure. It references a parent AreDeclaration and is grouped with related mutations for coordinated apply and revert operations."
   })
 ], AreMutation);
@@ -643,9 +643,8 @@ var AreScene = class extends A_Fragment {
   }
 };
 AreScene = __decorateClass([
-  A_Frame.Component({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreScene",
     description: "Persistent runtime structure that owns the rendering state for a component's lifetime. Maintains two sets \u2014 applied (what is currently in the DOM) and planned (what should be). Acts as the single source of truth for all rendering decisions. The Compiler produces it once, the Interpreter reads it on every update."
   })
 ], AreScene);
@@ -676,6 +675,9 @@ var AreAttributeFeatures = {
 
 // src/lib/AreAttribute/AreAttribute.entity.ts
 var AreAttribute = class extends A_Entity {
+  static get concept() {
+    return "are";
+  }
   /**
    * The scope where the attribute is defined, which can be used to access other entities and features within the same scope. This is particularly useful for attributes that need to interact with other parts of the scene or component, as it allows them to access shared data and functionality without needing to pass it explicitly through parameters.
    */
@@ -759,14 +761,13 @@ var AreAttribute = class extends A_Entity {
   }
 };
 __decorateClass([
-  A_Frame.Method({
+  A_Frame.Define({
     description: "Compile the attribute. This method should transform attribute details into a set of SceneInstructions. It may also modify attribute value, since this field is editable during runtime."
   })
 ], AreAttribute.prototype, "compile", 1);
 AreAttribute = __decorateClass([
-  A_Frame.Component({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreAttribute",
     description: "Represents an HTML attribute within the A-Concept Rendering Engine (ARE) framework, encapsulating the attribute's name, raw content, evaluated value, and associated features for initialization, transformation, compilation, updating, and validation."
   })
 ], AreAttribute);
@@ -994,15 +995,17 @@ var AreContext = class extends A_ExecutionContext {
   }
 };
 AreContext = __decorateClass([
-  A_Frame.Fragment({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreContext",
     description: "Context fragment for the A-Concept Rendering Engine (ARE) framework, serving as a foundational component for managing shared state and configurations within the ARE environment. This Context uses to encapsulate global settings, resources, and utilities that can be accessed by various ARE components and entities during the rendering and interaction processes."
   })
 ], AreContext);
 
 // src/lib/AreNode/AreNode.entity.ts
 var AreNode = class extends A_Entity {
+  static get concept() {
+    return "are";
+  }
   /**
    * Actual node identifier. 
    */
@@ -1373,18 +1376,16 @@ var AreNode = class extends A_Entity {
   }
 };
 AreNode = __decorateClass([
-  A_Frame.Entity({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreNode",
     description: "An AreNode entity represents a node within the A-Concept Rendering Engine (ARE) framework. It encapsulates content, markup, and styles, and manages its own scope for nested fragments and entities. AreNodes are responsible for handling events, compiling, rendering, updating, and lifecycle management within the ARE context."
   })
 ], AreNode);
 var AreEvent = class extends A_ExecutionContext {
 };
 AreEvent = __decorateClass([
-  A_Frame.Fragment({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreEvent",
     description: "Event context for managing events within the A-Concept Rendering Engine (ARE) framework, encapsulating event data and associated nodes to facilitate event-driven interactions."
   })
 ], AreEvent);
@@ -1560,7 +1561,8 @@ var AreSignalsContext = class extends A_Fragment {
   }
 };
 AreSignalsContext = __decorateClass([
-  A_Frame.Fragment({
+  A_Frame.Define({
+    namespace: "A-ARE",
     description: "AreSignalsContext is a fragment that manages the set of root nodes subscribed to the signal bus. It tracks which Are components should receive signal vectors from AreSignals and provides the subscriber registry used during signal dispatch."
   })
 ], AreSignalsContext);
@@ -1623,9 +1625,8 @@ __decorateClass([
   __decorateParam(4, A_Inject(A_Logger))
 ], AreSignals.prototype, "propagateEvent", 1);
 AreSignals = __decorateClass([
-  A_Frame.Component({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreSignals",
     description: "AreSignals is the central signal bus component within the ARE framework. It listens for incoming signal vectors and dispatches them to all subscribed root nodes, enabling reactive, event-driven rendering and lifecycle management across the component tree."
   }),
   A_Meta.Define(AreSignalsMeta)
@@ -1830,9 +1831,8 @@ __decorateClass([
   Are.Data
 ], Are.prototype, "data", 1);
 Are = __decorateClass([
-  A_Frame.Component({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "Are",
     description: "Base component class for A-Concept Rendering Engine (ARE) components. It provides lifecycle decorators and methods for defining templates, styles, and data, facilitating the creation of dynamic and interactive UI components within the ARE framework."
   }),
   A_Meta.Define(AreMeta)
@@ -2165,9 +2165,8 @@ var AreSyntax = class extends A_Fragment {
   }
 };
 AreSyntax = __decorateClass([
-  A_Frame.Fragment({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreSyntaxContext",
     description: "Context that defines the syntax rules and structures for the A-Concept Rendering Engine (ARE). It provides mechanisms for parsing and interpreting templates, attributes, directives, interpolations, and event listeners, enabling dynamic and interactive UI rendering within the ARE framework."
   })
 ], AreSyntax);
@@ -2212,9 +2211,8 @@ __decorateClass([
   __decorateParam(2, A_Inject(A_Logger))
 ], AreCompiler.prototype, "compile", 1);
 AreCompiler = __decorateClass([
-  A_Frame.Component({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreCompiler",
     description: "Walks the transformed AreNode tree and emits a Scene. Translates each node, binding, directive and interpolation into a typed instruction. Knows nothing about the DOM or any rendering target \u2014 its only concern is producing a complete and ordered set of instructions that fully describes how the tree should be rendered."
   })
 ], AreCompiler);
@@ -2241,7 +2239,8 @@ __decorateClass([
   __decorateParam(2, A_Inject(AreScene))
 ], AreTransformer.prototype, "transform", 1);
 AreTransformer = __decorateClass([
-  A_Frame.Component({
+  A_Frame.Define({
+    namespace: "A-ARE",
     description: "Reshapes the AreNode tree before compilation without changing its abstraction level. Responsible for structural rewrites that would complicate the compiler if left unhandled \u2014 converting $for nodes into AreGroupNode, extracting AreText and AreInterpolation from raw text, sorting directives via TopologicalSorter, and flagging static nodes."
   })
 ], AreTransformer);
@@ -2283,7 +2282,8 @@ __decorateClass([
   __decorateParam(4, A_Inject(AreContext))
 ], AreLoader.prototype, "load", 1);
 AreLoader = __decorateClass([
-  A_Frame.Component({
+  A_Frame.Define({
+    namespace: "A-ARE",
     description: "Entry point of the pipeline. Accepts a raw template string and orchestrates the initial processing by delegating to Syntax. Returns a structured AreNode tree ready for transformation. Knows nothing about the template content or grammar rules."
   })
 ], AreLoader);
@@ -2460,8 +2460,9 @@ var AreStore = class extends A_ExecutionContext {
   }
 };
 AreStore = __decorateClass([
-  A_Frame.Fragment({
-    description: "Are Store uses to keep AreNode related information for interpolations, runtime data, etc. This object can be injected to manipulate with data at runtime."
+  A_Frame.Define({
+    namespace: "A-ARE",
+    description: "Runtime data store scoped to an AreNode. Holds interpolation values, dynamic data bindings, and any per-node state that components need to read or write during rendering. Can be injected into directives, attributes, and lifecycle handlers to share mutable data across the render pipeline without exposing it globally."
   })
 ], AreStore);
 
@@ -2602,7 +2603,8 @@ __decorateClass([
   __decorateParam(4, A_Inject(A_Feature))
 ], AreInterpreter.prototype, "revertInstruction", 1);
 AreInterpreter = __decorateClass([
-  A_Frame.Component({
+  A_Frame.Define({
+    namespace: "A-ARE",
     description: "Stateless executor that reads the Scene and translates its instructions into operations on a rendering target. Computes the diff between applied and planned, calls revert on removed instructions and apply on added ones. Owns no state of its own \u2014 all state lives in the Scene. Can be swapped for any target implementation (DOMInterpreter, SSRInterpreter, CanvasInterpreter) without touching any other part of the pipeline."
   })
 ], AreInterpreter);
@@ -2928,7 +2930,8 @@ __decorateClass([
   __decorateParam(2, A_Inject(A_Feature))
 ], AreLifecycle.prototype, "afterDestroy", 1);
 AreLifecycle = __decorateClass([
-  A_Frame.Component({
+  A_Frame.Define({
+    namespace: "A-ARE",
     description: "Handles the lifecycle of the AreNode and related entities such as interpolations, directives, attributes, and so on. It provides lifecycle hooks for initialization, mounting, updating, and unmounting of the nodes, allowing to manage the state and behavior of the nodes throughout their lifecycle in a structured and consistent way."
   })
 ], AreLifecycle);
@@ -3148,18 +3151,19 @@ __decorateClass([
   __decorateParam(2, A_Inject(A_Logger))
 ], AreTokenizer.prototype, "tokenize", 1);
 AreTokenizer = __decorateClass([
-  A_Frame.Component({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreTokenizer",
     description: "AreTokenizer is responsible for scanning and tokenizing template source strings using the syntax rules defined in AreSyntax. It converts raw template strings into AreNode instances that represent the structured AST of the template, enabling downstream compilation and rendering within the ARE framework."
   })
 ], AreTokenizer);
 var AreSignal = class extends A_Signal {
+  static get concept() {
+    return "are";
+  }
 };
 AreSignal = __decorateClass([
-  A_Frame.Entity({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreSignal",
     description: "AreSignal is the base class for all signals used within the ARE framework. It extends A_Signal to provide a typed signal entity that components can subscribe to and emit, enabling reactive communication between ARE components and driving lifecycle and rendering updates."
   })
 ], AreSignal);
@@ -3330,17 +3334,17 @@ var AreEngine = class extends A_Component {
   }
 };
 __decorateClass([
-  A_Frame.Method({
+  A_Frame.Define({
     description: "Method does engine loading, first read of the source and tokenization."
   })
 ], AreEngine.prototype, "load", 1);
 __decorateClass([
-  A_Frame.Method({
+  A_Frame.Define({
     description: "Method responsible for building the scene, which includes initializing root nodes, loading necessary data, applying transformations, and compiling the scene into a format that can be executed by the interpreter."
   })
 ], AreEngine.prototype, "build", 1);
 __decorateClass([
-  A_Frame.Method({
+  A_Frame.Define({
     description: "Method responsible for executing the rendering process, which involves mounting the root nodes to the DOM and starting the reactive update cycle based on signals and state changes."
   })
 ], AreEngine.prototype, "execute", 1);
@@ -3386,14 +3390,13 @@ __decorateClass([
   __decorateParam(8, A_Inject(A_Logger))
 ], AreEngine.prototype, "verify", 1);
 __decorateClass([
-  A_Frame.Method({
+  A_Frame.Define({
     description: "Method to pack all necessary dependencies for the engine. This method is called during the initialization phase of the engine and ensures that all required components are registered in the container scope, allowing for proper dependency injection and management throughout the engine's lifecycle."
   })
 ], AreEngine.prototype, "package", 1);
 AreEngine = __decorateClass([
-  A_Frame.Component({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreEngine",
     description: "Core rendering engine for A-Concept Rendering Engine (ARE), responsible for orchestrating the loading, building, and execution of the rendering process. It manages the lifecycle of root nodes, coordinates the interactions between syntax, transformer, loader, compiler, and interpreter components, and ensures the proper initialization and mounting of the UI application."
   })
 ], AreEngine);
@@ -3415,10 +3418,9 @@ __decorateClass([
   A_Concept.Stop()
 ], AreWatcher.prototype, "destroy", 1);
 AreWatcher = __decorateClass([
-  A_Frame.Component({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreWatcher",
-    description: "AreWatcher is a component that observes changes and produces A_Signals Depending on the actual handlers"
+    description: "Abstract base component that observes external changes and emits A_Signals to drive reactive updates within the ARE pipeline. Subclasses override init() to set up initial state and watch() to begin observing \u2014 for example, polling a data source, listening to DOM events, or subscribing to a store \u2014 and call the appropriate signal methods to notify the engine when a re-render is needed."
   })
 ], AreWatcher);
 

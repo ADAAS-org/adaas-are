@@ -1,5 +1,5 @@
 import { __decorateClass } from '../../../chunk-EQQGB2QZ.mjs';
-import { A_Frame } from '@adaas/a-frame';
+import { A_Frame } from '@adaas/a-frame/core';
 import { AreInstructionDefaultNames } from '@adaas/are/instruction/AreInstruction.constants';
 import { AreInstruction } from '@adaas/are/instruction/AreInstruction.entity';
 import { AreInstructionError } from '@adaas/are/instruction/AreInstruction.error';
@@ -33,9 +33,8 @@ let AreMutation = class extends AreInstruction {
   }
 };
 AreMutation = __decorateClass([
-  A_Frame.Entity({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreMutation",
     description: "AreMutation is a rendering instruction that represents a reversible change applied to an existing declaration node in the ARE scene \u2014 such as updating an attribute, modifying content, or altering child structure. It references a parent AreDeclaration and is grouped with related mutations for coordinated apply and revert operations."
   })
 ], AreMutation);

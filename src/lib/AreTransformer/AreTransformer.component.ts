@@ -1,5 +1,5 @@
 import { A_Caller, A_Component, A_Feature, A_FormatterHelper, A_Inject, A_Scope } from "@adaas/a-concept";
-import { A_Frame } from "@adaas/a-frame";
+import { A_Frame } from "@adaas/a-frame/core";
 import { A_Logger } from "@adaas/a-utils/a-logger";
 import { AreNode } from "@adaas/are/node/AreNode.entity";
 import { AreNodeFeatures } from "@adaas/are/node/AreNode.constants";
@@ -7,7 +7,8 @@ import { AreScene } from "@adaas/are/scene/AreScene.context";
 
 
 
-@A_Frame.Component({
+@A_Frame.Define({
+    namespace: 'A-ARE',
     description: 'Reshapes the AreNode tree before compilation without changing its abstraction level. Responsible for structural rewrites that would complicate the compiler if left unhandled — converting $for nodes into AreGroupNode, extracting AreText and AreInterpolation from raw text, sorting directives via TopologicalSorter, and flagging static nodes.'
 })
 export class AreTransformer extends A_Component {

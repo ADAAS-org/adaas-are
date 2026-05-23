@@ -6,15 +6,14 @@ import { AreFeatures } from "@adaas/are/component/Are.constants";
 import { AreNode } from "@adaas/are/node/AreNode.entity";
 import { AreNodeFeatures } from "@adaas/are/node/AreNode.constants";
 import { AreEvent } from "@adaas/are/event/AreEvent.context";
-import { A_Frame } from "@adaas/a-frame";
+import { A_Frame } from "@adaas/a-frame/core";
 import { AreSignalsMeta } from "./AreSignals.meta";
 import { AreSignalsContext } from "./AreSignals.context";
 
 
 
-@A_Frame.Component({
+@A_Frame.Define({
     namespace: 'A-ARE',
-    name: 'AreSignals',
     description: 'AreSignals is the central signal bus component within the ARE framework. It listens for incoming signal vectors and dispatches them to all subscribed root nodes, enabling reactive, event-driven rendering and lifecycle management across the component tree.'
 })
 @A_Meta.Define(AreSignalsMeta)

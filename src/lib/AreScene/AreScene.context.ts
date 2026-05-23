@@ -1,5 +1,5 @@
 import { A_Context, A_Dependency, A_Fragment, A_Scope, ASEID } from "@adaas/a-concept";
-import { A_Frame } from "@adaas/a-frame";
+import { A_Frame } from "@adaas/a-frame/core";
 import type { AreNode } from "@adaas/are/node/AreNode.entity";
 import { AreDeclaration } from "@adaas/are/instruction/types/AreDeclaration.instruction";
 import { AreInstruction } from "@adaas/are/instruction/AreInstruction.entity";
@@ -10,9 +10,8 @@ import { AreSceneStatuses } from "./AreScene.constants";
 
 
 
-@A_Frame.Component({
+@A_Frame.Define({
     namespace: 'A-ARE',
-    name: 'AreScene',
     description: "Persistent runtime structure that owns the rendering state for a component's lifetime. Maintains two sets — applied (what is currently in the DOM) and planned (what should be). Acts as the single source of truth for all rendering decisions. The Compiler produces it once, the Interpreter reads it on every update."
 })
 export class AreScene extends A_Fragment {

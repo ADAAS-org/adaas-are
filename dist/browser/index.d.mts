@@ -242,6 +242,7 @@ type AreStoreWatchingEntity = {
 type AreStoreAreComponentMetaKeyNames = typeof AreStoreAreComponentMetaKeys[keyof typeof AreStoreAreComponentMetaKeys];
 
 declare class AreInstruction<T extends Record<string, any> = Record<string, any>, S extends AreInstructionSerialized<T> = AreInstructionSerialized<T>> extends A_Entity<AreInstructionNewProps<T>, S> implements AreStoreWatchingEntity {
+    static get concept(): string;
     /**
      * The name of the instruction, for example "CreateElement", "AddAttribute", "RemoveNode", etc. This is used to identify the type of the instruction and how to process it. The name should be in PascalCase format, and should be unique across all instruction types. It is recommended to use a prefix that indicates the category of the instruction, for example "CreateElement" for instructions that create new elements, "UpdateAttribute" for instructions that update attributes, etc.
      */
@@ -648,6 +649,7 @@ type AreAttribute_Serialized = {
 type AreAttributeFeatureNames = typeof AreAttributeFeatures[keyof typeof AreAttributeFeatures];
 
 declare class AreAttribute extends A_Entity<AreAttribute_Init, AreAttribute_Serialized> {
+    static get concept(): string;
     /**
      * Property name (e.g. "label")
      */
@@ -951,6 +953,7 @@ type AreNodeFeatureNames = typeof AreNodeFeatures[keyof typeof AreNodeFeatures];
 type AreNodeStatusNames = typeof AreNodeStatuses[keyof typeof AreNodeStatuses];
 
 declare class AreNode extends A_Entity<AreNodeNewProps> {
+    static get concept(): string;
     /**
      * The current status of the node, which can be used to track the lifecycle and rendering state of the node within the scene.
      */
@@ -1831,6 +1834,7 @@ declare class AreLoaderError extends A_Error {
 }
 
 declare class AreSignal<_TSignalDataType extends Record<string, any> = Record<string, any>> extends A_Signal<_TSignalDataType> {
+    static get concept(): string;
 }
 
 declare class AreInit extends AreSignal {

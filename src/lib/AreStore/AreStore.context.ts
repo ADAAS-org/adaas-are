@@ -1,5 +1,5 @@
 import { A_Context, A_TYPES__ComponentMeta, A_TYPES__Paths, ASEID } from "@adaas/a-concept";
-import { A_Frame } from "@adaas/a-frame";
+import { A_Frame } from "@adaas/a-frame/core";
 import { A_ExecutionContext } from "@adaas/a-utils/a-execution";
 import type { AreNode } from "@adaas/are/node/AreNode.entity";
 import type { Are } from "@adaas/are/component/Are.component";
@@ -12,8 +12,9 @@ import { A_UtilsHelper } from "@adaas/a-utils/helpers";
 
 
 
-@A_Frame.Fragment({
-    description: "Are Store uses to keep AreNode related information for interpolations, runtime data, etc. This object can be injected to manipulate with data at runtime.",
+@A_Frame.Define({
+    namespace: 'A-ARE',
+    description: 'Runtime data store scoped to an AreNode. Holds interpolation values, dynamic data bindings, and any per-node state that components need to read or write during rendering. Can be injected into directives, attributes, and lifecycle handlers to share mutable data across the render pipeline without exposing it globally.',
 })
 export class AreStore<
     T extends Record<string, any> = Record<string, any>

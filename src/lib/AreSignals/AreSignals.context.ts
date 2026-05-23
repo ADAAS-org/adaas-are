@@ -1,5 +1,5 @@
 import { A_Context, A_Fragment, A_TYPES__Ctor } from "@adaas/a-concept";
-import { A_Frame } from "@adaas/a-frame";
+import { A_Frame } from "@adaas/a-frame/core";
 import { A_Signal, A_SignalVector } from "@adaas/a-utils/a-signal";
 import { Are } from "@adaas/are/component/Are.component";
 import { AreSignalsContextConfig } from "./AreSignals.types";
@@ -9,7 +9,8 @@ import { AreSignals } from "./AreSignals.component";
 
 
 
-@A_Frame.Fragment({
+@A_Frame.Define({
+    namespace: 'A-ARE',
     description: 'AreSignalsContext is a fragment that manages the set of root nodes subscribed to the signal bus. It tracks which Are components should receive signal vectors from AreSignals and provides the subscriber registry used during signal dispatch.'
 })
 export class AreSignalsContext<

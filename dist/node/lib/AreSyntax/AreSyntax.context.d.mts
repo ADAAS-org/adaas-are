@@ -1,5 +1,5 @@
 import { A_Fragment } from '@adaas/a-concept';
-import { q as AreSyntaxInitOptions, t as AreSyntaxTokenRules, g as AreNode, p as AreSyntaxCompiledExpression, o as AreStore } from '../../Are.context-D7w32H1G.mjs';
+import { q as AreSyntaxInitOptions, t as AreSyntaxTokenRules, g as AreNode, p as AreSyntaxCompiledExpression, o as AreStore } from '../../Are.context-D19qgRl8.mjs';
 import '@adaas/a-utils/a-signal';
 import '../AreEvent/AreEvent.context.mjs';
 import '@adaas/a-utils/a-execution';

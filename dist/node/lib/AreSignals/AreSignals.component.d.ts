@@ -1,7 +1,7 @@
 import { A_Component, A_Scope, A_Feature } from '@adaas/a-concept';
 import { A_SignalVector, A_SignalState } from '@adaas/a-utils/a-signal';
 import { A_Logger } from '@adaas/a-utils/a-logger';
-import { g as AreNode } from '../../Are.context-9Ija_fdC.js';
+import { g as AreNode } from '../../Are.context-CLpFZLEm.js';
 import { AreEvent } from '../AreEvent/AreEvent.context.js';
 import { AreSignalsContext } from './AreSignals.context.js';
 import '../AreStore/AreStore.types.js';

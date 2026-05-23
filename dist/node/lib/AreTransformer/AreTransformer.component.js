@@ -1,7 +1,7 @@
 'use strict';
 
 var aConcept = require('@adaas/a-concept');
-var aFrame = require('@adaas/a-frame');
+var core = require('@adaas/a-frame/core');
 var AreNode_entity = require('@adaas/are/node/AreNode.entity');
 var AreNode_constants = require('@adaas/are/node/AreNode.constants');
 var AreScene_context = require('@adaas/are/scene/AreScene.context');
@@ -40,7 +40,8 @@ __decorateClass([
   __decorateParam(2, aConcept.A_Inject(AreScene_context.AreScene))
 ], exports.AreTransformer.prototype, "transform", 1);
 exports.AreTransformer = __decorateClass([
-  aFrame.A_Frame.Component({
+  core.A_Frame.Define({
+    namespace: "A-ARE",
     description: "Reshapes the AreNode tree before compilation without changing its abstraction level. Responsible for structural rewrites that would complicate the compiler if left unhandled \u2014 converting $for nodes into AreGroupNode, extracting AreText and AreInterpolation from raw text, sorting directives via TopologicalSorter, and flagging static nodes."
   })
 ], exports.AreTransformer);

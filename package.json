@@ -208,12 +208,15 @@
     "echo-version": "echo $npm_package_version",
     "build": "tsup --config tsup.config.ts"
   },
-  "dependencies": {
-    "@adaas/a-concept": "^0.3.13",
-    "@adaas/a-frame": "^0.0.22",
-    "@adaas/a-utils": "^0.3.18"
+  "peerDependencies": {
+    "@adaas/a-concept": "^0.3.16",
+    "@adaas/a-frame": "^0.1.2",
+    "@adaas/a-utils": "^0.3.20"
   },
   "devDependencies": {
+    "@adaas/a-concept": "^0.3.16",
+    "@adaas/a-frame": "^0.1.2",
+    "@adaas/a-utils": "^0.3.20",
     "@types/chai": "^4.3.14",
     "@types/jest": "^29.5.12",
     "@types/mocha": "^10.0.6",

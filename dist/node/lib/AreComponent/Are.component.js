@@ -1,7 +1,7 @@
 'use strict';
 
 var aConcept = require('@adaas/a-concept');
-var aFrame = require('@adaas/a-frame');
+var core = require('@adaas/a-frame/core');
 var aSignal = require('@adaas/a-utils/a-signal');
 var AreSignals_component = require('@adaas/are/signals/AreSignals.component');
 var Are_meta = require('./Are.meta');
@@ -213,9 +213,8 @@ __decorateClass([
   exports.Are.Data
 ], exports.Are.prototype, "data", 1);
 exports.Are = __decorateClass([
-  aFrame.A_Frame.Component({
+  core.A_Frame.Define({
     namespace: "A-ARE",
-    name: "Are",
     description: "Base component class for A-Concept Rendering Engine (ARE) components. It provides lifecycle decorators and methods for defining templates, styles, and data, facilitating the creation of dynamic and interactive UI components within the ARE framework."
   }),
   aConcept.A_Meta.Define(Are_meta.AreMeta)

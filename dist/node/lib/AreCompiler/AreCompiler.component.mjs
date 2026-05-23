@@ -1,6 +1,6 @@
 import { __decorateClass, __decorateParam } from '../../chunk-EQQGB2QZ.mjs';
 import { A_Feature, A_Inject, A_Caller, A_Component } from '@adaas/a-concept';
-import { A_Frame } from '@adaas/a-frame';
+import { A_Frame } from '@adaas/a-frame/core';
 import { A_Logger } from '@adaas/a-utils/a-logger';
 import { AreScene } from '@adaas/are/scene/AreScene.context';
 import { AreNode } from '@adaas/are/node/AreNode.entity';
@@ -49,9 +49,8 @@ __decorateClass([
   __decorateParam(2, A_Inject(A_Logger))
 ], AreCompiler.prototype, "compile", 1);
 AreCompiler = __decorateClass([
-  A_Frame.Component({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreCompiler",
     description: "Walks the transformed AreNode tree and emits a Scene. Translates each node, binding, directive and interpolation into a typed instruction. Knows nothing about the DOM or any rendering target \u2014 its only concern is producing a complete and ordered set of instructions that fully describes how the tree should be rendered."
   })
 ], AreCompiler);

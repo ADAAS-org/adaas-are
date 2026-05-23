@@ -1,5 +1,5 @@
 import { A_Caller, A_Component, A_Context, A_Dependency, A_Feature, A_FormatterHelper, A_Inject, A_Scope, A_TYPES__ComponentMeta, A_TYPES__EntityFeatures } from "@adaas/a-concept";
-import { A_Frame } from "@adaas/a-frame";
+import { A_Frame } from "@adaas/a-frame/core";
 import { A_Logger } from "@adaas/a-utils/a-logger";
 import { AreNode } from "@adaas/are/node/AreNode.entity";
 import { AreFeatures } from "@adaas/are/component/Are.constants";
@@ -7,7 +7,8 @@ import { AreContext } from "@adaas/are/component/Are.context";
 
 
 
-@A_Frame.Component({
+@A_Frame.Define({
+    namespace: 'A-ARE',
     description: 'Entry point of the pipeline. Accepts a raw template string and orchestrates the initial processing by delegating to Syntax. Returns a structured AreNode tree ready for transformation. Knows nothing about the template content or grammar rules.'
 })
 export class AreLoader extends A_Component {

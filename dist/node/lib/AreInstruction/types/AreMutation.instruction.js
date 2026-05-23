@@ -1,6 +1,6 @@
 'use strict';
 
-var aFrame = require('@adaas/a-frame');
+var core = require('@adaas/a-frame/core');
 var AreInstruction_constants = require('@adaas/are/instruction/AreInstruction.constants');
 var AreInstruction_entity = require('@adaas/are/instruction/AreInstruction.entity');
 var AreInstruction_error = require('@adaas/are/instruction/AreInstruction.error');
@@ -42,9 +42,8 @@ exports.AreMutation = class AreMutation extends AreInstruction_entity.AreInstruc
   }
 };
 exports.AreMutation = __decorateClass([
-  aFrame.A_Frame.Entity({
+  core.A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreMutation",
     description: "AreMutation is a rendering instruction that represents a reversible change applied to an existing declaration node in the ARE scene \u2014 such as updating an attribute, modifying content, or altering child structure. It references a parent AreDeclaration and is grouped with related mutations for coordinated apply and revert operations."
   })
 ], exports.AreMutation);

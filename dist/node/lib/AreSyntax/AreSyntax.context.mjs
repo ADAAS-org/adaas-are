@@ -1,6 +1,6 @@
 import { __decorateClass } from '../../chunk-EQQGB2QZ.mjs';
 import { A_Fragment } from '@adaas/a-concept';
-import { A_Frame } from '@adaas/a-frame';
+import { A_Frame } from '@adaas/a-frame/core';
 
 let AreSyntax = class extends A_Fragment {
   constructor(config) {
@@ -330,9 +330,8 @@ let AreSyntax = class extends A_Fragment {
   }
 };
 AreSyntax = __decorateClass([
-  A_Frame.Fragment({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreSyntaxContext",
     description: "Context that defines the syntax rules and structures for the A-Concept Rendering Engine (ARE). It provides mechanisms for parsing and interpreting templates, attributes, directives, interpolations, and event listeners, enabling dynamic and interactive UI rendering within the ARE framework."
   })
 ], AreSyntax);

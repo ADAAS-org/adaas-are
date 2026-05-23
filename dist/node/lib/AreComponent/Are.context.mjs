@@ -1,6 +1,6 @@
 import { __decorateClass } from '../../chunk-EQQGB2QZ.mjs';
 import { A_Context } from '@adaas/a-concept';
-import { A_Frame } from '@adaas/a-frame';
+import { A_Frame } from '@adaas/a-frame/core';
 import { A_ExecutionContext } from '@adaas/a-utils/a-execution';
 
 let AreContext = class extends A_ExecutionContext {
@@ -115,9 +115,8 @@ let AreContext = class extends A_ExecutionContext {
   }
 };
 AreContext = __decorateClass([
-  A_Frame.Fragment({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreContext",
     description: "Context fragment for the A-Concept Rendering Engine (ARE) framework, serving as a foundational component for managing shared state and configurations within the ARE environment. This Context uses to encapsulate global settings, resources, and utilities that can be accessed by various ARE components and entities during the rendering and interaction processes."
   })
 ], AreContext);

@@ -1,7 +1,7 @@
 'use strict';
 
 var aSignal = require('@adaas/a-utils/a-signal');
-var aFrame = require('@adaas/a-frame');
+var core = require('@adaas/a-frame/core');
 
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __decorateClass = (decorators, target, key, kind) => {
@@ -12,11 +12,13 @@ var __decorateClass = (decorators, target, key, kind) => {
   return result;
 };
 exports.AreSignal = class AreSignal extends aSignal.A_Signal {
+  static get concept() {
+    return "are";
+  }
 };
 exports.AreSignal = __decorateClass([
-  aFrame.A_Frame.Entity({
+  core.A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreSignal",
     description: "AreSignal is the base class for all signals used within the ARE framework. It extends A_Signal to provide a typed signal entity that components can subscribe to and emit, enabling reactive communication between ARE components and driving lifecycle and rendering updates."
   })
 ], exports.AreSignal);

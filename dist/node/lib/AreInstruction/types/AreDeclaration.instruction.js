@@ -1,6 +1,6 @@
 'use strict';
 
-var aFrame = require('@adaas/a-frame');
+var core = require('@adaas/a-frame/core');
 var AreInstruction_entity = require('@adaas/are/instruction/AreInstruction.entity');
 var AreInstruction_constants = require('@adaas/are/instruction/AreInstruction.constants');
 
@@ -27,9 +27,8 @@ exports.AreDeclaration = class AreDeclaration extends AreInstruction_entity.AreI
   }
 };
 exports.AreDeclaration = __decorateClass([
-  aFrame.A_Frame.Entity({
+  core.A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreDeclaration",
     description: "AreDeclaration is a top-level rendering instruction that represents the creation of a new element in the ARE scene. It carries the target tag name and parent reference needed by the Host to construct the DOM element, and can be applied or reverted to manage element creation and removal deterministically."
   })
 ], exports.AreDeclaration);

@@ -7,7 +7,7 @@ var Are_constants = require('@adaas/are/component/Are.constants');
 var AreNode_entity = require('@adaas/are/node/AreNode.entity');
 var AreNode_constants = require('@adaas/are/node/AreNode.constants');
 var AreEvent_context = require('@adaas/are/event/AreEvent.context');
-var aFrame = require('@adaas/a-frame');
+var core = require('@adaas/a-frame/core');
 var AreSignals_meta = require('./AreSignals.meta');
 var AreSignals_context = require('./AreSignals.context');
 
@@ -79,9 +79,8 @@ __decorateClass([
   __decorateParam(4, aConcept.A_Inject(aLogger.A_Logger))
 ], exports.AreSignals.prototype, "propagateEvent", 1);
 exports.AreSignals = __decorateClass([
-  aFrame.A_Frame.Component({
+  core.A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreSignals",
     description: "AreSignals is the central signal bus component within the ARE framework. It listens for incoming signal vectors and dispatches them to all subscribed root nodes, enabling reactive, event-driven rendering and lifecycle management across the component tree."
   }),
   aConcept.A_Meta.Define(AreSignals_meta.AreSignalsMeta)

@@ -1,5 +1,5 @@
 import { __decorateClass } from '../../../chunk-EQQGB2QZ.mjs';
-import { A_Frame } from '@adaas/a-frame';
+import { A_Frame } from '@adaas/a-frame/core';
 import { AreInstruction } from '@adaas/are/instruction/AreInstruction.entity';
 import { AreInstructionDefaultNames } from '@adaas/are/instruction/AreInstruction.constants';
 
@@ -18,9 +18,8 @@ let AreDeclaration = class extends AreInstruction {
   }
 };
 AreDeclaration = __decorateClass([
-  A_Frame.Entity({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreDeclaration",
     description: "AreDeclaration is a top-level rendering instruction that represents the creation of a new element in the ARE scene. It carries the target tag name and parent reference needed by the Host to construct the DOM element, and can be applied or reverted to manage element creation and removal deterministically."
   })
 ], AreDeclaration);

@@ -1,6 +1,6 @@
 import { __decorateClass } from '../../chunk-EQQGB2QZ.mjs';
 import { A_Fragment, A_Context, A_Dependency } from '@adaas/a-concept';
-import { A_Frame } from '@adaas/a-frame';
+import { A_Frame } from '@adaas/a-frame/core';
 import { AreDeclaration } from '@adaas/are/instruction/types/AreDeclaration.instruction';
 import { AreInstruction } from '@adaas/are/instruction/AreInstruction.entity';
 import { AreSceneError } from './AreScene.error';
@@ -328,9 +328,8 @@ let AreScene = class extends A_Fragment {
   }
 };
 AreScene = __decorateClass([
-  A_Frame.Component({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreScene",
     description: "Persistent runtime structure that owns the rendering state for a component's lifetime. Maintains two sets \u2014 applied (what is currently in the DOM) and planned (what should be). Acts as the single source of truth for all rendering decisions. The Compiler produces it once, the Interpreter reads it on every update."
   })
 ], AreScene);

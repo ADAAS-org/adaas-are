@@ -1,7 +1,7 @@
 'use strict';
 
 var aConcept = require('@adaas/a-concept');
-var aFrame = require('@adaas/a-frame');
+var core = require('@adaas/a-frame/core');
 var AreNode_entity = require('@adaas/are/node/AreNode.entity');
 var AreSyntax_context = require('@adaas/are/syntax/AreSyntax.context');
 var Are_context = require('@adaas/are/component/Are.context');
@@ -228,9 +228,8 @@ __decorateClass([
   __decorateParam(2, aConcept.A_Inject(aLogger.A_Logger))
 ], exports.AreTokenizer.prototype, "tokenize", 1);
 exports.AreTokenizer = __decorateClass([
-  aFrame.A_Frame.Component({
+  core.A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreTokenizer",
     description: "AreTokenizer is responsible for scanning and tokenizing template source strings using the syntax rules defined in AreSyntax. It converts raw template strings into AreNode instances that represent the structured AST of the template, enabling downstream compilation and rendering within the ARE framework."
   })
 ], exports.AreTokenizer);

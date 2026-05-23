@@ -1,5 +1,5 @@
 import { A_Caller, A_Component, A_Feature, A_Inject, A_TYPES__Entity_Constructor, } from "@adaas/a-concept";
-import { A_Frame } from "@adaas/a-frame";
+import { A_Frame } from "@adaas/a-frame/core";
 import { A_Logger } from "@adaas/a-utils/a-logger";
 import { AreScene } from "@adaas/are/scene/AreScene.context";
 import { AreNode } from "@adaas/are/node/AreNode.entity";
@@ -9,9 +9,8 @@ import { AreAttributeFeatures } from "@adaas/are/attribute/AreAttribute.constant
 import { AreDeclaration } from "@adaas/are/instruction/types/AreDeclaration.instruction";
 
 
-@A_Frame.Component({
+@A_Frame.Define({
     namespace: 'A-ARE',
-    name: 'AreCompiler',
     description: 'Walks the transformed AreNode tree and emits a Scene. Translates each node, binding, directive and interpolation into a typed instruction. Knows nothing about the DOM or any rendering target — its only concern is producing a complete and ordered set of instructions that fully describes how the tree should be rendered.'
 })
 export class AreCompiler extends A_Component {

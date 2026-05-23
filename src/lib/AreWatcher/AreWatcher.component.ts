@@ -1,10 +1,9 @@
 import { A_Component, A_Concept } from "@adaas/a-concept";
-import { A_Frame } from "@adaas/a-frame";
+import { A_Frame } from "@adaas/a-frame/core";
 
-@A_Frame.Component({
+@A_Frame.Define({
     namespace: 'A-ARE',
-    name: 'AreWatcher',
-    description: 'AreWatcher is a component that observes changes and produces A_Signals Depending on the actual handlers'
+    description: 'Abstract base component that observes external changes and emits A_Signals to drive reactive updates within the ARE pipeline. Subclasses override init() to set up initial state and watch() to begin observing — for example, polling a data source, listening to DOM events, or subscribing to a store — and call the appropriate signal methods to notify the engine when a re-render is needed.'
 })
 export class AreWatcher extends A_Component {
 

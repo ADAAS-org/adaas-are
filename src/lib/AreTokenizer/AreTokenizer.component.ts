@@ -1,5 +1,5 @@
 import { A_Caller, A_Component, A_Context, A_Feature, A_Inject, A_Scope } from "@adaas/a-concept";
-import { A_Frame } from "@adaas/a-frame";
+import { A_Frame } from "@adaas/a-frame/core";
 import { AreNode } from "@adaas/are/node/AreNode.entity";
 import { AreSyntaxTokenMatch, AreSyntaxTokenRules } from "@adaas/are/syntax/AreSyntax.types";
 import { AreSyntax } from "@adaas/are/syntax/AreSyntax.context";
@@ -11,9 +11,8 @@ import { AreNodeFeatures } from "@adaas/are/node/AreNode.constants";
 import { A_Logger } from "@adaas/a-utils/a-logger";
 
 
-@A_Frame.Component({
+@A_Frame.Define({
     namespace: 'A-ARE',
-    name: 'AreTokenizer',
     description: 'AreTokenizer is responsible for scanning and tokenizing template source strings using the syntax rules defined in AreSyntax. It converts raw template strings into AreNode instances that represent the structured AST of the template, enabling downstream compilation and rendering within the ARE framework.'
 })
 export class AreTokenizer extends A_Component {

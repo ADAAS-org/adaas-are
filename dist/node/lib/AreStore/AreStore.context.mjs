@@ -1,6 +1,6 @@
 import { __decorateClass } from '../../chunk-EQQGB2QZ.mjs';
 import { A_Context } from '@adaas/a-concept';
-import { A_Frame } from '@adaas/a-frame';
+import { A_Frame } from '@adaas/a-frame/core';
 import { A_ExecutionContext } from '@adaas/a-utils/a-execution';
 import { AreStoreAreComponentMetaKeys } from './AreStore.constants';
 import { AreContext } from '@adaas/are/component/Are.context';
@@ -174,8 +174,9 @@ let AreStore = class extends A_ExecutionContext {
   }
 };
 AreStore = __decorateClass([
-  A_Frame.Fragment({
-    description: "Are Store uses to keep AreNode related information for interpolations, runtime data, etc. This object can be injected to manipulate with data at runtime."
+  A_Frame.Define({
+    namespace: "A-ARE",
+    description: "Runtime data store scoped to an AreNode. Holds interpolation values, dynamic data bindings, and any per-node state that components need to read or write during rendering. Can be injected into directives, attributes, and lifecycle handlers to share mutable data across the render pipeline without exposing it globally."
   })
 ], AreStore);
 

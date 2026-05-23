@@ -1,13 +1,13 @@
 import * as _adaas_a_concept from '@adaas/a-concept';
 import { A_TYPES__Entity_Serialized, A_Entity, A_Scope, A_TYPES__Fragment_Serialized, A_Fragment, ASEID, A_TYPES__Paths, A_TYPES__Entity_Constructor } from '@adaas/a-concept';
 import { A_SignalVector } from '@adaas/a-utils/a-signal';
-import { AreEvent } from './lib/AreEvent/AreEvent.context.js';
-import { AreStoreWatchingEntity, AreStorePathValue } from './lib/AreStore/AreStore.types.js';
-import { AreSceneStatuses } from './lib/AreScene/AreScene.constants.js';
-import { AreAttribute_Init, AreAttribute_Serialized } from './lib/AreAttribute/AreAttribute.types.js';
-import { Are } from './lib/AreComponent/Are.component.js';
+import { AreEvent } from './lib/AreEvent/AreEvent.context.mjs';
+import { AreStoreWatchingEntity, AreStorePathValue } from './lib/AreStore/AreStore.types.mjs';
+import { AreSceneStatuses } from './lib/AreScene/AreScene.constants.mjs';
+import { AreAttribute_Init, AreAttribute_Serialized } from './lib/AreAttribute/AreAttribute.types.mjs';
+import { Are } from './lib/AreComponent/Are.component.mjs';
 import { A_ExecutionContext } from '@adaas/a-utils/a-execution';
-import { AreNodeStatuses, AreNodeFeatures } from './lib/AreNode/AreNode.constants.js';
+import { AreNodeStatuses, AreNodeFeatures } from './lib/AreNode/AreNode.constants.mjs';
 
 type AreInstructionNewProps<T extends any = Record<string, any>> = {
     /**
@@ -67,6 +67,7 @@ type AreInstructionSerialized<T extends any = Record<string, any>> = {
 } & A_TYPES__Entity_Serialized;
 
 declare class AreInstruction<T extends Record<string, any> = Record<string, any>, S extends AreInstructionSerialized<T> = AreInstructionSerialized<T>> extends A_Entity<AreInstructionNewProps<T>, S> implements AreStoreWatchingEntity {
+    static get concept(): string;
     /**
      * The name of the instruction, for example "CreateElement", "AddAttribute", "RemoveNode", etc. This is used to identify the type of the instruction and how to process it. The name should be in PascalCase format, and should be unique across all instruction types. It is recommended to use a prefix that indicates the category of the instruction, for example "CreateElement" for instructions that create new elements, "UpdateAttribute" for instructions that update attributes, etc.
      */
@@ -401,6 +402,7 @@ declare class AreScene extends A_Fragment {
 }
 
 declare class AreAttribute extends A_Entity<AreAttribute_Init, AreAttribute_Serialized> {
+    static get concept(): string;
     /**
      * Property name (e.g. "label")
      */
@@ -599,6 +601,7 @@ type AreNodeFeatureNames = typeof AreNodeFeatures[keyof typeof AreNodeFeatures];
 type AreNodeStatusNames = typeof AreNodeStatuses[keyof typeof AreNodeStatuses];
 
 declare class AreNode extends A_Entity<AreNodeNewProps> {
+    static get concept(): string;
     /**
      * The current status of the node, which can be used to track the lifecycle and rendering state of the node within the scene.
      */

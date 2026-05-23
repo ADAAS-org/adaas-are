@@ -1,6 +1,6 @@
 import { __decorateClass, __decorateParam } from '../../chunk-EQQGB2QZ.mjs';
 import { A_Feature, A_Inject, A_Caller, A_Scope, A_Component } from '@adaas/a-concept';
-import { A_Frame } from '@adaas/a-frame';
+import { A_Frame } from '@adaas/a-frame/core';
 import { AreNode } from '@adaas/are/node/AreNode.entity';
 import { AreNodeFeatures } from '@adaas/are/node/AreNode.constants';
 import { AreScene } from '@adaas/are/scene/AreScene.context';
@@ -28,7 +28,8 @@ __decorateClass([
   __decorateParam(2, A_Inject(AreScene))
 ], AreTransformer.prototype, "transform", 1);
 AreTransformer = __decorateClass([
-  A_Frame.Component({
+  A_Frame.Define({
+    namespace: "A-ARE",
     description: "Reshapes the AreNode tree before compilation without changing its abstraction level. Responsible for structural rewrites that would complicate the compiler if left unhandled \u2014 converting $for nodes into AreGroupNode, extracting AreText and AreInterpolation from raw text, sorting directives via TopologicalSorter, and flagging static nodes."
   })
 ], AreTransformer);

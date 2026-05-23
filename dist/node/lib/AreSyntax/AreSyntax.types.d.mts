@@ -1,5 +1,5 @@
 import '@adaas/a-concept';
-export { p as AreSyntaxCompiledExpression, q as AreSyntaxInitOptions, r as AreSyntaxTokenMatch, s as AreSyntaxTokenPayload, t as AreSyntaxTokenRules } from '../../Are.context-D7w32H1G.mjs';
+export { p as AreSyntaxCompiledExpression, q as AreSyntaxInitOptions, r as AreSyntaxTokenMatch, s as AreSyntaxTokenPayload, t as AreSyntaxTokenRules } from '../../Are.context-D19qgRl8.mjs';
 import '@adaas/a-utils/a-signal';
 import '../AreEvent/AreEvent.context.mjs';
 import '@adaas/a-utils/a-execution';

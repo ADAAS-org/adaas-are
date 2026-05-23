@@ -1,6 +1,6 @@
 import { __decorateClass } from '../../chunk-EQQGB2QZ.mjs';
 import { A_Fragment, A_Context } from '@adaas/a-concept';
-import { A_Frame } from '@adaas/a-frame';
+import { A_Frame } from '@adaas/a-frame/core';
 import { A_SignalVector } from '@adaas/a-utils/a-signal';
 import { AreSignals } from './AreSignals.component';
 
@@ -136,7 +136,8 @@ let AreSignalsContext = class extends A_Fragment {
   }
 };
 AreSignalsContext = __decorateClass([
-  A_Frame.Fragment({
+  A_Frame.Define({
+    namespace: "A-ARE",
     description: "AreSignalsContext is a fragment that manages the set of root nodes subscribed to the signal bus. It tracks which Are components should receive signal vectors from AreSignals and provides the subscriber registry used during signal dispatch."
   })
 ], AreSignalsContext);

@@ -1,6 +1,6 @@
 import { __decorateClass, __decorateParam } from '../../chunk-EQQGB2QZ.mjs';
 import { A_Feature, A_Inject, A_Caller, A_Scope, A_TYPES__EntityFeatures, A_Component } from '@adaas/a-concept';
-import { A_Frame } from '@adaas/a-frame';
+import { A_Frame } from '@adaas/a-frame/core';
 import { AreScene } from '@adaas/are/scene/AreScene.context';
 import { AreNode } from '@adaas/are/node/AreNode.entity';
 import { AreNodeFeatures } from '@adaas/are/node/AreNode.constants';
@@ -329,7 +329,8 @@ __decorateClass([
   __decorateParam(2, A_Inject(A_Feature))
 ], AreLifecycle.prototype, "afterDestroy", 1);
 AreLifecycle = __decorateClass([
-  A_Frame.Component({
+  A_Frame.Define({
+    namespace: "A-ARE",
     description: "Handles the lifecycle of the AreNode and related entities such as interpolations, directives, attributes, and so on. It provides lifecycle hooks for initialization, mounting, updating, and unmounting of the nodes, allowing to manage the state and behavior of the nodes throughout their lifecycle in a structured and consistent way."
   })
 ], AreLifecycle);

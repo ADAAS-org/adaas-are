@@ -1,7 +1,7 @@
 'use strict';
 
 var aConcept = require('@adaas/a-concept');
-var aFrame = require('@adaas/a-frame');
+var core = require('@adaas/a-frame/core');
 var AreInstruction_constants = require('./AreInstruction.constants');
 
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -13,6 +13,9 @@ var __decorateClass = (decorators, target, key, kind) => {
   return result;
 };
 exports.AreInstruction = class AreInstruction extends aConcept.A_Entity {
+  static get concept() {
+    return "are";
+  }
   /**
    * The name of the instruction, for example "CreateElement", "AddAttribute", "RemoveNode", etc. This is used to identify the type of the instruction and how to process it. The name should be in PascalCase format, and should be unique across all instruction types. It is recommended to use a prefix that indicates the category of the instruction, for example "CreateElement" for instructions that create new elements, "UpdateAttribute" for instructions that update attributes, etc.
    */
@@ -142,9 +145,8 @@ exports.AreInstruction = class AreInstruction extends aConcept.A_Entity {
   }
 };
 exports.AreInstruction = __decorateClass([
-  aFrame.A_Frame.Entity({
+  core.A_Frame.Define({
     namespace: "A-ARE",
-    name: "AreInstruction",
     description: "AreInstruction is the base entity for all rendering instructions in the ARE framework. It represents a serializable, reversible operation (such as creating or mutating a DOM element) that can be applied to and tracked within the AreScene, enabling deterministic rendering and undo/redo capabilities."
   })
 ], exports.AreInstruction);

@@ -1,6 +1,6 @@
 import { __decorateClass } from '../../chunk-EQQGB2QZ.mjs';
 import { A_Meta, A_Component, A_Context, A_Feature } from '@adaas/a-concept';
-import { A_Frame } from '@adaas/a-frame';
+import { A_Frame } from '@adaas/a-frame/core';
 import { A_SignalVector } from '@adaas/a-utils/a-signal';
 import { AreSignals } from '@adaas/are/signals/AreSignals.component';
 import { AreMeta } from './Are.meta';
@@ -202,9 +202,8 @@ __decorateClass([
   Are.Data
 ], Are.prototype, "data", 1);
 Are = __decorateClass([
-  A_Frame.Component({
+  A_Frame.Define({
     namespace: "A-ARE",
-    name: "Are",
     description: "Base component class for A-Concept Rendering Engine (ARE) components. It provides lifecycle decorators and methods for defining templates, styles, and data, facilitating the creation of dynamic and interactive UI components within the ARE framework."
   }),
   A_Meta.Define(AreMeta)

@@ -1,7 +1,7 @@
 'use strict';
 
 var aConcept = require('@adaas/a-concept');
-var aFrame = require('@adaas/a-frame');
+var core = require('@adaas/a-frame/core');
 var AreScene_context = require('@adaas/are/scene/AreScene.context');
 var AreNode_entity = require('@adaas/are/node/AreNode.entity');
 var AreNode_constants = require('@adaas/are/node/AreNode.constants');
@@ -156,7 +156,8 @@ __decorateClass([
   __decorateParam(4, aConcept.A_Inject(aConcept.A_Feature))
 ], exports.AreInterpreter.prototype, "revertInstruction", 1);
 exports.AreInterpreter = __decorateClass([
-  aFrame.A_Frame.Component({
+  core.A_Frame.Define({
+    namespace: "A-ARE",
     description: "Stateless executor that reads the Scene and translates its instructions into operations on a rendering target. Computes the diff between applied and planned, calls revert on removed instructions and apply on added ones. Owns no state of its own \u2014 all state lives in the Scene. Can be swapped for any target implementation (DOMInterpreter, SSRInterpreter, CanvasInterpreter) without touching any other part of the pipeline."
   })
 ], exports.AreInterpreter);

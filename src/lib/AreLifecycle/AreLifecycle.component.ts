@@ -1,5 +1,5 @@
 import { A_Caller, A_Component, A_Dependency, A_Feature, A_Inject, A_Scope, A_TYPES__Entity_Constructor, A_TYPES__EntityFeatures } from "@adaas/a-concept";
-import { A_Frame } from "@adaas/a-frame";
+import { A_Frame } from "@adaas/a-frame/core";
 import { AreScene } from "@adaas/are/scene/AreScene.context";
 import { AreNode } from "@adaas/are/node/AreNode.entity";
 import { AreNodeFeatures } from "@adaas/are/node/AreNode.constants";
@@ -13,7 +13,8 @@ import { AreContext } from "@adaas/are/component/Are.context";
 
 
 
-@A_Frame.Component({
+@A_Frame.Define({
+    namespace: 'A-ARE',
     description: 'Handles the lifecycle of the AreNode and related entities such as interpolations, directives, attributes, and so on. It provides lifecycle hooks for initialization, mounting, updating, and unmounting of the nodes, allowing to manage the state and behavior of the nodes throughout their lifecycle in a structured and consistent way.'
 })
 export class AreLifecycle extends A_Component {
