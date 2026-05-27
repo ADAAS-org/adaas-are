@@ -2756,9 +2756,6 @@ var AreLifecycle = class extends A_Component {
       if (scene.isInactive)
         continue;
       const { toApply, toRevert } = scene.changes;
-      console.log(" -- Scene Changes -- ");
-      console.log("To Apply: ", toApply);
-      console.log("To Revert: ", toRevert);
       for (const instruction of toRevert) {
         try {
           instruction.revert();
@@ -2773,7 +2770,6 @@ var AreLifecycle = class extends A_Component {
           instruction.apply();
           scene.apply(instruction);
         } catch (error) {
-          console.log("WTF?? ", error);
           instruction.revert();
           scene.unApply(instruction);
         }

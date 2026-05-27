@@ -366,10 +366,6 @@ export class AreLifecycle extends A_Component {
              */
             const { toApply, toRevert } = scene.changes
 
-
-            console.log(' -- Scene Changes -- ');
-            console.log('To Apply: ', toApply);
-            console.log('To Revert: ', toRevert);
             /**
              * 2. Then we need to revert all instructions from scene
              */
@@ -393,8 +389,6 @@ export class AreLifecycle extends A_Component {
                     instruction.apply();
                     scene.apply(instruction);
                 } catch (error) {
-                    console.log('WTF?? ', error);
-
                     /**
                      * 2.2. if any error happened we simply revert the instruction and remove it from the state
                      */
