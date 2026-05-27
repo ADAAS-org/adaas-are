@@ -1673,6 +1673,36 @@ declare class AreSignals extends A_Component {
      * @param args
      */
     propagateEvent(node: AreNode, scope: A_Scope, event: AreEvent, feature: A_Feature, logger?: A_Logger, ...args: any[]): Promise<void>;
+    /**
+     * Notifies all mounted nodes whose component is exactly the specified constructor
+     * (strict match — subclasses are excluded).
+     *
+     * @param ctor  - The Are component constructor to target
+     * @param event - The event to emit to all matching nodes
+     */
+    notifyExact<T extends Are>(ctor: A_TYPES__Ctor<T>, event: AreEvent): Promise<void>;
+    /**
+     * Notifies all mounted nodes whose component is an instance of the specified
+     * constructor, including nodes backed by subclasses (polymorphic match).
+     *
+     * @param ctor  - The Are component constructor to target
+     * @param event - The event to emit to all matching nodes
+     */
+    notifyAll<T extends Are>(ctor: A_TYPES__Ctor<T>, event: AreEvent): Promise<void>;
+    /**
+     * Notifies all mounted nodes whose component matches the specified constructor.
+     *
+     * By default uses polymorphic matching (includes subclasses). Pass `{ exact: true }`
+     * to restrict to the exact constructor only.
+     *
+     * @param ctor    - The Are component constructor to target
+     * @param event   - The event to emit to all matching nodes
+     * @param options - `exact`: when true, subclasses are excluded (defaults to false)
+     */
+    notify<T extends Are>(ctor: A_TYPES__Ctor<T>, event: AreEvent, options?: {
+        exact?: boolean;
+    }): Promise<void>;
+    protected traverseAndNotify(node: AreNode, event: AreEvent, match: (component: Are) => boolean): Promise<void>;
 }
 
 type AreEngineDependencies = {

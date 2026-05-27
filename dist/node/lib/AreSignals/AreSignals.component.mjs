@@ -1,7 +1,8 @@
 import { __decorateClass, __decorateParam } from '../../chunk-EQQGB2QZ.mjs';
-import { A_Feature, A_Inject, A_Scope, A_Caller, A_Meta, A_Component } from '@adaas/a-concept';
+import { A_Feature, A_Inject, A_Scope, A_Caller, A_Meta, A_Component, A_Context } from '@adaas/a-concept';
 import { A_SignalBusFeatures, A_SignalVector, A_SignalState } from '@adaas/a-utils/a-signal';
 import { A_Logger } from '@adaas/a-utils/a-logger';
+import { AreContext } from '@adaas/are/component/Are.context';
 import { AreFeatures } from '@adaas/are/component/Are.constants';
 import { AreNode } from '@adaas/are/node/AreNode.entity';
 import { AreNodeFeatures } from '@adaas/are/node/AreNode.constants';
@@ -43,6 +44,61 @@ let AreSignals = class extends A_Component {
     }
     if (target.component)
       await feature.chain(target.component, event.name, scope);
+  }
+  // -----------------------------------------------------------------------------------------
+  // ----------------------------Are-Component Notify Section---------------------------------
+  // -----------------------------------------------------------------------------------------
+  /**
+   * Notifies all mounted nodes whose component is exactly the specified constructor
+   * (strict match — subclasses are excluded).
+   *
+   * @param ctor  - The Are component constructor to target
+   * @param event - The event to emit to all matching nodes
+   */
+  async notifyExact(ctor, event) {
+    const context = A_Context.scope(this).resolve(AreContext);
+    if (!context) return;
+    for (const root of context.roots) {
+      await this.traverseAndNotify(root, event, (component) => component.constructor === ctor);
+    }
+  }
+  /**
+   * Notifies all mounted nodes whose component is an instance of the specified
+   * constructor, including nodes backed by subclasses (polymorphic match).
+   *
+   * @param ctor  - The Are component constructor to target
+   * @param event - The event to emit to all matching nodes
+   */
+  async notifyAll(ctor, event) {
+    const context = A_Context.scope(this).resolve(AreContext);
+    if (!context) return;
+    for (const root of context.roots) {
+      await this.traverseAndNotify(root, event, (component) => component instanceof ctor);
+    }
+  }
+  /**
+   * Notifies all mounted nodes whose component matches the specified constructor.
+   * 
+   * By default uses polymorphic matching (includes subclasses). Pass `{ exact: true }`
+   * to restrict to the exact constructor only.
+   *
+   * @param ctor    - The Are component constructor to target
+   * @param event   - The event to emit to all matching nodes
+   * @param options - `exact`: when true, subclasses are excluded (defaults to false)
+   */
+  async notify(ctor, event, options) {
+    if (options?.exact) {
+      return this.notifyExact(ctor, event);
+    }
+    return this.notifyAll(ctor, event);
+  }
+  async traverseAndNotify(node, event, match) {
+    if (node.component && match(node.component)) {
+      await node.emit(event);
+    }
+    for (const child of node.children) {
+      await this.traverseAndNotify(child, event, match);
+    }
   }
 };
 __decorateClass([

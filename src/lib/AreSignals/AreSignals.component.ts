@@ -1,4 +1,4 @@
-import { A_Caller, A_Component, A_Feature, A_Inject, A_Meta, A_Scope } from "@adaas/a-concept";
+import { A_Caller, A_Component, A_Context, A_Feature, A_Inject, A_Meta, A_Scope, A_TYPES__Ctor } from "@adaas/a-concept";
 import { A_SignalBusFeatures, A_SignalState, A_SignalVector } from "@adaas/a-utils/a-signal";
 import { A_Logger } from "@adaas/a-utils/a-logger";
 import { AreContext } from "@adaas/are/component/Are.context";
@@ -9,6 +9,7 @@ import { AreEvent } from "@adaas/are/event/AreEvent.context";
 import { A_Frame } from "@adaas/a-frame/core";
 import { AreSignalsMeta } from "./AreSignals.meta";
 import { AreSignalsContext } from "./AreSignals.context";
+import { Are } from "@adaas/are/component/Are.component";
 
 
 
@@ -93,5 +94,84 @@ export class AreSignals extends A_Component {
 
         if (target.component)
             await feature.chain(target.component, event.name, scope);
+    }
+
+
+    // -----------------------------------------------------------------------------------------
+    // ----------------------------Are-Component Notify Section---------------------------------
+    // -----------------------------------------------------------------------------------------
+    /**
+     * Notifies all mounted nodes whose component is exactly the specified constructor
+     * (strict match — subclasses are excluded).
+     *
+     * @param ctor  - The Are component constructor to target
+     * @param event - The event to emit to all matching nodes
+     */
+    async notifyExact<T extends Are>(
+        ctor: A_TYPES__Ctor<T>,
+        event: AreEvent,
+    ): Promise<void> {
+        const context = A_Context.scope(this).resolve(AreContext);
+
+        if (!context) return;
+
+        for (const root of context.roots) {
+            await this.traverseAndNotify(root, event, (component) => component.constructor === ctor);
+        }
+    }
+
+    /**
+     * Notifies all mounted nodes whose component is an instance of the specified
+     * constructor, including nodes backed by subclasses (polymorphic match).
+     *
+     * @param ctor  - The Are component constructor to target
+     * @param event - The event to emit to all matching nodes
+     */
+    async notifyAll<T extends Are>(
+        ctor: A_TYPES__Ctor<T>,
+        event: AreEvent,
+    ): Promise<void> {
+        const context = A_Context.scope(this).resolve(AreContext);
+
+        if (!context) return;
+
+        for (const root of context.roots) {
+            await this.traverseAndNotify(root, event, (component) => component instanceof ctor);
+        }
+    }
+
+    /**
+     * Notifies all mounted nodes whose component matches the specified constructor.
+     * 
+     * By default uses polymorphic matching (includes subclasses). Pass `{ exact: true }`
+     * to restrict to the exact constructor only.
+     *
+     * @param ctor    - The Are component constructor to target
+     * @param event   - The event to emit to all matching nodes
+     * @param options - `exact`: when true, subclasses are excluded (defaults to false)
+     */
+    async notify<T extends Are>(
+        ctor: A_TYPES__Ctor<T>,
+        event: AreEvent,
+        options?: { exact?: boolean },
+    ): Promise<void> {
+        if (options?.exact) {
+            return this.notifyExact(ctor, event);
+        }
+        return this.notifyAll(ctor, event);
+    }
+
+    protected async traverseAndNotify(
+        node: AreNode,
+        event: AreEvent,
+        match: (component: Are) => boolean,
+    ): Promise<void> {
+        if (node.component && match(node.component)) {
+            await node.emit(event);
+        }
+
+        for (const child of node.children) {
+            await this.traverseAndNotify(child, event, match);
+        }
     }
 }
