@@ -57,9 +57,13 @@ export class AreSyntax extends A_Fragment {
         'alert', 'confirm', 'prompt',
     ])
     /**
-     * Regex pattern that defines the allowed characters in expressions. This pattern allows letters, digits, whitespace, and common operators and punctuation used in JavaScript expressions. Expressions containing characters that do not match this pattern will be rejected during validation to prevent injection of potentially harmful code.
+     * Regex pattern that defines the allowed characters in expressions. This pattern allows ASCII
+     * operator/punctuation characters used in JavaScript expressions, plus any Unicode letter,
+     * number, mark, symbol or emoji that can legitimately appear inside a string literal.
+     * Dangerous constructs are caught by BLOCKED_PATTERNS; this guard exists only to reject
+     * clearly-invalid byte sequences (e.g. raw null bytes, control characters).
      */
-    private readonly ALLOWED_CHARS = /^[\w\s\d\.\[\]()=><|&!+\-*/%?:,'"`;~^$]+$/
+    private readonly ALLOWED_CHARS = /^[\w\s\d\.\[\]()=><|&!+\-*/%?:,'"`;~^$\p{L}\p{N}\p{M}\p{S}\p{Emoji}]+$/u
     /**
      * Simple dot-path identifier pattern (e.g. "name", "user.name", "user.profile.name").
      * Matches strings that consist solely of identifier characters separated by dots.
