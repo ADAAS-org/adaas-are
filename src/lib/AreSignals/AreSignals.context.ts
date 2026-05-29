@@ -148,6 +148,7 @@ export class AreSignalsContext<
      * @param vector  The incoming signal vector from the bus.
      */
     findComponentByVector(rootId: string, vector: A_SignalVector): A_TYPES__Ctor<T> | undefined {
+        if (!vector) return undefined;
         const conditions = this._conditionsMap.get(rootId) || [];
 
         for (const condition of conditions) {

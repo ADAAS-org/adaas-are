@@ -24,8 +24,7 @@ export class AreSignalsMeta extends A_ComponentMeta<{
     }
 
 
-    findComponentByVector(vector: A_SignalVector): A_TYPES__Ctor<Are> | undefined {
-
+    findComponentByVector(vector: A_SignalVector): A_TYPES__Ctor<Are> | undefined {        if (!vector) return undefined;
         /**
          * 1. try simple lookup
          */

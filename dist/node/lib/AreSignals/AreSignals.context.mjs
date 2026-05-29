@@ -104,6 +104,7 @@ let AreSignalsContext = class extends A_Fragment {
    * @param vector  The incoming signal vector from the bus.
    */
   findComponentByVector(rootId, vector) {
+    if (!vector) return void 0;
     const conditions = this._conditionsMap.get(rootId) || [];
     for (const condition of conditions) {
       const conditionVector = new A_SignalVector(condition.vector);

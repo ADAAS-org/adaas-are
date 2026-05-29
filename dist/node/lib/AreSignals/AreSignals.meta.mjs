@@ -14,6 +14,7 @@ class AreSignalsMeta extends A_ComponentMeta {
     this.set("componentToVector", componentToVector);
   }
   findComponentByVector(vector) {
+    if (!vector) return void 0;
     const vectorToComponent = this.get("vectorToComponent");
     if (vectorToComponent) {
       const component = vectorToComponent.get(vector);
