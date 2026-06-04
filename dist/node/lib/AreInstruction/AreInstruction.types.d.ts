@@ -1,5 +1,5 @@
 import '@adaas/a-concept';
-export { d as AreInstructionNewProps, e as AreInstructionSerialized } from '../../Are.context-CLpFZLEm.js';
+export { d as AreInstructionNewProps, e as AreInstructionSerialized } from '../../Are.context-DIyrZVQS.js';
 import '@adaas/a-utils/a-signal';
 import '../AreEvent/AreEvent.context.js';
 import '@adaas/a-utils/a-execution';

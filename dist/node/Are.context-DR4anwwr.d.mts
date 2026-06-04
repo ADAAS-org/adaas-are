@@ -491,11 +491,30 @@ declare class AreStore<T extends Record<string, any> = Record<string, any>> exte
     get keys(): Set<keyof T>;
     watch(instruction: AreStoreWatchingEntity): void;
     unwatch(instruction: AreStoreWatchingEntity): void;
+    /**
+     * Remove a key (or nested path) from the store and notify every watcher
+     * registered against that path — same ancestor/descendant matching rules
+     * as {@link set}. Falls through to `A_ExecutionContext.drop()` for the
+     * underlying meta cleanup so dependent renders re-evaluate against the
+     * now-missing value.
+     */
+    drop<P extends A_TYPES__Paths<T>>(key: P | keyof T): void;
     set<K extends keyof T>(values: Partial<T>): this;
     set<P extends A_TYPES__Paths<T>>(key: P, value: AreStorePathValue<T, P>): this;
     get<K extends keyof T>(key: K): T[K] | undefined;
     protected setAsObject(values: Partial<T>): this;
     protected setAsKeyValue<K extends keyof T, P extends A_TYPES__Paths<T>>(key: K | P, value: T[K] | AreStorePathValue<T, P>): this;
+    /**
+     * Force a re-notification of every registered watcher, bypassing the
+     * usual key/path dependency tracking. Useful when external state
+     * (entities, lists, services) has mutated in place and the store
+     * has no way to detect the change through `set()`.
+     *
+     * If `key` is provided, only watchers registered against that key
+     * (or any of its ancestor/descendant paths — same rules as `set()`)
+     * are notified.
+     */
+    forceUpdate<P extends A_TYPES__Paths<T>>(key?: P | keyof T | string): this;
     /**
      * Notifies instructions — immediately or deferred if inside a batch.
      */
