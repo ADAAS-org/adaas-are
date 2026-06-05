@@ -13,28 +13,45 @@ class AreSignalsMeta extends A_ComponentMeta {
     this.set("vectorToComponent", vectorToComponent);
     this.set("componentToVector", componentToVector);
   }
-  findComponentByVector(vector) {
+  /**
+   * Finds the best registered component whose condition vector matches the
+   * provided signal vector.
+   *
+   * An optional `allowed` set restricts the search to specific component
+   * constructors — used by outlets that maintain a pool of admissible
+   * components. This prevents a globally-registered component from another
+   * outlet (whose condition happens to match the same signals) from being
+   * returned and then rejected by the caller, which would otherwise mask a
+   * lower-priority but pool-eligible match.
+   *
+   * @param vector   The incoming signal vector.
+   * @param allowed  Optional set/array of component constructors to consider.
+   *                 When omitted, every registered component is eligible.
+   */
+  findComponentByVector(vector, allowed) {
     if (!vector) return void 0;
+    const allowedSet = allowed ? allowed instanceof Set ? allowed : new Set(allowed) : void 0;
+    const isAllowed = (component) => !allowedSet || allowedSet.has(component);
     const vectorToComponent = this.get("vectorToComponent");
     if (vectorToComponent) {
       const component = vectorToComponent.get(vector);
-      if (component) {
+      if (component && isAllowed(component)) {
         return component;
       }
     }
     if (vectorToComponent) {
       for (const [registeredVector, component] of vectorToComponent.entries()) {
-        if (vector.equals(registeredVector)) {
+        if (isAllowed(component) && vector.equals(registeredVector)) {
           return component;
         }
       }
       for (const [registeredVector, component] of vectorToComponent.entries()) {
-        if (vector.match(registeredVector)) {
+        if (isAllowed(component) && vector.match(registeredVector)) {
           return component;
         }
       }
       for (const [registeredVector, component] of vectorToComponent.entries()) {
-        if (vector.includes(registeredVector)) {
+        if (isAllowed(component) && vector.includes(registeredVector)) {
           return component;
         }
       }

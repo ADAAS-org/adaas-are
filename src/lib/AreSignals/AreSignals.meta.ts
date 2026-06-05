@@ -24,7 +24,36 @@ export class AreSignalsMeta extends A_ComponentMeta<{
     }
 
 
-    findComponentByVector(vector: A_SignalVector): A_TYPES__Ctor<Are> | undefined {        if (!vector) return undefined;
+    /**
+     * Finds the best registered component whose condition vector matches the
+     * provided signal vector.
+     *
+     * An optional `allowed` set restricts the search to specific component
+     * constructors — used by outlets that maintain a pool of admissible
+     * components. This prevents a globally-registered component from another
+     * outlet (whose condition happens to match the same signals) from being
+     * returned and then rejected by the caller, which would otherwise mask a
+     * lower-priority but pool-eligible match.
+     *
+     * @param vector   The incoming signal vector.
+     * @param allowed  Optional set/array of component constructors to consider.
+     *                 When omitted, every registered component is eligible.
+     */
+    findComponentByVector(
+        vector: A_SignalVector,
+        allowed?: ReadonlySet<A_TYPES__Ctor<Are>> | ReadonlyArray<A_TYPES__Ctor<Are>>
+    ): A_TYPES__Ctor<Are> | undefined {
+        if (!vector) return undefined;
+
+        const allowedSet = allowed
+            ? (allowed instanceof Set
+                ? allowed
+                : new Set<A_TYPES__Ctor<Are>>(allowed as ReadonlyArray<A_TYPES__Ctor<Are>>))
+            : undefined;
+
+        const isAllowed = (component: A_TYPES__Ctor<Are>): boolean =>
+            !allowedSet || allowedSet.has(component);
+
         /**
          * 1. try simple lookup
          */
@@ -32,7 +61,7 @@ export class AreSignalsMeta extends A_ComponentMeta<{
 
         if (vectorToComponent) {
             const component = vectorToComponent.get(vector);
-            if (component) {
+            if (component && isAllowed(component)) {
                 return component;
             }
         }
@@ -46,7 +75,7 @@ export class AreSignalsMeta extends A_ComponentMeta<{
              * 2.1 Priority 1: Full Equivalence - find a component whose registered vector is fully equivalent to the provided vector (i.e., all signals match in type and data).
              */
             for (const [registeredVector, component] of vectorToComponent.entries()) {
-                if (vector.equals(registeredVector)) {
+                if (isAllowed(component) && vector.equals(registeredVector)) {
                     return component;
                 }
             }
@@ -54,7 +83,7 @@ export class AreSignalsMeta extends A_ComponentMeta<{
              * 2.2 Priority 2: Logical Match - find a component whose registered vector logically matches the provided vector (i.e., all signals match in type and data, but order may differ).
              */
             for (const [registeredVector, component] of vectorToComponent.entries()) {
-                if (vector.match(registeredVector)) {
+                if (isAllowed(component) && vector.match(registeredVector)) {
                     return component;
                 }
             }
@@ -62,7 +91,7 @@ export class AreSignalsMeta extends A_ComponentMeta<{
              * 2.3 Priority 3: Inclusion - find a component whose registered vector includes all signals from the provided vector (i.e., the provided vector is a subset of the registered vector).
              */
             for (const [registeredVector, component] of vectorToComponent.entries()) {
-                if (vector.includes(registeredVector)) {
+                if (isAllowed(component) && vector.includes(registeredVector)) {
                     return component;
                 }
             }
