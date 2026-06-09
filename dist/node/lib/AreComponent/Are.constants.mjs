@@ -58,7 +58,11 @@ const AreFeatures = {
   //=================================================================================== 
   onSignal: "_Are_onSignal"
 };
+function AreSignalFeatureKey(ctor) {
+  const key = ctor.entity || ctor.name;
+  return `${AreFeatures.onSignal}:${key}`;
+}
 
-export { AreFeatures };
+export { AreFeatures, AreSignalFeatureKey };
 //# sourceMappingURL=Are.constants.mjs.map
 //# sourceMappingURL=Are.constants.mjs.map

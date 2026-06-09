@@ -44,5 +44,18 @@ declare const AreFeatures: {
     readonly onData: "_Are_onData";
     readonly onSignal: "_Are_onSignal";
 };
+/**
+ * Derives the per-signal-type feature key used by `@Are.Signal(SignalCtor)`
+ * typed handlers. Composed from the generic `onSignal` feature name plus the
+ * signal class's stable identifier (`entity` static getter from A_Entity, with
+ * a `.name` fallback for plain classes). The colon-delimited key is matched
+ * by name on the component's feature registry, so the typed handler is
+ * dispatched only when the runtime emits an event with the same composed
+ * name.
+ */
+declare function AreSignalFeatureKey(ctor: {
+    entity?: string;
+    name: string;
+}): string;
 
-export { AreFeatures };
+export { AreFeatures, AreSignalFeatureKey };

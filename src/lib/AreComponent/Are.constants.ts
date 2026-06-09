@@ -57,3 +57,20 @@ export const AreFeatures = {
     //=================================================================================== 
     onSignal: '_Are_onSignal',
 } as const;
+
+
+/**
+ * Derives the per-signal-type feature key used by `@Are.Signal(SignalCtor)`
+ * typed handlers. Composed from the generic `onSignal` feature name plus the
+ * signal class's stable identifier (`entity` static getter from A_Entity, with
+ * a `.name` fallback for plain classes). The colon-delimited key is matched
+ * by name on the component's feature registry, so the typed handler is
+ * dispatched only when the runtime emits an event with the same composed
+ * name.
+ */
+export function AreSignalFeatureKey(
+    ctor: { entity?: string; name: string }
+): string {
+    const key = ctor.entity || ctor.name;
+    return `${AreFeatures.onSignal}:${key}`;
+}

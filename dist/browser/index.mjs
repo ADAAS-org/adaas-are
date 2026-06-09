@@ -195,6 +195,10 @@ var AreFeatures = {
   //=================================================================================== 
   onSignal: "_Are_onSignal"
 };
+function AreSignalFeatureKey(ctor) {
+  const key = ctor.entity || ctor.name;
+  return `${AreFeatures.onSignal}:${key}`;
+}
 
 // src/lib/AreInstruction/AreInstruction.constants.ts
 var AreInstructionFeatures = {
@@ -1603,6 +1607,19 @@ var AreSignals = class extends A_Component {
         logger?.debug("Emitting signal for root node:", vector);
         await root.emit(callScope);
         callScope.destroy();
+        for (const signal of vector) {
+          if (!signal) continue;
+          const ctor = signal.constructor;
+          const typedFeatureName = AreSignalFeatureKey(ctor);
+          const typedScope = new A_Scope({
+            fragments: [new AreEvent(typedFeatureName, {
+              vector,
+              signal
+            })]
+          }).import(scope, root.scope);
+          await root.emit(typedScope);
+          typedScope.destroy();
+        }
       }
     } catch (error) {
       logger?.error(error);
@@ -1877,13 +1894,19 @@ var Are = class extends A_Component {
       })(target, propertyKey, descriptor);
     };
   }
-  /**
-   * Allows to define a custom method for handling signals emitted by the component or other parts of the application. This method can be used to implement custom logic for responding to specific signals, such as user interactions, state changes, or other events that may affect the component's behavior or appearance. By defining this method, developers can create more dynamic and interactive components that can react to changes in the application state or user input in a flexible and efficient way.
-   */
-  static get Signal() {
-    return (target, propertyKey, descriptor) => {
+  static Signal(...args) {
+    if (args.length >= 3 && typeof args[1] === "string") {
+      const [target, propertyKey, descriptor] = args;
       return A_Feature.Extend({
         name: AreFeatures.onSignal,
+        scope: [target.constructor]
+      })(target, propertyKey, descriptor);
+    }
+    const ctor = args[0];
+    const featureName = AreSignalFeatureKey(ctor);
+    return function(target, propertyKey, descriptor) {
+      return A_Feature.Extend({
+        name: featureName,
         scope: [target.constructor]
       })(target, propertyKey, descriptor);
     };
@@ -3627,6 +3650,6 @@ var AreRoute = class _AreRoute extends AreSignal {
   }
 };
 
-export { Are, AreAttribute, AreAttributeFeatures, AreCompiler, AreCompilerError, AreContainer, AreContext, AreDeclaration, AreEngine, AreEngineError, AreEngineFeatures, AreEvent, AreFeatures, AreInit, AreInstruction, AreInstructionDefaultNames, AreInstructionError, AreInstructionFeatures, AreInterpreter, AreInterpreterError, AreLifecycle, AreLifecycleError, AreLoader, AreLoaderError, AreMutation, AreNode, AreNodeFeatures, AreNodeStatuses, AreRoute, AreScene, AreSceneError, AreSceneStatuses, AreSignal, AreSignals, AreSignalsContext, AreSignalsMeta, AreStore, AreStoreAreComponentMetaKeys, AreSyntax, AreSyntaxError, AreTokenizer, AreTokenizerError, AreTransformer, AreWatcher };
+export { Are, AreAttribute, AreAttributeFeatures, AreCompiler, AreCompilerError, AreContainer, AreContext, AreDeclaration, AreEngine, AreEngineError, AreEngineFeatures, AreEvent, AreFeatures, AreInit, AreInstruction, AreInstructionDefaultNames, AreInstructionError, AreInstructionFeatures, AreInterpreter, AreInterpreterError, AreLifecycle, AreLifecycleError, AreLoader, AreLoaderError, AreMutation, AreNode, AreNodeFeatures, AreNodeStatuses, AreRoute, AreScene, AreSceneError, AreSceneStatuses, AreSignal, AreSignalFeatureKey, AreSignals, AreSignalsContext, AreSignalsMeta, AreStore, AreStoreAreComponentMetaKeys, AreSyntax, AreSyntaxError, AreTokenizer, AreTokenizerError, AreTransformer, AreWatcher };
 //# sourceMappingURL=index.mjs.map
 //# sourceMappingURL=index.mjs.map

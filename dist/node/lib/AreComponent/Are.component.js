@@ -185,13 +185,19 @@ exports.Are = class Are extends aConcept.A_Component {
       })(target, propertyKey, descriptor);
     };
   }
-  /**
-   * Allows to define a custom method for handling signals emitted by the component or other parts of the application. This method can be used to implement custom logic for responding to specific signals, such as user interactions, state changes, or other events that may affect the component's behavior or appearance. By defining this method, developers can create more dynamic and interactive components that can react to changes in the application state or user input in a flexible and efficient way.
-   */
-  static get Signal() {
-    return (target, propertyKey, descriptor) => {
+  static Signal(...args) {
+    if (args.length >= 3 && typeof args[1] === "string") {
+      const [target, propertyKey, descriptor] = args;
       return aConcept.A_Feature.Extend({
         name: Are_constants.AreFeatures.onSignal,
+        scope: [target.constructor]
+      })(target, propertyKey, descriptor);
+    }
+    const ctor = args[0];
+    const featureName = Are_constants.AreSignalFeatureKey(ctor);
+    return function(target, propertyKey, descriptor) {
+      return aConcept.A_Feature.Extend({
+        name: featureName,
         scope: [target.constructor]
       })(target, propertyKey, descriptor);
     };

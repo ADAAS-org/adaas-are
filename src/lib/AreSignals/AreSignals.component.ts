@@ -2,7 +2,7 @@ import { A_Caller, A_Component, A_Context, A_Feature, A_Inject, A_Meta, A_Scope,
 import { A_SignalBusFeatures, A_SignalState, A_SignalVector } from "@adaas/a-utils/a-signal";
 import { A_Logger } from "@adaas/a-utils/a-logger";
 import { AreContext } from "@adaas/are/component/Are.context";
-import { AreFeatures } from "@adaas/are/component/Are.constants";
+import { AreFeatures, AreSignalFeatureKey } from "@adaas/are/component/Are.constants";
 import { AreNode } from "@adaas/are/node/AreNode.entity";
 import { AreNodeFeatures } from "@adaas/are/node/AreNode.constants";
 import { AreEvent } from "@adaas/are/event/AreEvent.context";
@@ -48,6 +48,40 @@ export class AreSignals extends A_Component {
                 await root.emit(callScope);
 
                 callScope.destroy();
+
+                // ─────────────────────────────────────────────────────────────
+                // Typed dispatch
+                // ─────────────────────────────────────────────────────────────
+                // For each signal in the vector, also emit a per-type event so
+                // handlers registered via `@Are.Signal(SignalCtor)` receive
+                // only the signals they care about. The composed feature name
+                // (`onSignal:<signal-entity>`) is matched on the component's
+                // feature registry; components without a typed handler simply
+                // see a no-op chain.
+                //
+                // The signal instance itself is already registered as an
+                // entity in `scope` by A_SignalBus.next() (see
+                // A_SignalBus-Next-Scope construction), so importing that
+                // scope here makes it resolvable via `@A_Inject(SignalCtor)`
+                // without any additional registration on the typed scope.
+                for (const signal of vector) {
+                    if (!signal) continue;
+
+                    const ctor = signal.constructor as A_TYPES__Ctor<typeof signal> & { entity?: string; name: string };
+                    const typedFeatureName = AreSignalFeatureKey(ctor);
+
+                    const typedScope = new A_Scope({
+                        fragments: [new AreEvent(typedFeatureName, {
+                            vector,
+                            signal,
+                        })]
+                    })
+                        .import(scope, root.scope);
+
+                    await root.emit(typedScope);
+
+                    typedScope.destroy();
+                }
             }
         } catch (error) {
             logger?.error(error);

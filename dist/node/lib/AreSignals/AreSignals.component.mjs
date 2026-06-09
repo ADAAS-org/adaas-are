@@ -3,7 +3,7 @@ import { A_Feature, A_Inject, A_Scope, A_Caller, A_Meta, A_Component, A_Context 
 import { A_SignalBusFeatures, A_SignalVector, A_SignalState } from '@adaas/a-utils/a-signal';
 import { A_Logger } from '@adaas/a-utils/a-logger';
 import { AreContext } from '@adaas/are/component/Are.context';
-import { AreFeatures } from '@adaas/are/component/Are.constants';
+import { AreFeatures, AreSignalFeatureKey } from '@adaas/are/component/Are.constants';
 import { AreNode } from '@adaas/are/node/AreNode.entity';
 import { AreNodeFeatures } from '@adaas/are/node/AreNode.constants';
 import { AreEvent } from '@adaas/are/event/AreEvent.context';
@@ -27,6 +27,19 @@ let AreSignals = class extends A_Component {
         logger?.debug("Emitting signal for root node:", vector);
         await root.emit(callScope);
         callScope.destroy();
+        for (const signal of vector) {
+          if (!signal) continue;
+          const ctor = signal.constructor;
+          const typedFeatureName = AreSignalFeatureKey(ctor);
+          const typedScope = new A_Scope({
+            fragments: [new AreEvent(typedFeatureName, {
+              vector,
+              signal
+            })]
+          }).import(scope, root.scope);
+          await root.emit(typedScope);
+          typedScope.destroy();
+        }
       }
     } catch (error) {
       logger?.error(error);

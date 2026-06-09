@@ -1,4 +1,4 @@
-import { A_Component } from '@adaas/a-concept';
+import { A_Component, A_TYPES__Ctor } from '@adaas/a-concept';
 import { A_SignalVector, A_Signal } from '@adaas/a-utils/a-signal';
 import { ArePropDefinition } from './Are.types.js';
 import './Are.constants.js';
@@ -61,9 +61,28 @@ declare class Are extends A_Component {
      */
     static get Data(): (target: any, propertyKey: string, descriptor: PropertyDescriptor) => any;
     /**
-     * Allows to define a custom method for handling signals emitted by the component or other parts of the application. This method can be used to implement custom logic for responding to specific signals, such as user interactions, state changes, or other events that may affect the component's behavior or appearance. By defining this method, developers can create more dynamic and interactive components that can react to changes in the application state or user input in a flexible and efficient way.
+     * Allows to define a custom method for handling signals emitted by the component or other parts of the application.
+     *
+     * This decorator has two forms:
+     *
+     * 1. **Bare** — `@Are.Signal` — registers the method as a handler for the
+     *    generic `onSignal` feature. The handler is invoked for EVERY signal
+     *    vector dispatched to the component (this is the original, all-signals
+     *    behavior).
+     *
+     * 2. **Typed** — `@Are.Signal(MySignal)` — registers the method as a
+     *    handler that ONLY fires when the dispatched signal vector contains a
+     *    signal of the specified type. The matching signal instance is added
+     *    to the call scope so handlers can pull it directly via
+     *    `@A_Inject(MySignal) signal: MySignal` in addition to the usual
+     *    `@A_Inject(A_SignalVector) vector` access.
+     *
+     * Both forms can co-exist on the same component: the bare handler still
+     * fires on every vector, and any typed handler additionally fires once
+     * per matching signal in the same vector.
      */
-    static get Signal(): (target: any, propertyKey: string, descriptor: PropertyDescriptor) => any;
+    static Signal(target: any, propertyKey: string, descriptor: PropertyDescriptor): any;
+    static Signal<S extends A_Signal>(ctor: A_TYPES__Ctor<S>): MethodDecorator;
     /**
      * Props can be used to store any additional data or configuration for the component. They are not reactive by default but can be used in the component's methods and lifecycle hooks to manage state or pass information. Props can be defined as a simple object with key-value pairs, where keys are the prop names and values are the prop values. They can be accessed and modified within the component's methods to influence rendering or behavior based on the component's state or external inputs.
      */

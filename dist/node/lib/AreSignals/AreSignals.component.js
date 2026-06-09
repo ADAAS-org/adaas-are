@@ -39,6 +39,19 @@ exports.AreSignals = class AreSignals extends aConcept.A_Component {
         logger?.debug("Emitting signal for root node:", vector);
         await root.emit(callScope);
         callScope.destroy();
+        for (const signal of vector) {
+          if (!signal) continue;
+          const ctor = signal.constructor;
+          const typedFeatureName = Are_constants.AreSignalFeatureKey(ctor);
+          const typedScope = new aConcept.A_Scope({
+            fragments: [new AreEvent_context.AreEvent(typedFeatureName, {
+              vector,
+              signal
+            })]
+          }).import(scope, root.scope);
+          await root.emit(typedScope);
+          typedScope.destroy();
+        }
       }
     } catch (error) {
       logger?.error(error);

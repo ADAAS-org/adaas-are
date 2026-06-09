@@ -4,7 +4,7 @@ import { A_Frame } from '@adaas/a-frame/core';
 import { A_SignalVector } from '@adaas/a-utils/a-signal';
 import { AreSignals } from '@adaas/are/signals/AreSignals.component';
 import { AreMeta } from './Are.meta';
-import { AreFeatures } from './Are.constants';
+import { AreFeatures, AreSignalFeatureKey } from './Are.constants';
 
 let Are = class extends A_Component {
   constructor() {
@@ -174,13 +174,19 @@ let Are = class extends A_Component {
       })(target, propertyKey, descriptor);
     };
   }
-  /**
-   * Allows to define a custom method for handling signals emitted by the component or other parts of the application. This method can be used to implement custom logic for responding to specific signals, such as user interactions, state changes, or other events that may affect the component's behavior or appearance. By defining this method, developers can create more dynamic and interactive components that can react to changes in the application state or user input in a flexible and efficient way.
-   */
-  static get Signal() {
-    return (target, propertyKey, descriptor) => {
+  static Signal(...args) {
+    if (args.length >= 3 && typeof args[1] === "string") {
+      const [target, propertyKey, descriptor] = args;
       return A_Feature.Extend({
         name: AreFeatures.onSignal,
+        scope: [target.constructor]
+      })(target, propertyKey, descriptor);
+    }
+    const ctor = args[0];
+    const featureName = AreSignalFeatureKey(ctor);
+    return function(target, propertyKey, descriptor) {
+      return A_Feature.Extend({
+        name: featureName,
         scope: [target.constructor]
       })(target, propertyKey, descriptor);
     };
