@@ -1,5 +1,5 @@
 import { A_Caller, A_Component, A_Context, A_Feature, A_Inject, A_Meta, A_Scope, A_TYPES__Ctor } from "@adaas/a-concept";
-import { A_SignalBusFeatures, A_SignalState, A_SignalVector } from "@adaas/a-utils/a-signal";
+import { A_SignalBusFeatures, A_Signal, A_SignalState, A_SignalVector } from "@adaas/a-utils/a-signal";
 import { A_Logger } from "@adaas/a-utils/a-logger";
 import { AreContext } from "@adaas/are/component/Are.context";
 import { AreFeatures, AreSignalFeatureKey } from "@adaas/are/component/Are.constants";
@@ -52,19 +52,27 @@ export class AreSignals extends A_Component {
                 // ─────────────────────────────────────────────────────────────
                 // Typed dispatch
                 // ─────────────────────────────────────────────────────────────
-                // For each signal in the vector, also emit a per-type event so
-                // handlers registered via `@Are.Signal(SignalCtor)` receive
-                // only the signals they care about. The composed feature name
-                // (`onSignal:<signal-entity>`) is matched on the component's
-                // feature registry; components without a typed handler simply
-                // see a no-op chain.
+                // For each signal that was ACTUALLY dispatched on THIS tick,
+                // also emit a per-type event so handlers registered via
+                // `@Are.Signal(SignalCtor)` receive only the signals they care
+                // about. The composed feature name (`onSignal:<signal-entity>`)
+                // is matched on the component's feature registry; components
+                // without a typed handler simply see a no-op chain.
                 //
-                // The signal instance itself is already registered as an
-                // entity in `scope` by A_SignalBus.next() (see
-                // A_SignalBus-Next-Scope construction), so importing that
-                // scope here makes it resolvable via `@A_Inject(SignalCtor)`
-                // without any additional registration on the typed scope.
-                for (const signal of vector) {
+                // IMPORTANT: we iterate the freshly-dispatched signals (the
+                // ones registered as entities in the bus-next-scope by
+                // A_SignalBus.next()), NOT the accumulated `vector` from
+                // A_SignalState. The accumulated vector also carries signals
+                // from PREVIOUS ticks; firing typed handlers for those would
+                // (a) re-invoke the handler on every subsequent tick while the
+                // signal lingers in state — breaking the "fires only for its
+                // signal type" condition — and (b) fail to resolve
+                // `@A_Inject(SignalCtor)` because older signals are no longer
+                // registered in this scope. Restricting to the fresh signals
+                // keeps both the firing condition and the injection correct.
+                const dispatchedSignals = scope.resolveFlatAll<A_Signal>(A_Signal);
+
+                for (const signal of dispatchedSignals) {
                     if (!signal) continue;
 
                     const ctor = signal.constructor as A_TYPES__Ctor<typeof signal> & { entity?: string; name: string };

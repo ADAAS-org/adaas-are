@@ -78,6 +78,16 @@ type AreContextInit = {
         [rootName: string]: A_SignalVector;
     };
 };
+/**
+ * Optional targeting for the `@Are.Condition` decorator.
+ */
+type AreConditionOptions = {
+    /**
+     * Restricts the condition to a single outlet (root) id. When omitted, the
+     * condition applies to every root — the original, root-agnostic behavior.
+     */
+    root?: string;
+};
 type ArePropDefinition = {
     /**
      * The type of the property, which can be used for validation and parsing purposes. This can include basic types like 'string', 'number', 'boolean', as well as more complex types like 'object' or 'array'.
@@ -97,11 +107,20 @@ declare class Are extends A_Component {
     /**
      * Allows to apply Signal Vector as a condition for rendering the component. The component will be rendered only if at least one of the signals in the vector is active. This can be used to manage complex rendering logic and to optimize performance by ensuring that components are only rendered when necessary based on the defined conditions.
      *
-     * @param signals
+     * By default a condition applies to EVERY root (outlet) in the
+     * application — this is the original, root-agnostic behavior. When an
+     * application renders multiple roots with different ids, an optional
+     * `root` target can be supplied to scope the condition to a single
+     * outlet: `@Are.Condition(vector, { root: 'my-outlet' })`. A root-scoped
+     * condition is only considered when matching for that exact root id and
+     * never leaks into other outlets.
+     *
+     * @param signals The signal vector (or array of signals) that activates the component.
+     * @param options Optional targeting. `root` scopes the condition to a single outlet id.
      * @returns
      */
-    static Condition(vector: A_SignalVector): any;
-    static Condition(vector: Array<A_Signal>): any;
+    static Condition(vector: A_SignalVector, options?: AreConditionOptions): <TTarget extends A_TYPES__Ctor<Are>>(target: TTarget) => TTarget;
+    static Condition(vector: Array<A_Signal>, options?: AreConditionOptions): <TTarget extends A_TYPES__Ctor<Are>>(target: TTarget) => TTarget;
     /**
      * Allows to define a custom method for the component's template. This method should return a string representing the HTML template of the component. The template can include dynamic content and bindings that will be processed during rendering to create the final DOM structure for the component.
      */
@@ -757,7 +776,21 @@ declare class AreAttribute extends A_Entity<AreAttribute_Init, AreAttribute_Seri
 
 declare class AreStore<T extends Record<string, any> = Record<string, any>> extends A_ExecutionContext<T> {
     protected dependencies: Map<string, Set<AreStoreWatchingEntity>>;
+    /**
+     * Reverse index of `dependencies`: for every watcher, the set of
+     * normalized paths it is currently registered against on THIS store.
+     * Maintained alongside `dependencies` so a watcher's stale subscriptions
+     * can be pruned in O(deps) when it re-evaluates (see {@link pruneWatcher}).
+     */
+    protected watcherPaths: Map<AreStoreWatchingEntity, Set<string>>;
     protected _keys: Set<keyof T>;
+    /**
+     * Re-entrant batch depth. While > 0, `dispatch()` accumulates affected
+     * watchers into `_pendingNotify` instead of notifying synchronously; the
+     * outermost `batch()` flushes them exactly once.
+     */
+    private _batchDepth;
+    private _pendingNotify;
     /**
      * Allows to define a pure function that will be executed in the context of the store, so it can access the store's data and methods, but it won't have access to the component's scope or other features. This can be useful for example for defining a function that will update the store's data based on some logic, without having access to the component's scope or other features, so we can keep the store's logic separate from the component's logic.
      */
@@ -795,12 +828,43 @@ declare class AreStore<T extends Record<string, any> = Record<string, any>> exte
      */
     forceUpdate<P extends A_TYPES__Paths<T>>(key?: P | keyof T | string): this;
     /**
+     * Runs `fn` with notifications deferred: every watcher affected by writes
+     * performed inside `fn` is collected and notified exactly once when the
+     * outermost batch completes. Nested `batch()` calls are coalesced into the
+     * outermost flush. Use this to wrap a burst of `set()`/`drop()` calls that
+     * logically belong together so each dependent renders only once (#4).
+     */
+    batch(fn: () => void): this;
+    /**
+     * Builds the deduplicated set of watchers affected by a change to
+     * `changedKey`, using the same exact/descendant/ancestor path matching as
+     * `set()`. Returning a single union Set guarantees each watcher appears at
+     * most once regardless of how many of its registered paths matched (#3).
+     */
+    protected collectAffected(changedKey: string): Set<AreStoreWatchingEntity>;
+    /**
+     * Notifies the given watchers now, or defers them to the batch flush when a
+     * `batch()` is active. The incoming set is already deduplicated by
+     * {@link collectAffected}.
+     */
+    protected dispatch(affected: Set<AreStoreWatchingEntity>): void;
+    /**
+     * Removes a watcher from every dependency set it holds on THIS store (and,
+     * best-effort, on ancestor stores reached via parent delegation in
+     * `get()`), clearing the matching reverse-index entries. Called at the
+     * start of each tracking window so a re-evaluating watcher does not keep
+     * stale subscriptions (#5).
+     */
+    protected pruneWatcher(instruction: AreStoreWatchingEntity): void;
+    /**
      * Notifies instructions — immediately or deferred if inside a batch.
      */
     private notify;
     /**
-     * Removes an instruction from all dependency sets.
-     * Called when an instruction is reverted/destroyed.
+     * Removes an instruction from all dependency sets on this store, clearing
+     * its reverse-index entry and any pending batched notification. Called when
+     * an instruction is reverted/destroyed so a torn-down node's watcher can
+     * never be re-notified by a later `set()` (#1).
      */
     unregister(instruction: AreStoreWatchingEntity): void;
     /**
@@ -1647,8 +1711,27 @@ type AreSignalsContextConfig<T extends Are> = {
 declare class AreSignalsMeta extends A_ComponentMeta<{
     vectorToComponent: Map<A_SignalVector, A_TYPES__Ctor<Are>>;
     componentToVector: Map<A_TYPES__Ctor<Are>, Set<A_SignalVector>>;
+    /**
+     * Conditions scoped to a single root id. The outer key is the root id
+     * (the `id` attribute of an `<are-root>` outlet); the inner map mirrors
+     * the global `vectorToComponent` map but only applies when matching is
+     * performed for that exact root. Conditions registered here are NEVER
+     * considered for any other root, allowing the same component / vector to
+     * resolve differently per outlet in a multi-root application.
+     */
+    rootScopedConditions: Map<string, Map<A_SignalVector, A_TYPES__Ctor<Are>>>;
 } & A_TYPES__ComponentMeta> {
-    registerCondition<T extends Are>(component: A_TYPES__Ctor<T>, vector: A_SignalVector): void;
+    /**
+     * Registers a condition vector for a component.
+     *
+     * @param component The component constructor to render when the condition matches.
+     * @param vector    The signal vector that activates the component.
+     * @param root      Optional root id. When provided, the condition only
+     *                  applies to the outlet with that id (per-root targeting).
+     *                  When omitted, the condition applies to ALL roots — this
+     *                  is the original, root-agnostic behavior.
+     */
+    registerCondition<T extends Are>(component: A_TYPES__Ctor<T>, vector: A_SignalVector, root?: string): void;
     /**
      * Finds the best registered component whose condition vector matches the
      * provided signal vector.
@@ -1663,8 +1746,22 @@ declare class AreSignalsMeta extends A_ComponentMeta<{
      * @param vector   The incoming signal vector.
      * @param allowed  Optional set/array of component constructors to consider.
      *                 When omitted, every registered component is eligible.
+     * @param root     Optional root id. When provided, conditions registered
+     *                 specifically for that root (via `@Are.Condition(vector,
+     *                 { root })`) are considered FIRST and take priority over
+     *                 global, root-agnostic conditions. Conditions scoped to a
+     *                 DIFFERENT root are never returned here.
      */
-    findComponentByVector(vector: A_SignalVector, allowed?: ReadonlySet<A_TYPES__Ctor<Are>> | ReadonlyArray<A_TYPES__Ctor<Are>>): A_TYPES__Ctor<Are> | undefined;
+    findComponentByVector(vector: A_SignalVector, allowed?: ReadonlySet<A_TYPES__Ctor<Are>> | ReadonlyArray<A_TYPES__Ctor<Are>>, root?: string): A_TYPES__Ctor<Are> | undefined;
+    /**
+     * Resolves the best component from a vector→component map using the
+     * three-tier priority shared by all condition matching:
+     *   1. Simple identity lookup (same vector instance).
+     *   2. Full equivalence (`vector.equals`).
+     *   3. Logical match (`vector.match`, order-independent).
+     *   4. Inclusion (`vector.includes`, provided vector is a subset).
+     */
+    protected matchInMap(map: Map<A_SignalVector, A_TYPES__Ctor<Are>>, vector: A_SignalVector, isAllowed: (component: A_TYPES__Ctor<Are>) => boolean): A_TYPES__Ctor<Are> | undefined;
 }
 
 declare class AreSignalsContext<T extends Are = Are> extends A_Fragment {
@@ -1963,4 +2060,4 @@ declare class AreEngineError extends A_Error {
     static readonly MissedRequiredDependency = "A Required Dependency is missing in AreEngine";
 }
 
-export { Are, AreAttribute, type AreAttributeFeatureNames, AreAttributeFeatures, type AreAttribute_Init, type AreAttribute_Serialized, AreCompiler, AreCompilerError, AreContainer, AreContext, type AreContextInit, AreDeclaration, AreEngine, type AreEngineDependencies, AreEngineError, AreEngineFeatures, AreEvent, type AreEventProps, type AreFeatureNames, AreFeatures, AreInit, AreInstruction, AreInstructionDefaultNames, AreInstructionError, AreInstructionFeatures, type AreInstructionNewProps, type AreInstructionSerialized, AreInterpreter, AreInterpreterError, AreLifecycle, AreLifecycleError, AreLoader, AreLoaderError, AreMutation, AreNode, type AreNodeFeatureNames, AreNodeFeatures, type AreNodeNewProps, type AreNodeStatusNames, AreNodeStatuses, type ArePropDefinition, AreRoute, AreScene, type AreSceneChanges, AreSceneError, type AreSceneStatusNames, AreSceneStatuses, type AreScene_Serialized, AreSignal, AreSignalFeatureKey, AreSignals, AreSignalsContext, type AreSignalsContextConfig, AreSignalsMeta, AreStore, type AreStoreAreComponentMetaKeyNames, AreStoreAreComponentMetaKeys, type AreStorePathValue, type AreStoreWatchingEntity, AreSyntax, type AreSyntaxCompiledExpression, AreSyntaxError, type AreSyntaxInitOptions, type AreSyntaxTokenMatch, type AreSyntaxTokenPayload, type AreSyntaxTokenRules, AreTokenizer, AreTokenizerError, AreTransformer, AreWatcher };
+export { Are, AreAttribute, type AreAttributeFeatureNames, AreAttributeFeatures, type AreAttribute_Init, type AreAttribute_Serialized, AreCompiler, AreCompilerError, type AreConditionOptions, AreContainer, AreContext, type AreContextInit, AreDeclaration, AreEngine, type AreEngineDependencies, AreEngineError, AreEngineFeatures, AreEvent, type AreEventProps, type AreFeatureNames, AreFeatures, AreInit, AreInstruction, AreInstructionDefaultNames, AreInstructionError, AreInstructionFeatures, type AreInstructionNewProps, type AreInstructionSerialized, AreInterpreter, AreInterpreterError, AreLifecycle, AreLifecycleError, AreLoader, AreLoaderError, AreMutation, AreNode, type AreNodeFeatureNames, AreNodeFeatures, type AreNodeNewProps, type AreNodeStatusNames, AreNodeStatuses, type ArePropDefinition, AreRoute, AreScene, type AreSceneChanges, AreSceneError, type AreSceneStatusNames, AreSceneStatuses, type AreScene_Serialized, AreSignal, AreSignalFeatureKey, AreSignals, AreSignalsContext, type AreSignalsContextConfig, AreSignalsMeta, AreStore, type AreStoreAreComponentMetaKeyNames, AreStoreAreComponentMetaKeys, type AreStorePathValue, type AreStoreWatchingEntity, AreSyntax, type AreSyntaxCompiledExpression, AreSyntaxError, type AreSyntaxInitOptions, type AreSyntaxTokenMatch, type AreSyntaxTokenPayload, type AreSyntaxTokenRules, AreTokenizer, AreTokenizerError, AreTransformer, AreWatcher };

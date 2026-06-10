@@ -192,17 +192,19 @@ export class AreInterpreter extends A_Component {
     ) {
         try {
             /**
-             * 1. uses to track all calls to Store
-             */
-            // store.watch(instruction);
-            /**
              * So we're looking for any instruction name in the interpreter to be executed.
              */
             feature.chain(interpreter, instruction.name + AreInstructionFeatures.Revert, scope);
 
-            // store.unwatch(instruction);
+            /**
+             * The instruction is being torn down — drop every store
+             * subscription it holds so a later set() can never re-notify a
+             * reverted/unmounted watcher (prevents the dependency-map leak and
+             * zombie updates).
+             */
+            store.unregister(instruction);
         } catch (error) {
-            // store.unwatch(instruction);
+            store.unregister(instruction);
             throw error;
         }
     }

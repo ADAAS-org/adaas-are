@@ -13,6 +13,16 @@ type AreContextInit = {
         [rootName: string]: A_SignalVector;
     };
 };
+/**
+ * Optional targeting for the `@Are.Condition` decorator.
+ */
+type AreConditionOptions = {
+    /**
+     * Restricts the condition to a single outlet (root) id. When omitted, the
+     * condition applies to every root — the original, root-agnostic behavior.
+     */
+    root?: string;
+};
 type ArePropDefinition = {
     /**
      * The type of the property, which can be used for validation and parsing purposes. This can include basic types like 'string', 'number', 'boolean', as well as more complex types like 'object' or 'array'.
@@ -28,4 +38,4 @@ type ArePropDefinition = {
  */
 type AreFeatureNames = typeof AreFeatures[keyof typeof AreFeatures];
 
-export type { AreContextInit, AreFeatureNames, ArePropDefinition };
+export type { AreConditionOptions, AreContextInit, AreFeatureNames, ArePropDefinition };

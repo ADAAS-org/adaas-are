@@ -98,7 +98,9 @@ let AreInterpreter = class extends A_Component {
   revertInstruction(instruction, interpreter, store, scope, feature, ...args) {
     try {
       feature.chain(interpreter, instruction.name + AreInstructionFeatures.Revert, scope);
+      store.unregister(instruction);
     } catch (error) {
+      store.unregister(instruction);
       throw error;
     }
   }

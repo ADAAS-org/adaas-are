@@ -39,7 +39,8 @@ exports.AreSignals = class AreSignals extends aConcept.A_Component {
         logger?.debug("Emitting signal for root node:", vector);
         await root.emit(callScope);
         callScope.destroy();
-        for (const signal of vector) {
+        const dispatchedSignals = scope.resolveFlatAll(aSignal.A_Signal);
+        for (const signal of dispatchedSignals) {
           if (!signal) continue;
           const ctor = signal.constructor;
           const typedFeatureName = Are_constants.AreSignalFeatureKey(ctor);

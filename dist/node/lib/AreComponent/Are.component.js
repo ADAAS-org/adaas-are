@@ -28,7 +28,7 @@ exports.Are = class Are extends aConcept.A_Component {
      */
     this.props = {};
   }
-  static Condition(signals) {
+  static Condition(signals, options) {
     return function(target) {
       const componentMeta = aConcept.A_Context.meta(target);
       const signalsMeta = aConcept.A_Context.meta(AreSignals_component.AreSignals);
@@ -45,7 +45,7 @@ exports.Are = class Are extends aConcept.A_Component {
       }
       if (vector) {
         componentMeta.vector = vector;
-        signalsMeta.registerCondition(target, vector);
+        signalsMeta.registerCondition(target, vector, options?.root);
       }
       return target;
     };

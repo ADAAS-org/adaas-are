@@ -1,17 +1,26 @@
 import { A_Component, A_TYPES__Ctor } from '@adaas/a-concept';
 import { A_SignalVector, A_Signal } from '@adaas/a-utils/a-signal';
-import { ArePropDefinition } from './Are.types.mjs';
+import { AreConditionOptions, ArePropDefinition } from './Are.types.mjs';
 import './Are.constants.mjs';
 
 declare class Are extends A_Component {
     /**
      * Allows to apply Signal Vector as a condition for rendering the component. The component will be rendered only if at least one of the signals in the vector is active. This can be used to manage complex rendering logic and to optimize performance by ensuring that components are only rendered when necessary based on the defined conditions.
      *
-     * @param signals
+     * By default a condition applies to EVERY root (outlet) in the
+     * application — this is the original, root-agnostic behavior. When an
+     * application renders multiple roots with different ids, an optional
+     * `root` target can be supplied to scope the condition to a single
+     * outlet: `@Are.Condition(vector, { root: 'my-outlet' })`. A root-scoped
+     * condition is only considered when matching for that exact root id and
+     * never leaks into other outlets.
+     *
+     * @param signals The signal vector (or array of signals) that activates the component.
+     * @param options Optional targeting. `root` scopes the condition to a single outlet id.
      * @returns
      */
-    static Condition(vector: A_SignalVector): any;
-    static Condition(vector: Array<A_Signal>): any;
+    static Condition(vector: A_SignalVector, options?: AreConditionOptions): <TTarget extends A_TYPES__Ctor<Are>>(target: TTarget) => TTarget;
+    static Condition(vector: Array<A_Signal>, options?: AreConditionOptions): <TTarget extends A_TYPES__Ctor<Are>>(target: TTarget) => TTarget;
     /**
      * Allows to define a custom method for the component's template. This method should return a string representing the HTML template of the component. The template can include dynamic content and bindings that will be processed during rendering to create the final DOM structure for the component.
      */

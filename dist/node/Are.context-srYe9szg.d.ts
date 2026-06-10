@@ -478,7 +478,21 @@ declare class AreAttribute extends A_Entity<AreAttribute_Init, AreAttribute_Seri
 
 declare class AreStore<T extends Record<string, any> = Record<string, any>> extends A_ExecutionContext<T> {
     protected dependencies: Map<string, Set<AreStoreWatchingEntity>>;
+    /**
+     * Reverse index of `dependencies`: for every watcher, the set of
+     * normalized paths it is currently registered against on THIS store.
+     * Maintained alongside `dependencies` so a watcher's stale subscriptions
+     * can be pruned in O(deps) when it re-evaluates (see {@link pruneWatcher}).
+     */
+    protected watcherPaths: Map<AreStoreWatchingEntity, Set<string>>;
     protected _keys: Set<keyof T>;
+    /**
+     * Re-entrant batch depth. While > 0, `dispatch()` accumulates affected
+     * watchers into `_pendingNotify` instead of notifying synchronously; the
+     * outermost `batch()` flushes them exactly once.
+     */
+    private _batchDepth;
+    private _pendingNotify;
     /**
      * Allows to define a pure function that will be executed in the context of the store, so it can access the store's data and methods, but it won't have access to the component's scope or other features. This can be useful for example for defining a function that will update the store's data based on some logic, without having access to the component's scope or other features, so we can keep the store's logic separate from the component's logic.
      */
@@ -516,12 +530,43 @@ declare class AreStore<T extends Record<string, any> = Record<string, any>> exte
      */
     forceUpdate<P extends A_TYPES__Paths<T>>(key?: P | keyof T | string): this;
     /**
+     * Runs `fn` with notifications deferred: every watcher affected by writes
+     * performed inside `fn` is collected and notified exactly once when the
+     * outermost batch completes. Nested `batch()` calls are coalesced into the
+     * outermost flush. Use this to wrap a burst of `set()`/`drop()` calls that
+     * logically belong together so each dependent renders only once (#4).
+     */
+    batch(fn: () => void): this;
+    /**
+     * Builds the deduplicated set of watchers affected by a change to
+     * `changedKey`, using the same exact/descendant/ancestor path matching as
+     * `set()`. Returning a single union Set guarantees each watcher appears at
+     * most once regardless of how many of its registered paths matched (#3).
+     */
+    protected collectAffected(changedKey: string): Set<AreStoreWatchingEntity>;
+    /**
+     * Notifies the given watchers now, or defers them to the batch flush when a
+     * `batch()` is active. The incoming set is already deduplicated by
+     * {@link collectAffected}.
+     */
+    protected dispatch(affected: Set<AreStoreWatchingEntity>): void;
+    /**
+     * Removes a watcher from every dependency set it holds on THIS store (and,
+     * best-effort, on ancestor stores reached via parent delegation in
+     * `get()`), clearing the matching reverse-index entries. Called at the
+     * start of each tracking window so a re-evaluating watcher does not keep
+     * stale subscriptions (#5).
+     */
+    protected pruneWatcher(instruction: AreStoreWatchingEntity): void;
+    /**
      * Notifies instructions — immediately or deferred if inside a batch.
      */
     private notify;
     /**
-     * Removes an instruction from all dependency sets.
-     * Called when an instruction is reverted/destroyed.
+     * Removes an instruction from all dependency sets on this store, clearing
+     * its reverse-index entry and any pending batched notification. Called when
+     * an instruction is reverted/destroyed so a torn-down node's watcher can
+     * never be re-notified by a later `set()` (#1).
      */
     unregister(instruction: AreStoreWatchingEntity): void;
     /**

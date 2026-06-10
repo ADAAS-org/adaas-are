@@ -1,6 +1,6 @@
 import { __decorateClass, __decorateParam } from '../../chunk-EQQGB2QZ.mjs';
 import { A_Feature, A_Inject, A_Scope, A_Caller, A_Meta, A_Component, A_Context } from '@adaas/a-concept';
-import { A_SignalBusFeatures, A_SignalVector, A_SignalState } from '@adaas/a-utils/a-signal';
+import { A_SignalBusFeatures, A_SignalVector, A_SignalState, A_Signal } from '@adaas/a-utils/a-signal';
 import { A_Logger } from '@adaas/a-utils/a-logger';
 import { AreContext } from '@adaas/are/component/Are.context';
 import { AreFeatures, AreSignalFeatureKey } from '@adaas/are/component/Are.constants';
@@ -27,7 +27,8 @@ let AreSignals = class extends A_Component {
         logger?.debug("Emitting signal for root node:", vector);
         await root.emit(callScope);
         callScope.destroy();
-        for (const signal of vector) {
+        const dispatchedSignals = scope.resolveFlatAll(A_Signal);
+        for (const signal of dispatchedSignals) {
           if (!signal) continue;
           const ctor = signal.constructor;
           const typedFeatureName = AreSignalFeatureKey(ctor);

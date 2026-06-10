@@ -3,7 +3,7 @@ import { A_Frame } from "@adaas/a-frame/core";
 import { A_Signal, A_SignalVector } from "@adaas/a-utils/a-signal";
 import { AreSignals } from "@adaas/are/signals/AreSignals.component";
 import { AreSignalsMeta } from "@adaas/are/signals/AreSignals.meta";
-import { ArePropDefinition } from "./Are.types";
+import { ArePropDefinition, AreConditionOptions } from "./Are.types";
 import { AreMeta } from "./Are.meta";
 import { AreFeatures, AreSignalFeatureKey } from "./Are.constants";
 
@@ -16,13 +16,22 @@ import { AreFeatures, AreSignalFeatureKey } from "./Are.constants";
 export class Are extends A_Component {
     /**
      * Allows to apply Signal Vector as a condition for rendering the component. The component will be rendered only if at least one of the signals in the vector is active. This can be used to manage complex rendering logic and to optimize performance by ensuring that components are only rendered when necessary based on the defined conditions.
-     * 
-     * @param signals 
-     * @returns 
+     *
+     * By default a condition applies to EVERY root (outlet) in the
+     * application — this is the original, root-agnostic behavior. When an
+     * application renders multiple roots with different ids, an optional
+     * `root` target can be supplied to scope the condition to a single
+     * outlet: `@Are.Condition(vector, { root: 'my-outlet' })`. A root-scoped
+     * condition is only considered when matching for that exact root id and
+     * never leaks into other outlets.
+     *
+     * @param signals The signal vector (or array of signals) that activates the component.
+     * @param options Optional targeting. `root` scopes the condition to a single outlet id.
+     * @returns
      */
-    static Condition(vector: A_SignalVector)
-    static Condition(vector: Array<A_Signal>)
-    static Condition(signals: Array<A_Signal> | A_SignalVector) {
+    static Condition(vector: A_SignalVector, options?: AreConditionOptions): <TTarget extends A_TYPES__Ctor<Are>>(target: TTarget) => TTarget
+    static Condition(vector: Array<A_Signal>, options?: AreConditionOptions): <TTarget extends A_TYPES__Ctor<Are>>(target: TTarget) => TTarget
+    static Condition(signals: Array<A_Signal> | A_SignalVector, options?: AreConditionOptions) {
         return function <TTarget extends A_TYPES__Ctor<Are>>(
             target: TTarget
         ): TTarget {
@@ -45,7 +54,7 @@ export class Are extends A_Component {
 
             if (vector) {
                 componentMeta.vector = vector;
-                signalsMeta.registerCondition(target, vector);
+                signalsMeta.registerCondition(target, vector, options?.root);
             }
 
             return target;

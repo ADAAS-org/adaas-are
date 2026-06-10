@@ -17,7 +17,7 @@ let Are = class extends A_Component {
      */
     this.props = {};
   }
-  static Condition(signals) {
+  static Condition(signals, options) {
     return function(target) {
       const componentMeta = A_Context.meta(target);
       const signalsMeta = A_Context.meta(AreSignals);
@@ -34,7 +34,7 @@ let Are = class extends A_Component {
       }
       if (vector) {
         componentMeta.vector = vector;
-        signalsMeta.registerCondition(target, vector);
+        signalsMeta.registerCondition(target, vector, options?.root);
       }
       return target;
     };

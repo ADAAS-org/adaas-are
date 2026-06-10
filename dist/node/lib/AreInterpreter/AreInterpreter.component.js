@@ -110,7 +110,9 @@ exports.AreInterpreter = class AreInterpreter extends aConcept.A_Component {
   revertInstruction(instruction, interpreter, store, scope, feature, ...args) {
     try {
       feature.chain(interpreter, instruction.name + AreInstruction_constants.AreInstructionFeatures.Revert, scope);
+      store.unregister(instruction);
     } catch (error) {
+      store.unregister(instruction);
       throw error;
     }
   }

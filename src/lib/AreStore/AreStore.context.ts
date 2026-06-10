@@ -22,7 +22,24 @@ export class AreStore<
 
     protected dependencies: Map<string, Set<AreStoreWatchingEntity>> = new Map();
 
+    /**
+     * Reverse index of `dependencies`: for every watcher, the set of
+     * normalized paths it is currently registered against on THIS store.
+     * Maintained alongside `dependencies` so a watcher's stale subscriptions
+     * can be pruned in O(deps) when it re-evaluates (see {@link pruneWatcher}).
+     */
+    protected watcherPaths: Map<AreStoreWatchingEntity, Set<string>> = new Map();
+
     protected _keys: Set<keyof T> = new Set();
+
+    /**
+     * Re-entrant batch depth. While > 0, `dispatch()` accumulates affected
+     * watchers into `_pendingNotify` instead of notifying synchronously; the
+     * outermost `batch()` flushes them exactly once.
+     */
+    private _batchDepth = 0;
+
+    private _pendingNotify: Set<AreStoreWatchingEntity> = new Set();
 
 
 
@@ -72,6 +89,11 @@ export class AreStore<
 
 
     watch(instruction: AreStoreWatchingEntity): void {
+        // A fresh tracking window for this watcher begins now. Drop its
+        // previously recorded dependencies (this store + ancestors) so paths
+        // it no longer reads stop notifying it on the next change (#5).
+        this.pruneWatcher(instruction);
+
         const watchers: Set<AreStoreWatchingEntity> = this.context.get('watchers') || new Set();
         watchers.add(instruction);
         this.context.set('watchers', watchers);
@@ -107,18 +129,7 @@ export class AreStore<
             }
         }
 
-        const normChanged = this.normalizePath(String(key));
-        const prefix = normChanged + '.';
-
-        for (const [normRegistered, instructions] of this.dependencies) {
-            if (
-                normRegistered === normChanged ||
-                normRegistered.startsWith(prefix) ||
-                normChanged.startsWith(normRegistered + '.')
-            ) {
-                this.notify(instructions);
-            }
-        }
+        this.dispatch(this.collectAffected(String(key)));
     }
 
     set<K extends keyof T>(values: Partial<T>): this
@@ -159,7 +170,17 @@ export class AreStore<
                 }
 
 
-                this.watchers.forEach(watcher => this.dependencies.get(normAncestor)!.add(watcher))
+                this.watchers.forEach(watcher => {
+                    this.dependencies.get(normAncestor)!.add(watcher)
+                    // keep the reverse index in sync so this subscription can
+                    // later be pruned when the watcher re-evaluates (#5)
+                    let paths = this.watcherPaths.get(watcher)
+                    if (!paths) {
+                        paths = new Set()
+                        this.watcherPaths.set(watcher, paths)
+                    }
+                    paths.add(normAncestor)
+                })
             }
         }
 
@@ -174,27 +195,21 @@ export class AreStore<
     protected setAsObject(values: Partial<T>): this {
         const entires = Object.entries(values);
 
-        for (const [key, value] of entires) {
+        // Collect the union of affected watchers across ALL keys, then notify
+        // once. A multi-key object set is a single logical change, so a watcher
+        // reading several of those keys must re-render only once (#3, #4).
+        const affected = new Set<AreStoreWatchingEntity>();
 
+        for (const [key, value] of entires) {
             this._keys.add(key as keyof T);
             super.set(key as keyof T, value as T[keyof T]);
 
-            // normalize once — dependencies are already stored normalized
-            const normChanged = this.normalizePath(String(key))
-            const prefix = normChanged + '.'
-
-
-            for (const [normRegistered, instructions] of this.dependencies) {
-                if (
-                    normRegistered === normChanged ||   // exact
-                    normRegistered.startsWith(prefix) ||   // descendant
-                    normChanged.startsWith(normRegistered + '.') // ancestor
-                ) {
-                    this.notify(instructions)
-                }
+            for (const watcher of this.collectAffected(String(key))) {
+                affected.add(watcher);
             }
-
         }
+
+        this.dispatch(affected);
         return this;
     }
 
@@ -212,19 +227,7 @@ export class AreStore<
 
         super.set(firstPart as keyof T, result ? result[firstPart] : value);
 
-        // normalize once — dependencies are already stored normalized
-        const normChanged = this.normalizePath(String(key))
-        const prefix = normChanged + '.'
-
-        for (const [normRegistered, instructions] of this.dependencies) {
-            if (
-                normRegistered === normChanged ||   // exact
-                normRegistered.startsWith(prefix) ||   // descendant
-                normChanged.startsWith(normRegistered + '.') // ancestor
-            ) {
-                this.notify(instructions)
-            }
-        }
+        this.dispatch(this.collectAffected(String(key)));
 
         return this;
     }
@@ -242,26 +245,108 @@ export class AreStore<
      */
     forceUpdate<P extends A_TYPES__Paths<T>>(key?: P | keyof T | string): this {
         if (key === undefined) {
+            const all = new Set<AreStoreWatchingEntity>();
             for (const instructions of this.dependencies.values()) {
-                this.notify(instructions);
+                for (const watcher of instructions) all.add(watcher);
             }
+            this.dispatch(all);
             return this;
         }
 
-        const normChanged = this.normalizePath(String(key));
+        this.dispatch(this.collectAffected(String(key)));
+
+        return this;
+    }
+
+    /**
+     * Runs `fn` with notifications deferred: every watcher affected by writes
+     * performed inside `fn` is collected and notified exactly once when the
+     * outermost batch completes. Nested `batch()` calls are coalesced into the
+     * outermost flush. Use this to wrap a burst of `set()`/`drop()` calls that
+     * logically belong together so each dependent renders only once (#4).
+     */
+    batch(fn: () => void): this {
+        this._batchDepth++;
+        try {
+            fn();
+        } finally {
+            this._batchDepth--;
+            if (this._batchDepth === 0 && this._pendingNotify.size > 0) {
+                const pending = this._pendingNotify;
+                this._pendingNotify = new Set();
+                this.notify(pending);
+            }
+        }
+        return this;
+    }
+
+    /**
+     * Builds the deduplicated set of watchers affected by a change to
+     * `changedKey`, using the same exact/descendant/ancestor path matching as
+     * `set()`. Returning a single union Set guarantees each watcher appears at
+     * most once regardless of how many of its registered paths matched (#3).
+     */
+    protected collectAffected(changedKey: string): Set<AreStoreWatchingEntity> {
+        const normChanged = this.normalizePath(String(changedKey));
         const prefix = normChanged + '.';
+        const affected = new Set<AreStoreWatchingEntity>();
 
         for (const [normRegistered, instructions] of this.dependencies) {
             if (
-                normRegistered === normChanged ||
-                normRegistered.startsWith(prefix) ||
-                normChanged.startsWith(normRegistered + '.')
+                normRegistered === normChanged ||             // exact
+                normRegistered.startsWith(prefix) ||          // descendant
+                normChanged.startsWith(normRegistered + '.')  // ancestor
             ) {
-                this.notify(instructions);
+                for (const instruction of instructions) affected.add(instruction);
             }
         }
 
-        return this;
+        return affected;
+    }
+
+    /**
+     * Notifies the given watchers now, or defers them to the batch flush when a
+     * `batch()` is active. The incoming set is already deduplicated by
+     * {@link collectAffected}.
+     */
+    protected dispatch(affected: Set<AreStoreWatchingEntity>): void {
+        if (affected.size === 0) return;
+
+        if (this._batchDepth > 0) {
+            for (const watcher of affected) this._pendingNotify.add(watcher);
+            return;
+        }
+
+        this.notify(affected);
+    }
+
+    /**
+     * Removes a watcher from every dependency set it holds on THIS store (and,
+     * best-effort, on ancestor stores reached via parent delegation in
+     * `get()`), clearing the matching reverse-index entries. Called at the
+     * start of each tracking window so a re-evaluating watcher does not keep
+     * stale subscriptions (#5).
+     */
+    protected pruneWatcher(instruction: AreStoreWatchingEntity): void {
+        const paths = this.watcherPaths.get(instruction);
+        if (paths) {
+            for (const path of paths) {
+                const set = this.dependencies.get(path);
+                if (set) {
+                    set.delete(instruction);
+                    if (set.size === 0) this.dependencies.delete(path);
+                }
+            }
+            this.watcherPaths.delete(instruction);
+        }
+
+        // Reads can be delegated to a parent store; prune there too. Guarded
+        // because `parent` requires a live node owner, absent in isolated use.
+        try {
+            this.parent?.pruneWatcher(instruction);
+        } catch {
+            // no node owner / standalone store — nothing to prune upstream
+        }
     }
 
     /**
@@ -279,13 +364,18 @@ export class AreStore<
         }
     }
     /**
-     * Removes an instruction from all dependency sets.
-     * Called when an instruction is reverted/destroyed.
+     * Removes an instruction from all dependency sets on this store, clearing
+     * its reverse-index entry and any pending batched notification. Called when
+     * an instruction is reverted/destroyed so a torn-down node's watcher can
+     * never be re-notified by a later `set()` (#1).
      */
     unregister(instruction: AreStoreWatchingEntity): void {
-        for (const instructions of this.dependencies.values()) {
+        for (const [path, instructions] of this.dependencies) {
             instructions.delete(instruction);
+            if (instructions.size === 0) this.dependencies.delete(path);
         }
+        this.watcherPaths.delete(instruction);
+        this._pendingNotify.delete(instruction);
     }
     /**
      * Normalizes a path once — reused in both get and set.
