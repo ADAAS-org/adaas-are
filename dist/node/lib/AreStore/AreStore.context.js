@@ -3,6 +3,7 @@
 var aConcept = require('@adaas/a-concept');
 var core = require('@adaas/a-frame/core');
 var aExecution = require('@adaas/a-utils/a-execution');
+var aLogger = require('@adaas/a-utils/a-logger');
 var AreStore_constants = require('./AreStore.constants');
 var Are_context = require('@adaas/are/component/Are.context');
 var helpers = require('@adaas/a-utils/helpers');
@@ -63,8 +64,10 @@ exports.AreStore = class AreStore extends aExecution.A_ExecutionContext {
   get keys() {
     return this._keys;
   }
-  watch(instruction) {
-    this.pruneWatcher(instruction);
+  watch(instruction, reevaluate = false) {
+    if (reevaluate) {
+      this.pruneWatcher(instruction);
+    }
     const watchers = this.context.get("watchers") || /* @__PURE__ */ new Set();
     watchers.add(instruction);
     this.context.set("watchers", watchers);
@@ -255,12 +258,23 @@ exports.AreStore = class AreStore extends aExecution.A_ExecutionContext {
   }
   /**
    * Notifies instructions — immediately or deferred if inside a batch.
+   *
+   * A failing watcher is isolated so one bad `update()` cannot abort the rest
+   * of the flush, but the error is surfaced (no longer swallowed silently) so
+   * render-time failures are diagnosable. Logger resolution is best-effort and
+   * confined to this cold error path.
    */
   notify(instructions) {
     for (const instruction of instructions) {
       try {
         instruction.update();
       } catch (error) {
+        try {
+          const logger = aConcept.A_Context.scope(this).resolve(aLogger.A_Logger);
+          logger?.error(error);
+        } catch {
+          console.error("[AreStore] watcher update failed:", error);
+        }
       }
     }
   }

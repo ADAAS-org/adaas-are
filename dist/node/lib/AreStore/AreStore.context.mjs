@@ -2,6 +2,7 @@ import { __decorateClass } from '../../chunk-EQQGB2QZ.mjs';
 import { A_Context } from '@adaas/a-concept';
 import { A_Frame } from '@adaas/a-frame/core';
 import { A_ExecutionContext } from '@adaas/a-utils/a-execution';
+import { A_Logger } from '@adaas/a-utils/a-logger';
 import { AreStoreAreComponentMetaKeys } from './AreStore.constants';
 import { AreContext } from '@adaas/are/component/Are.context';
 import { A_UtilsHelper } from '@adaas/a-utils/helpers';
@@ -54,8 +55,10 @@ let AreStore = class extends A_ExecutionContext {
   get keys() {
     return this._keys;
   }
-  watch(instruction) {
-    this.pruneWatcher(instruction);
+  watch(instruction, reevaluate = false) {
+    if (reevaluate) {
+      this.pruneWatcher(instruction);
+    }
     const watchers = this.context.get("watchers") || /* @__PURE__ */ new Set();
     watchers.add(instruction);
     this.context.set("watchers", watchers);
@@ -246,12 +249,23 @@ let AreStore = class extends A_ExecutionContext {
   }
   /**
    * Notifies instructions — immediately or deferred if inside a batch.
+   *
+   * A failing watcher is isolated so one bad `update()` cannot abort the rest
+   * of the flush, but the error is surfaced (no longer swallowed silently) so
+   * render-time failures are diagnosable. Logger resolution is best-effort and
+   * confined to this cold error path.
    */
   notify(instructions) {
     for (const instruction of instructions) {
       try {
         instruction.update();
       } catch (error) {
+        try {
+          const logger = A_Context.scope(this).resolve(A_Logger);
+          logger?.error(error);
+        } catch {
+          console.error("[AreStore] watcher update failed:", error);
+        }
       }
     }
   }

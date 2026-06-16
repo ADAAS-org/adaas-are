@@ -1,5 +1,5 @@
 import { A_Component, A_Scope } from '@adaas/a-concept';
-import { g as AreNode, k as AreScene } from '../../Are.context-BNYherUL.mjs';
+import { g as AreNode, k as AreScene } from '../../Are.context-EW2N5G5E.mjs';
 import '@adaas/a-utils/a-signal';
 import '../AreEvent/AreEvent.context.mjs';
 import '@adaas/a-utils/a-execution';

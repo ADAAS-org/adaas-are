@@ -503,7 +503,7 @@ declare class AreStore<T extends Record<string, any> = Record<string, any>> exte
     constructor(aseid: ASEID | string);
     get watchers(): Set<AreStoreWatchingEntity>;
     get keys(): Set<keyof T>;
-    watch(instruction: AreStoreWatchingEntity): void;
+    watch(instruction: AreStoreWatchingEntity, reevaluate?: boolean): void;
     unwatch(instruction: AreStoreWatchingEntity): void;
     /**
      * Remove a key (or nested path) from the store and notify every watcher
@@ -560,6 +560,11 @@ declare class AreStore<T extends Record<string, any> = Record<string, any>> exte
     protected pruneWatcher(instruction: AreStoreWatchingEntity): void;
     /**
      * Notifies instructions — immediately or deferred if inside a batch.
+     *
+     * A failing watcher is isolated so one bad `update()` cannot abort the rest
+     * of the flush, but the error is surfaced (no longer swallowed silently) so
+     * render-time failures are diagnosable. Logger resolution is best-effort and
+     * confined to this cold error path.
      */
     private notify;
     /**

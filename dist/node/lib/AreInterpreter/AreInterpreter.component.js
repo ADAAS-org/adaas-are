@@ -89,30 +89,30 @@ exports.AreInterpreter = class AreInterpreter extends aConcept.A_Component {
   }
   applyInstruction(instruction, interpreter, store, scope, feature, ...args) {
     try {
-      store.watch(instruction);
+      store?.watch(instruction);
       feature.chain(interpreter, instruction.name + AreInstruction_constants.AreInstructionFeatures.Apply, scope);
-      store.unwatch(instruction);
+      store?.unwatch(instruction);
     } catch (error) {
-      store.unwatch(instruction);
+      store?.unwatch(instruction);
       throw error;
     }
   }
   updateInstruction(instruction, interpreter, store, scope, feature, ...args) {
     try {
-      store.watch(instruction);
+      store?.watch(instruction, true);
       feature.chain(interpreter, instruction.name + AreInstruction_constants.AreInstructionFeatures.Update, scope);
-      store.unwatch(instruction);
+      store?.unwatch(instruction);
     } catch (error) {
-      store.unwatch(instruction);
+      store?.unwatch(instruction);
       throw error;
     }
   }
   revertInstruction(instruction, interpreter, store, scope, feature, ...args) {
     try {
       feature.chain(interpreter, instruction.name + AreInstruction_constants.AreInstructionFeatures.Revert, scope);
-      store.unregister(instruction);
+      store?.unregister(instruction);
     } catch (error) {
-      store.unregister(instruction);
+      store?.unregister(instruction);
       throw error;
     }
   }

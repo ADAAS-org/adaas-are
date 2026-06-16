@@ -1,6 +1,6 @@
 import '@adaas/a-concept';
 import '@adaas/a-utils/a-execution';
-export { o as AreStore } from '../../Are.context-BNYherUL.mjs';
+export { o as AreStore } from '../../Are.context-EW2N5G5E.mjs';
 import '../AreComponent/Are.component.mjs';
 import './AreStore.types.mjs';
 import '@adaas/a-utils/a-signal';

@@ -23,13 +23,7 @@ let AreLoader = class extends A_Component {
     context?.startPerformance("Tokenization");
     node.tokenize();
     context?.endPerformance("Tokenization");
-    for (let i = 0; i < node.children.length; i++) {
-      const childNode = node.children[i];
-      const res = childNode.load();
-      if (res instanceof Promise) {
-        await res;
-      }
-    }
+    await Promise.all(node.children.map((childNode) => childNode.load()));
   }
 };
 __decorateClass([

@@ -77,14 +77,12 @@ export class AreLoader extends A_Component {
 
         /**
          * 3. We have to extract node content and create child nodes if content exists, since it can impact the rendering and compilation process, for example if we have some directives that are affecting the structure of the node or its children, we need to have them in place before compilation to ensure that they are properly processed and their instructions are added to the render plan.
+         *
+         * Siblings are independent, so their loads run concurrently: any async
+         * `data()` resolution overlaps instead of serializing one child after
+         * another. `Promise.all` transparently handles children whose `load()`
+         * returns synchronously (non-thenables resolve immediately).
          */
-        for (let i = 0; i < node.children.length; i++) {
-            const childNode = node.children[i];
-
-            const res =  childNode.load();
-            if(res instanceof Promise) {
-                await res;
-            }
-        }
+        await Promise.all(node.children.map(childNode => childNode.load()));
     }
 }

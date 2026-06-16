@@ -1,6 +1,7 @@
 import { A_Context, A_TYPES__ComponentMeta, A_TYPES__Paths, ASEID } from "@adaas/a-concept";
 import { A_Frame } from "@adaas/a-frame/core";
 import { A_ExecutionContext } from "@adaas/a-utils/a-execution";
+import { A_Logger } from "@adaas/a-utils/a-logger";
 import type { AreNode } from "@adaas/are/node/AreNode.entity";
 import type { Are } from "@adaas/are/component/Are.component";
 import type { AreMeta } from "@adaas/are/component/Are.meta";
@@ -88,11 +89,21 @@ export class AreStore<
     }
 
 
-    watch(instruction: AreStoreWatchingEntity): void {
-        // A fresh tracking window for this watcher begins now. Drop its
-        // previously recorded dependencies (this store + ancestors) so paths
-        // it no longer reads stop notifying it on the next change (#5).
-        this.pruneWatcher(instruction);
+    watch(instruction: AreStoreWatchingEntity, reevaluate: boolean = false): void {
+        // A re-evaluating watcher (an Update window) begins a fresh tracking
+        // pass: drop its previously recorded dependencies (this store +
+        // ancestors) so paths it no longer reads stop notifying it (#5).
+        //
+        // Initial application is NOT a re-evaluation. A watcher may read the
+        // store across MULTIPLE apply windows (e.g. the `$for` directive reads
+        // its source array in the Transform phase but not in the Compile
+        // phase). Pruning on every watch window would let a later phase wipe
+        // the subscription an earlier phase established, leaving the watcher
+        // permanently unsubscribed. So only prune when explicitly told this is
+        // a re-evaluation.
+        if (reevaluate) {
+            this.pruneWatcher(instruction);
+        }
 
         const watchers: Set<AreStoreWatchingEntity> = this.context.get('watchers') || new Set();
         watchers.add(instruction);
@@ -351,6 +362,11 @@ export class AreStore<
 
     /**
      * Notifies instructions — immediately or deferred if inside a batch.
+     *
+     * A failing watcher is isolated so one bad `update()` cannot abort the rest
+     * of the flush, but the error is surfaced (no longer swallowed silently) so
+     * render-time failures are diagnosable. Logger resolution is best-effort and
+     * confined to this cold error path.
      */
     private notify(instructions: Set<AreStoreWatchingEntity>): void {
         for (const instruction of instructions) {
@@ -358,7 +374,14 @@ export class AreStore<
             try {
                 instruction.update()
             } catch (error) {
-
+                try {
+                    const logger = A_Context.scope(this).resolve(A_Logger);
+                    logger?.error(error as Error);
+                } catch {
+                    // No logger available in this scope — fall back to console so
+                    // the failure is still observable rather than discarded.
+                    console.error('[AreStore] watcher update failed:', error);
+                }
             }
             // instruction.owner.scene.unApply(instruction);
         }

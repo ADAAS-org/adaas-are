@@ -132,16 +132,21 @@ export class AreInterpreter extends A_Component {
         try {
             /**
              * 1. uses to track all calls to Store
+             *
+             * `store` is optional: it is only registered for nodes that have a
+             * component (see AreLifecycle.init). An instruction belonging to a
+             * node whose scope chain has no component ancestor (e.g. top-level
+             * text) has no store to read from, so there is nothing to track.
              */
-            store.watch(instruction);
+            store?.watch(instruction);
             /**
              * So we're looking for any instruction name in the interpreter to be executed.
              */
             feature.chain(interpreter, instruction.name + AreInstructionFeatures.Apply, scope);
 
-            store.unwatch(instruction);
+            store?.unwatch(instruction);
         } catch (error) {
-            store.unwatch(instruction);
+            store?.unwatch(instruction);
             throw error;
         }
 
@@ -162,16 +167,20 @@ export class AreInterpreter extends A_Component {
         try {
             /**
              * 1. uses to track all calls to Store
+             *
+             * `reevaluate = true`: an Update is a fresh re-evaluation of the
+             * instruction, so its previously recorded store dependencies are
+             * pruned first and rebuilt from this pass's reads (#5).
              */
-            store.watch(instruction);
+            store?.watch(instruction, true);
             /**
              * So we're looking for any instruction name in the interpreter to be executed.
              */
             feature.chain(interpreter, instruction.name + AreInstructionFeatures.Update, scope);
 
-            store.unwatch(instruction);
+            store?.unwatch(instruction);
         } catch (error) {
-            store.unwatch(instruction);
+            store?.unwatch(instruction);
             throw error;
         }
 
@@ -201,10 +210,15 @@ export class AreInterpreter extends A_Component {
              * subscription it holds so a later set() can never re-notify a
              * reverted/unmounted watcher (prevents the dependency-map leak and
              * zombie updates).
+             *
+             * `store` is optional (only present for component-backed nodes), so
+             * guard the teardown — a node outside any store holds no
+             * subscriptions to drop. Previously an unconditional call here threw
+             * on the undefined store and masked the real apply-time error.
              */
-            store.unregister(instruction);
+            store?.unregister(instruction);
         } catch (error) {
-            store.unregister(instruction);
+            store?.unregister(instruction);
             throw error;
         }
     }

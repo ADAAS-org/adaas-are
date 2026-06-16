@@ -1,4 +1,4 @@
-export { b as AreDeclaration } from '../../../Are.context-srYe9szg.js';
+export { b as AreDeclaration } from '../../../Are.context-CkoRTBA0.js';
 import '@adaas/a-concept';
 import '@adaas/a-utils/a-signal';
 import '../../AreEvent/AreEvent.context.js';

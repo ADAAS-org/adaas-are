@@ -2404,13 +2404,7 @@ var AreLoader = class extends A_Component {
     context?.startPerformance("Tokenization");
     node.tokenize();
     context?.endPerformance("Tokenization");
-    for (let i = 0; i < node.children.length; i++) {
-      const childNode = node.children[i];
-      const res = childNode.load();
-      if (res instanceof Promise) {
-        await res;
-      }
-    }
+    await Promise.all(node.children.map((childNode) => childNode.load()));
   }
 };
 __decorateClass([
@@ -2483,8 +2477,10 @@ var AreStore = class extends A_ExecutionContext {
   get keys() {
     return this._keys;
   }
-  watch(instruction) {
-    this.pruneWatcher(instruction);
+  watch(instruction, reevaluate = false) {
+    if (reevaluate) {
+      this.pruneWatcher(instruction);
+    }
     const watchers = this.context.get("watchers") || /* @__PURE__ */ new Set();
     watchers.add(instruction);
     this.context.set("watchers", watchers);
@@ -2675,12 +2671,23 @@ var AreStore = class extends A_ExecutionContext {
   }
   /**
    * Notifies instructions — immediately or deferred if inside a batch.
+   *
+   * A failing watcher is isolated so one bad `update()` cannot abort the rest
+   * of the flush, but the error is surfaced (no longer swallowed silently) so
+   * render-time failures are diagnosable. Logger resolution is best-effort and
+   * confined to this cold error path.
    */
   notify(instructions) {
     for (const instruction of instructions) {
       try {
         instruction.update();
       } catch (error) {
+        try {
+          const logger = A_Context.scope(this).resolve(A_Logger);
+          logger?.error(error);
+        } catch {
+          console.error("[AreStore] watcher update failed:", error);
+        }
       }
     }
   }
@@ -2815,30 +2822,30 @@ var AreInterpreter = class extends A_Component {
   }
   applyInstruction(instruction, interpreter, store, scope, feature, ...args) {
     try {
-      store.watch(instruction);
+      store?.watch(instruction);
       feature.chain(interpreter, instruction.name + AreInstructionFeatures.Apply, scope);
-      store.unwatch(instruction);
+      store?.unwatch(instruction);
     } catch (error) {
-      store.unwatch(instruction);
+      store?.unwatch(instruction);
       throw error;
     }
   }
   updateInstruction(instruction, interpreter, store, scope, feature, ...args) {
     try {
-      store.watch(instruction);
+      store?.watch(instruction, true);
       feature.chain(interpreter, instruction.name + AreInstructionFeatures.Update, scope);
-      store.unwatch(instruction);
+      store?.unwatch(instruction);
     } catch (error) {
-      store.unwatch(instruction);
+      store?.unwatch(instruction);
       throw error;
     }
   }
   revertInstruction(instruction, interpreter, store, scope, feature, ...args) {
     try {
       feature.chain(interpreter, instruction.name + AreInstructionFeatures.Revert, scope);
-      store.unregister(instruction);
+      store?.unregister(instruction);
     } catch (error) {
-      store.unregister(instruction);
+      store?.unregister(instruction);
       throw error;
     }
   }

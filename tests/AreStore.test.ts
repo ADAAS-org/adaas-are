@@ -27,7 +27,8 @@ function makeWatcher(store: AreStore, rereads?: () => string[]): AreStoreWatchin
     const watcher: AreStoreWatchingEntity & { update: jest.Mock } = {
         update: jest.fn(() => {
             if (!rereads) return;
-            store.watch(watcher);
+            // update() is a re-evaluation window → prune stale deps first.
+            store.watch(watcher, true);
             for (const key of rereads()) store.get(key);
             store.unwatch(watcher);
         }),
@@ -35,9 +36,13 @@ function makeWatcher(store: AreStore, rereads?: () => string[]): AreStoreWatchin
     return watcher;
 }
 
-/** Registers `watcher` against every `key` it "reads" inside one tracking window. */
-function track(store: AreStore, watcher: AreStoreWatchingEntity, keys: string[]) {
-    store.watch(watcher);
+/**
+ * Registers `watcher` against every `key` it "reads" inside one tracking window.
+ * Pass `reevaluate = true` to model an Update re-read (prunes stale deps); the
+ * default models initial application (accumulates deps across phases).
+ */
+function track(store: AreStore, watcher: AreStoreWatchingEntity, keys: string[], reevaluate: boolean = false) {
+    store.watch(watcher, reevaluate);
     for (const key of keys) store.get(key);
     store.unwatch(watcher);
 }
@@ -253,8 +258,8 @@ describe('AreStore — stale dependency pruning (#5)', () => {
 
         // First render reads "a"
         track(store, watcher, ['a']);
-        // Second render reads "b" instead — must drop the "a" subscription
-        track(store, watcher, ['b']);
+        // Second render (a re-evaluation) reads "b" instead — must drop "a".
+        track(store, watcher, ['b'], true);
 
         store.set('a', 1);
         expect(watcher.update).not.toHaveBeenCalled();
@@ -285,6 +290,25 @@ describe('AreStore — stale dependency pruning (#5)', () => {
         expect(watcher.update).not.toHaveBeenCalled();
 
         store.set('b', 1);
+        expect(watcher.update).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps a subscription read in an earlier apply phase when a later phase does not re-read it', () => {
+        // Regression: the `$for` directive reads its source array in the
+        // Transform apply window but not in the Compile apply window. Initial
+        // application must accumulate across phases — pruning on every watch
+        // window would let Compile wipe the subscription Transform established,
+        // leaving the directive permanently unsubscribed from its array.
+        const { store } = makeStore<{ items: number[] }>();
+        store.set('items', [1, 2]);
+        const watcher = makeWatcher(store);
+
+        // Phase 1 (Transform): reads "items".
+        track(store, watcher, ['items']);
+        // Phase 2 (Compile): reads nothing — must NOT drop the "items" sub.
+        track(store, watcher, []);
+
+        store.set('items', [1, 2, 3]);
         expect(watcher.update).toHaveBeenCalledTimes(1);
     });
 });
