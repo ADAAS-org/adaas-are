@@ -105,7 +105,7 @@ exports.AreEngine = class AreEngine extends aConcept.A_Component {
     logger?.debug("cyan", "Starting to execute the scene and mount root nodes...");
     for (const root of context.roots) {
       context.startPerformance(`Mount root <${root.aseid.id}>`);
-      root.mount();
+      await root.mount();
       context.endPerformance(`Mount root <${root.aseid.id}>`);
     }
     logger?.debug("cyan", "Emitting AreInit signal to start the reactive update cycle...");

@@ -304,24 +304,35 @@ export class AreNode extends A_Entity<AreNodeNewProps> {
      * 
      * [!] Note: The mount method should ensure that the node's scope is properly inherited from the context scope before performing any mounting logic, and it should handle any errors that may occur during mounting to ensure that the node can be rendered correctly in the scene.
      */
-    mount(): void {
+    mount(): void | Promise<void> {
 
         this.checkScopeInheritance();
 
-        try {
-            const context = this.scope.resolve(AreContext);
+        const context = this.scope.resolve(AreContext);
 
-            context?.startPerformance('Node Mount');
+        context?.startPerformance('Node Mount');
 
-            this.call(AreNodeFeatures.onBeforeMount, this.scope);
-            this.call(AreNodeFeatures.onMount, this.scope);
-            this.call(AreNodeFeatures.onAfterMount, this.scope);
+        this.call(AreNodeFeatures.onBeforeMount, this.scope);
 
-            context?.endPerformance('Node Mount');
+        const onMount = this.call(AreNodeFeatures.onMount, this.scope);
 
-        } catch (error) {
-            throw error;
+        /**
+         * The HTML engine time-slices large initial mounts and returns a Promise
+         * from onMount. When that happens we must defer onAfterMount (and the perf
+         * marker) until the whole subtree has finished mounting, so the
+         * "mounted" contract still fires post-order. Small/synchronous mounts
+         * return void here and keep the fully synchronous fast-path.
+         */
+        if (onMount && typeof (onMount as Promise<void>).then === 'function') {
+            return (onMount as Promise<void>).then(() => {
+                this.call(AreNodeFeatures.onAfterMount, this.scope);
+                context?.endPerformance('Node Mount');
+            });
         }
+
+        this.call(AreNodeFeatures.onAfterMount, this.scope);
+
+        context?.endPerformance('Node Mount');
     }
     /**
      * Interprets the node, which typically involves executing any necessary logic to process the node's features, attributes, directives, and other properties to generate the corresponding SceneInstructions for rendering and updating the node in response to changes in state or context. This method is responsible for ensuring that the node is properly interpreted based on its content, markup, styles, and features to enable dynamic behavior and responsiveness within the scene.

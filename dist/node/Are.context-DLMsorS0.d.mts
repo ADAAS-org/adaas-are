@@ -1,13 +1,13 @@
 import * as _adaas_a_concept from '@adaas/a-concept';
 import { A_TYPES__Entity_Serialized, A_Entity, A_Scope, A_TYPES__Fragment_Serialized, A_Fragment, ASEID, A_TYPES__Paths, A_TYPES__Entity_Constructor } from '@adaas/a-concept';
 import { A_SignalVector } from '@adaas/a-utils/a-signal';
-import { AreEvent } from './lib/AreEvent/AreEvent.context.js';
-import { AreStoreWatchingEntity, AreStorePathValue } from './lib/AreStore/AreStore.types.js';
-import { AreSceneStatuses } from './lib/AreScene/AreScene.constants.js';
-import { AreAttribute_Init, AreAttribute_Serialized } from './lib/AreAttribute/AreAttribute.types.js';
-import { Are } from './lib/AreComponent/Are.component.js';
+import { AreEvent } from './lib/AreEvent/AreEvent.context.mjs';
+import { AreStoreWatchingEntity, AreStorePathValue } from './lib/AreStore/AreStore.types.mjs';
+import { AreSceneStatuses } from './lib/AreScene/AreScene.constants.mjs';
+import { AreAttribute_Init, AreAttribute_Serialized } from './lib/AreAttribute/AreAttribute.types.mjs';
+import { Are } from './lib/AreComponent/Are.component.mjs';
 import { A_ExecutionContext } from '@adaas/a-utils/a-execution';
-import { AreNodeStatuses, AreNodeFeatures } from './lib/AreNode/AreNode.constants.js';
+import { AreNodeStatuses, AreNodeFeatures } from './lib/AreNode/AreNode.constants.mjs';
 
 type AreInstructionNewProps<T extends any = Record<string, any>> = {
     /**
@@ -815,7 +815,7 @@ declare class AreNode extends A_Entity<AreNodeNewProps> {
      *
      * [!] Note: The mount method should ensure that the node's scope is properly inherited from the context scope before performing any mounting logic, and it should handle any errors that may occur during mounting to ensure that the node can be rendered correctly in the scene.
      */
-    mount(): void;
+    mount(): void | Promise<void>;
     /**
      * Interprets the node, which typically involves executing any necessary logic to process the node's features, attributes, directives, and other properties to generate the corresponding SceneInstructions for rendering and updating the node in response to changes in state or context. This method is responsible for ensuring that the node is properly interpreted based on its content, markup, styles, and features to enable dynamic behavior and responsiveness within the scene.
      *

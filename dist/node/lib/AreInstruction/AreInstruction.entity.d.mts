@@ -1,5 +1,5 @@
 import '@adaas/a-concept';
-export { c as AreInstruction } from '../../Are.context-EW2N5G5E.mjs';
+export { c as AreInstruction } from '../../Are.context-DLMsorS0.mjs';
 import '../AreStore/AreStore.types.mjs';
 import '@adaas/a-utils/a-signal';
 import '../AreEvent/AreEvent.context.mjs';

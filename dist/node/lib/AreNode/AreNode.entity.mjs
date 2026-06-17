@@ -223,16 +223,18 @@ let AreNode = class extends A_Entity {
    */
   mount() {
     this.checkScopeInheritance();
-    try {
-      const context = this.scope.resolve(AreContext);
-      context?.startPerformance("Node Mount");
-      this.call(AreNodeFeatures.onBeforeMount, this.scope);
-      this.call(AreNodeFeatures.onMount, this.scope);
-      this.call(AreNodeFeatures.onAfterMount, this.scope);
-      context?.endPerformance("Node Mount");
-    } catch (error) {
-      throw error;
+    const context = this.scope.resolve(AreContext);
+    context?.startPerformance("Node Mount");
+    this.call(AreNodeFeatures.onBeforeMount, this.scope);
+    const onMount = this.call(AreNodeFeatures.onMount, this.scope);
+    if (onMount && typeof onMount.then === "function") {
+      return onMount.then(() => {
+        this.call(AreNodeFeatures.onAfterMount, this.scope);
+        context?.endPerformance("Node Mount");
+      });
     }
+    this.call(AreNodeFeatures.onAfterMount, this.scope);
+    context?.endPerformance("Node Mount");
   }
   /**
    * Interprets the node, which typically involves executing any necessary logic to process the node's features, attributes, directives, and other properties to generate the corresponding SceneInstructions for rendering and updating the node in response to changes in state or context. This method is responsible for ensuring that the node is properly interpreted based on its content, markup, styles, and features to enable dynamic behavior and responsiveness within the scene.
