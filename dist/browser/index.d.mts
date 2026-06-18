@@ -481,6 +481,14 @@ declare class AreScene extends A_Fragment {
      */
     protected _plan: Array<AreInstruction>;
     /**
+     * O(1) membership/lookup index that mirrors `_plan`. Keyed by the
+     * instruction's ASEID string (computed once on insert). The `_plan` array
+     * remains the source of truth for ORDER; this map exists purely so
+     * `isInPlan` / `getPlanned` (and therefore `changes`) avoid the previous
+     * O(plan) linear scan with a `toString()` allocation per element.
+     */
+    protected _planIndex: Map<string, AreInstruction>;
+    /**
      * State is a list of instructions that are currently applied to the node,
      * so it represents the current state of the node in the scene.
      *
@@ -489,6 +497,15 @@ declare class AreScene extends A_Fragment {
      * For example, if we have a node with two instructions in the plan: [Instruction A, Instruction B], and both of them are applied to the node, then the state will be [Instruction B, Instruction A], so when we need to revert the changes, we will revert Instruction B first, and then Instruction A.
      */
     protected _state: Array<AreInstruction>;
+    /**
+     * O(1) membership/lookup index that mirrors `_state`. Keyed by the
+     * instruction's ASEID string. The `_state` array remains the source of
+     * truth for ORDER (used by `applied` for revert sequencing); this map exists
+     * purely so `isApplied` / `getApplied` (and therefore `changes` and the
+     * mass unmount revert walk) avoid the previous O(state) linear scan with a
+     * `toString()` allocation per element.
+     */
+    protected _stateIndex: Map<string, AreInstruction>;
     protected _host: AreDeclaration | undefined;
     /**
      * Scene status is used to determine the current lifecycle stage of the scene, which can be 'active', 'inactive' or 'destroyed'. This status can be used to control the behavior of the scene and its instructions, for example, we can prevent applying new instructions to an inactive or destroyed scene, or we can trigger certain actions when the scene becomes active or inactive. The default status of the scene is 'inactive', which means that the scene is not yet rendered and its instructions are not applied, and it will become 'active' when it is mounted and its instructions are applied, and it will become 'destroyed' when it is unmounted and its instructions are reverted.

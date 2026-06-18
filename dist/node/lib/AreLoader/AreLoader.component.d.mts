@@ -1,6 +1,6 @@
 import { A_Component, A_Scope, A_Feature } from '@adaas/a-concept';
 import { A_Logger } from '@adaas/a-utils/a-logger';
-import { g as AreNode, a as AreContext } from '../../Are.context-DLMsorS0.mjs';
+import { g as AreNode, a as AreContext } from '../../Are.context-1m4-phlW.mjs';
 import '@adaas/a-utils/a-signal';
 import '../AreEvent/AreEvent.context.mjs';
 import '@adaas/a-utils/a-execution';

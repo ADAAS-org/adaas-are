@@ -1,5 +1,5 @@
 import { A_Component, A_TYPES__Entity_Constructor, A_Scope, A_Feature } from '@adaas/a-concept';
-import { g as AreNode, A as AreAttribute, k as AreScene, a as AreContext } from '../../Are.context-DnqJ31YV.js';
+import { g as AreNode, A as AreAttribute, k as AreScene, a as AreContext } from '../../Are.context-Bf7vs_6U.js';
 import { A_Logger } from '@adaas/a-utils/a-logger';
 import '@adaas/a-utils/a-signal';
 import '../AreEvent/AreEvent.context.js';

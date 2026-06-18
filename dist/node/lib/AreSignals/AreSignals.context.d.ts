@@ -2,7 +2,7 @@ import { A_Fragment, A_TYPES__Ctor } from '@adaas/a-concept';
 import { A_SignalVector } from '@adaas/a-utils/a-signal';
 import { Are } from '../AreComponent/Are.component.js';
 import { AreSignalsContextConfig } from './AreSignals.types.js';
-import { g as AreNode } from '../../Are.context-DnqJ31YV.js';
+import { g as AreNode } from '../../Are.context-Bf7vs_6U.js';
 import { AreSignalsMeta } from './AreSignals.meta.js';
 import '../AreComponent/Are.types.js';
 import '../AreComponent/Are.constants.js';

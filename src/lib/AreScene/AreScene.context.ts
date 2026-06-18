@@ -27,6 +27,14 @@ export class AreScene extends A_Fragment {
      */
     protected _plan: Array<AreInstruction> = [];
     /**
+     * O(1) membership/lookup index that mirrors `_plan`. Keyed by the
+     * instruction's ASEID string (computed once on insert). The `_plan` array
+     * remains the source of truth for ORDER; this map exists purely so
+     * `isInPlan` / `getPlanned` (and therefore `changes`) avoid the previous
+     * O(plan) linear scan with a `toString()` allocation per element.
+     */
+    protected _planIndex: Map<string, AreInstruction> = new Map();
+    /**
      * State is a list of instructions that are currently applied to the node, 
      * so it represents the current state of the node in the scene.
      * 
@@ -35,6 +43,15 @@ export class AreScene extends A_Fragment {
      * For example, if we have a node with two instructions in the plan: [Instruction A, Instruction B], and both of them are applied to the node, then the state will be [Instruction B, Instruction A], so when we need to revert the changes, we will revert Instruction B first, and then Instruction A.
      */
     protected _state: Array<AreInstruction> = [];
+    /**
+     * O(1) membership/lookup index that mirrors `_state`. Keyed by the
+     * instruction's ASEID string. The `_state` array remains the source of
+     * truth for ORDER (used by `applied` for revert sequencing); this map exists
+     * purely so `isApplied` / `getApplied` (and therefore `changes` and the
+     * mass unmount revert walk) avoid the previous O(state) linear scan with a
+     * `toString()` allocation per element.
+     */
+    protected _stateIndex: Map<string, AreInstruction> = new Map();
 
 
     protected _host: AreDeclaration | undefined;
@@ -230,6 +247,7 @@ export class AreScene extends A_Fragment {
 
         }
         this._plan.push(instruction);
+        this._planIndex.set(instruction.aseid.toString(), instruction);
 
         // We also add the instruction to the group map, so we can easily manage instructions by group, for example, when we want to unPlan all instructions related to a specific host instruction, we can easily find them in the group map and unPlan them.
         if (!this._groupToInstructionsMap.has(instruction.group || 'default')) {
@@ -259,6 +277,7 @@ export class AreScene extends A_Fragment {
 
             }
             this._plan.splice(beforeIndex, 0, instruction);
+            this._planIndex.set(instruction.aseid.toString(), instruction);
         } else {
             // Instruction is already in the plan, we just need to move it before the beforeInstruction
             this._plan.splice(instructionIndex, 1); // remove from current position
@@ -280,6 +299,7 @@ export class AreScene extends A_Fragment {
         if (instructionIndex === -1) {
             this.scope.register(instruction);
             this._plan.splice(afterIndex + 1, 0, instruction);
+            this._planIndex.set(instruction.aseid.toString(), instruction);
         } else {
             // Instruction is already in the plan, we just need to move it after the afterInstruction
             this._plan.splice(instructionIndex, 1); // remove from current position
@@ -323,7 +343,9 @@ export class AreScene extends A_Fragment {
 
         // if (registered) {
         // this.scope.deregister(instruction);
-        this._plan = this._plan.filter(i => i.aseid.toString() !== instruction.aseid.toString());
+        const key = instruction.aseid.toString();
+        if (!this._planIndex.delete(key)) return;
+        this._plan = this._plan.filter(i => i.aseid.toString() !== key);
         // }
 
     }
@@ -334,9 +356,7 @@ export class AreScene extends A_Fragment {
      * @returns 
      */
     getPlanned(instruction: AreInstruction): AreInstruction | undefined {
-        const found = this._plan.find(i => i.aseid.toString() === instruction.aseid.toString());
-
-        return found;
+        return this._planIndex.get(instruction.aseid.toString());
     }
     /**
      * Checks if the instruction is already in the plan, so it will be rendered in the next render cycle.
@@ -345,7 +365,7 @@ export class AreScene extends A_Fragment {
      * @returns 
      */
     isInPlan(instruction: AreInstruction): boolean {
-        return !!this.getPlanned(instruction);
+        return this._planIndex.has(instruction.aseid.toString());
     }
 
     // -------------------------------------------------------------------------------------------------------------
@@ -357,8 +377,10 @@ export class AreScene extends A_Fragment {
      * @param instruction 
      */
     apply(instruction: AreInstruction) {
-        if (!this.isApplied(instruction)) {
+        const key = instruction.aseid.toString();
+        if (!this._stateIndex.has(key)) {
             this._state.push(instruction);
+            this._stateIndex.set(key, instruction);
         }
     }
     /**
@@ -369,7 +391,9 @@ export class AreScene extends A_Fragment {
     unApply(
         instruction: AreInstruction
     ) {
-        this._state = this._state.filter(i => i.aseid.toString() !== instruction.aseid.toString());
+        const key = instruction.aseid.toString();
+        if (!this._stateIndex.delete(key)) return;
+        this._state = this._state.filter(i => i.aseid.toString() !== key);
     }
     /**
      * Checks if the instruction is already in the state, so it is currently applied to the scene.
@@ -378,9 +402,7 @@ export class AreScene extends A_Fragment {
      * @returns 
      */
     getApplied(instruction: AreInstruction): AreInstruction | undefined {
-        const found = this._state.find(i => i.aseid.toString() === instruction.aseid.toString());
-
-        return found;
+        return this._stateIndex.get(instruction.aseid.toString());
     }
     /**
      * Checks if the instruction is already in the state, so it is currently applied to the scene.
@@ -389,7 +411,7 @@ export class AreScene extends A_Fragment {
      * @returns 
      */
     isApplied(instruction: AreInstruction): boolean {
-        return !!this.getApplied(instruction);
+        return this._stateIndex.has(instruction.aseid.toString());
     }
     /**
      * Method that should reset the scene to the initial state, so it will clear the plan and state, but it will not deregister the instructions from the scene scope, so they will still be registered in the scene and can be planned and applied again if needed.
@@ -398,5 +420,7 @@ export class AreScene extends A_Fragment {
     reset() {
         this._plan = [];
         this._state = [];
+        this._planIndex.clear();
+        this._stateIndex.clear();
     }
 }

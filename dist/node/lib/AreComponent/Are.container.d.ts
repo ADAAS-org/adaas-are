@@ -1,6 +1,6 @@
 import { A_Service, A_ServiceFeatures } from '@adaas/a-utils/a-service';
 import { A_Logger } from '@adaas/a-utils/a-logger';
-import { a as AreContext } from '../../Are.context-DnqJ31YV.js';
+import { a as AreContext } from '../../Are.context-Bf7vs_6U.js';
 import { AreEngine } from '../AreEngine/AreEngine.component.js';
 import { AreWatcher } from '../AreWatcher/AreWatcher.component.js';
 import '@adaas/a-concept';

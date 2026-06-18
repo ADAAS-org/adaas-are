@@ -173,9 +173,9 @@ export class AreEngine extends A_Component {
 
             context.startPerformance(`Mount root <${root.aseid.id}>`);
 
-            // The HTML engine time-slices large initial mounts and may return a
-            // Promise — await it so AreInit only fires once the initial render is
-            // fully complete (preserving the "AreInit = page rendered" contract).
+            // The initial mount is atomic (synchronous) so the page never
+            // appears in a partial state; `mount()` resolves immediately. The
+            // await is kept for forward-compatibility and is a no-op here.
             await root.mount();
 
             context.endPerformance(`Mount root <${root.aseid.id}>`);

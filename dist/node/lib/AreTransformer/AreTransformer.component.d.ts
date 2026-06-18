@@ -1,5 +1,5 @@
 import { A_Component, A_Scope } from '@adaas/a-concept';
-import { g as AreNode, k as AreScene } from '../../Are.context-DnqJ31YV.js';
+import { g as AreNode, k as AreScene } from '../../Are.context-Bf7vs_6U.js';
 import '@adaas/a-utils/a-signal';
 import '../AreEvent/AreEvent.context.js';
 import '@adaas/a-utils/a-execution';
