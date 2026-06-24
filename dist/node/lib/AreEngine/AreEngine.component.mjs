@@ -15,6 +15,7 @@ import { AreTokenizer } from '@adaas/are/tokenizer/AreTokenizer.component';
 import { AreSignals } from '@adaas/are/signals/AreSignals.component';
 import { AreInit } from '@adaas/are/signals/entities/AreInit.signal';
 import { A_SignalBus } from '@adaas/a-utils/a-signal';
+import { Are } from '@adaas/are/component/Are.component';
 
 let AreEngine = class extends A_Component {
   /**
@@ -92,6 +93,7 @@ let AreEngine = class extends A_Component {
   async defaultExecute(context, bus, logger) {
     logger?.debug("cyan", "Starting to execute the scene and mount root nodes...");
     for (const root of context.roots) {
+      if (!(root.component instanceof Are)) continue;
       context.startPerformance(`Mount root <${root.aseid.id}>`);
       await root.mount();
       context.endPerformance(`Mount root <${root.aseid.id}>`);

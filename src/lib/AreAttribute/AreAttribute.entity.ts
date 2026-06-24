@@ -1,4 +1,4 @@
-import { A_Context, A_Entity, A_Feature, A_Scope } from "@adaas/a-concept";
+import { A_Context, A_Entity, A_Feature, A_Scope, ASEID } from "@adaas/a-concept";
 import { A_Frame } from "@adaas/a-frame/core";
 import type { AreNode } from "@adaas/are/node/AreNode.entity";
 import { AreAttributeFeatures } from "./AreAttribute.constants";
@@ -74,6 +74,23 @@ export class AreAttribute extends A_Entity<AreAttribute_Init, AreAttribute_Seria
         this.raw = newEntity.raw;
         this.content = newEntity.content;
     }
+
+    /**
+     * Reconstructs the attribute from its serialized (runtime-free) form, restoring its identity and static description.
+     *
+     * Restored: `aseid`, `name`, `raw`, `content` and `prefix`.
+     * Not restored: the evaluated `value`, which is derived from `content` against the live scope and is re-evaluated when the attribute is interpreted again.
+     *
+     * @param serialized the serialized representation produced by `toJSON()`.
+     */
+    fromJSON(serialized: AreAttribute_Serialized): void {
+        this.aseid = new ASEID(serialized.aseid);
+
+        this.name = serialized.name;
+        this.prefix = serialized.prefix;
+        this.raw = serialized.raw;
+        this.content = serialized.content;
+    }
     // =====================================================================================
     // ------------------------------- Attribute Methods ------------------------------
     // =====================================================================================
@@ -89,6 +106,24 @@ export class AreAttribute extends A_Entity<AreAttribute_Init, AreAttribute_Seria
             content: this.content,
             prefix: this.prefix,
         });
+    }
+
+    /**
+     * Serializes the attribute into its structural (runtime-free) form.
+     *
+     * Kept (static / structural): `aseid`, `name`, `raw`, `content` and `prefix`.
+     * Dropped (runtime-only): the evaluated `value`, which is derived from `content` against the live scope and must be re-evaluated when the attribute is interpreted again.
+     *
+     * @returns the serialized, runtime-free representation of the attribute.
+     */
+    toJSON(): AreAttribute_Serialized {
+        return {
+            aseid: this.aseid.toString(),
+            name: this.name,
+            raw: this.raw,
+            content: this.content,
+            prefix: this.prefix,
+        };
     }
     // =====================================================================================
     // ------------------------------- Attribute Lifecycle ------------------------------

@@ -1,14 +1,14 @@
-export { h as AreNodeFeatureNames, i as AreNodeNewProps, j as AreNodeStatusNames } from '../../Are.context-1m4-phlW.mjs';
+export { h as AreNodeFeatureNames, i as AreNodeNewProps, j as AreNodeStatusNames, k as AreNode_Serialized } from '../../Are.context-CS8hLApz.mjs';
 import './AreNode.constants.mjs';
 import '@adaas/a-concept';
+import '../AreAttribute/AreAttribute.types.mjs';
 import '@adaas/a-utils/a-signal';
 import '../AreEvent/AreEvent.context.mjs';
 import '@adaas/a-utils/a-execution';
 import '../AreStore/AreStore.types.mjs';
 import '../AreStore/AreStore.constants.mjs';
 import '../AreScene/AreScene.constants.mjs';
-import '../AreAttribute/AreAttribute.types.mjs';
-import '../AreAttribute/AreAttribute.constants.mjs';
 import '../AreComponent/Are.component.mjs';
 import '../AreComponent/Are.types.mjs';
 import '../AreComponent/Are.constants.mjs';
+import '../AreAttribute/AreAttribute.constants.mjs';

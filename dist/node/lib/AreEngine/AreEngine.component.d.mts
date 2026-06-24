@@ -6,7 +6,7 @@ import { AreTransformer } from '../AreTransformer/AreTransformer.component.mjs';
 import { AreLoader } from '../AreLoader/AreLoader.component.mjs';
 import { AreInterpreter } from '../AreInterpreter/AreInterpreter.component.mjs';
 import { AreLifecycle } from '../AreLifecycle/AreLifecycle.component.mjs';
-import { a as AreContext } from '../../Are.context-1m4-phlW.mjs';
+import { a as AreContext } from '../../Are.context-CS8hLApz.mjs';
 import { AreEngineDependencies } from './AreEngine.types.mjs';
 import { A_SignalBus } from '@adaas/a-utils/a-signal';
 import '../AreEvent/AreEvent.context.mjs';

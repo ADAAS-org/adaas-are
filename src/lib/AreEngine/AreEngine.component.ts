@@ -15,6 +15,7 @@ import { AreEngineDependencies } from "./AreEngine.types";
 import { AreSignals } from "@adaas/are/signals/AreSignals.component";
 import { AreInit } from "@adaas/are/signals/entities/AreInit.signal";
 import { A_SignalBus } from "@adaas/a-utils/a-signal";
+import { Are } from "@adaas/are/component/Are.component";
 
 
 
@@ -170,6 +171,18 @@ export class AreEngine extends A_Component {
         logger?.debug('cyan', 'Starting to execute the scene and mount root nodes...');
 
         for (const root of context.roots) {
+
+            // Skip roots that are not backed by a real Are component. Stray
+            // top-level template nodes (whitespace text, HTML comments, a
+            // <script> tag, etc.) are tokenized as roots but own no managed
+            // outlet — mounting them only triggers an interpret that fails its
+            // mount-point lookup. They remain roots of the template, they are
+            // simply not mounted/notified. Note: `node.component` resolves the
+            // PascalCase entity name and for primitive nodes (are-text,
+            // are-comment) returns the node's own class instance, which is NOT
+            // an `Are` component — so an `instanceof Are` check is required to
+            // distinguish real component roots (are-root → AreRoot) from these.
+            if (!(root.component instanceof Are)) continue;
 
             context.startPerformance(`Mount root <${root.aseid.id}>`);
 

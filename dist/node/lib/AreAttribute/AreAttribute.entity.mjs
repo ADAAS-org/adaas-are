@@ -1,5 +1,5 @@
 import { __decorateClass } from '../../chunk-EQQGB2QZ.mjs';
-import { A_Entity, A_Context } from '@adaas/a-concept';
+import { A_Entity, A_Context, ASEID } from '@adaas/a-concept';
 import { A_Frame } from '@adaas/a-frame/core';
 import { AreAttributeFeatures } from './AreAttribute.constants';
 
@@ -34,6 +34,21 @@ let AreAttribute = class extends A_Entity {
     this.raw = newEntity.raw;
     this.content = newEntity.content;
   }
+  /**
+   * Reconstructs the attribute from its serialized (runtime-free) form, restoring its identity and static description.
+   *
+   * Restored: `aseid`, `name`, `raw`, `content` and `prefix`.
+   * Not restored: the evaluated `value`, which is derived from `content` against the live scope and is re-evaluated when the attribute is interpreted again.
+   *
+   * @param serialized the serialized representation produced by `toJSON()`.
+   */
+  fromJSON(serialized) {
+    this.aseid = new ASEID(serialized.aseid);
+    this.name = serialized.name;
+    this.prefix = serialized.prefix;
+    this.raw = serialized.raw;
+    this.content = serialized.content;
+  }
   // =====================================================================================
   // ------------------------------- Attribute Methods ------------------------------
   // =====================================================================================
@@ -49,6 +64,23 @@ let AreAttribute = class extends A_Entity {
       content: this.content,
       prefix: this.prefix
     });
+  }
+  /**
+   * Serializes the attribute into its structural (runtime-free) form.
+   *
+   * Kept (static / structural): `aseid`, `name`, `raw`, `content` and `prefix`.
+   * Dropped (runtime-only): the evaluated `value`, which is derived from `content` against the live scope and must be re-evaluated when the attribute is interpreted again.
+   *
+   * @returns the serialized, runtime-free representation of the attribute.
+   */
+  toJSON() {
+    return {
+      aseid: this.aseid.toString(),
+      name: this.name,
+      raw: this.raw,
+      content: this.content,
+      prefix: this.prefix
+    };
   }
   // =====================================================================================
   // ------------------------------- Attribute Lifecycle ------------------------------

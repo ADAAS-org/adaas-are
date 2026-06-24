@@ -1,14 +1,14 @@
-export { h as AreNodeFeatureNames, i as AreNodeNewProps, j as AreNodeStatusNames } from '../../Are.context-Bf7vs_6U.js';
+export { h as AreNodeFeatureNames, i as AreNodeNewProps, j as AreNodeStatusNames, k as AreNode_Serialized } from '../../Are.context-DjbYIes7.js';
 import './AreNode.constants.js';
 import '@adaas/a-concept';
+import '../AreAttribute/AreAttribute.types.js';
 import '@adaas/a-utils/a-signal';
 import '../AreEvent/AreEvent.context.js';
 import '@adaas/a-utils/a-execution';
 import '../AreStore/AreStore.types.js';
 import '../AreStore/AreStore.constants.js';
 import '../AreScene/AreScene.constants.js';
-import '../AreAttribute/AreAttribute.types.js';
-import '../AreAttribute/AreAttribute.constants.js';
 import '../AreComponent/Are.component.js';
 import '../AreComponent/Are.types.js';
 import '../AreComponent/Are.constants.js';
+import '../AreAttribute/AreAttribute.constants.js';

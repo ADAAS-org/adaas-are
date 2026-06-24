@@ -1,5 +1,5 @@
 
-import { A_Context, A_Entity, A_Error, A_FormatterHelper, A_Scope } from "@adaas/a-concept";
+import { A_CommonHelper, A_Context, A_Entity, A_Error, A_FormatterHelper, A_Scope, ASEID } from "@adaas/a-concept";
 import { A_Frame } from "@adaas/a-frame/core";
 import type { AreNode } from "@adaas/are/node/AreNode.entity";
 import { AreInstructionNewProps, AreInstructionSerialized } from "./AreInstruction.types";
@@ -81,6 +81,15 @@ export class AreInstruction<
         return this.aseid.id;
     }
 
+    /**
+     * A stable discriminator that identifies the concrete instruction class (e.g. "AreDeclaration", "AreMutation"). It is used during serialization so a prebuilt/serialized scene can be mapped back to the correct instruction class via `scope.resolveConstructor(type)` during deserialization.
+     *
+     * [!] Note, this uses the canonical component name (`A_CommonHelper.getComponentName`) — the same naming the DI resolution (`resolveConstructor`) consumes — so a serialized instruction is resolvable without a separate registry.
+     */
+    get type(): string {
+        return A_CommonHelper.getComponentName(this.constructor);
+    }
+
     get owner(): AreNode {
         return A_Context.scope(this).issuer<AreNode>()!;
     }
@@ -105,6 +114,24 @@ export class AreInstruction<
         this._payload = newEntity.payload
         this._group = newEntity.group?.aseid.toString();
         this._parent = newEntity.parent?.aseid.toString();
+    }
+
+
+    /**
+     * Reconstructs the instruction from its serialized (runtime-free) form, restoring its identity and structural state.
+     *
+     * Restored: `aseid`, `name`, `payload`, `group` and `parent` (the parent/group references are already stored as ASEID strings, so no remapping is required for a restore-mode rehydration).
+     * Not restored: runtime-only state (store-dependency tracking, applied/reverted state) — it is re-derived when the instruction is interpreted again.
+     *
+     * @param serialized the serialized representation produced by `toJSON()`.
+     */
+    fromJSON(serialized: S): void {
+        this.aseid = new ASEID(serialized.aseid);
+
+        this._name = serialized.name;
+        this._payload = serialized.payload;
+        this._group = serialized.group;
+        this._parent = serialized.parent;
     }
 
 
@@ -198,6 +225,26 @@ export class AreInstruction<
         scope?: A_Scope
     ): void {
         this.call(AreInstructionFeatures.Revert, scope);
+    }
+
+
+    /**
+     * Serializes the instruction into its structural form, dropping all runtime-only state.
+     *
+     * Kept (static / structural): `aseid`, `name`, `type` discriminator, `group`, `parent` and `payload`.
+     * Dropped (runtime-only): `_props` (the live store-dependency tracking set) and any applied/reverted state, which must be re-derived when the instruction is interpreted again.
+     *
+     * @returns the serialized, runtime-free representation of the instruction.
+     */
+    toJSON(): S {
+        return {
+            aseid: this.aseid.toString(),
+            name: this._name,
+            type: this.type,
+            group: this.group,
+            parent: this.parent,
+            payload: this.payload,
+        } as S;
     }
 
 }

@@ -7,6 +7,7 @@ export * from './lib/AreNode/AreNode.entity';
 export * from './lib/AreNode/AreNode.constants';
 export * from './lib/AreNode/AreNode.types';
 export * from './lib/AreNode/AreNode.error';
+export * from './lib/AreComponentResolver/AreComponentResolver.fragment';
 export * from './lib/AreAttribute/AreAttribute.entity';
 export * from './lib/AreAttribute/AreAttribute.constants';
 export * from './lib/AreAttribute/AreAttribute.types';

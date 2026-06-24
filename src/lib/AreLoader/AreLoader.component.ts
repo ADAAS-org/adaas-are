@@ -1,9 +1,10 @@
-import { A_Caller, A_Component, A_Context, A_Dependency, A_Feature, A_FormatterHelper, A_Inject, A_Scope, A_TYPES__ComponentMeta, A_TYPES__EntityFeatures } from "@adaas/a-concept";
+import { A_Caller, A_Component, A_Context, A_Dependency, A_Feature, A_FormatterHelper, A_Inject, A_Scope, A_TYPES__ComponentMeta, A_TYPES__Ctor, A_TYPES__EntityFeatures } from "@adaas/a-concept";
 import { A_Frame } from "@adaas/a-frame/core";
 import { A_Logger } from "@adaas/a-utils/a-logger";
 import { AreNode } from "@adaas/are/node/AreNode.entity";
 import { AreFeatures } from "@adaas/are/component/Are.constants";
 import { AreContext } from "@adaas/are/component/Are.context";
+import { AreComponentResolver } from "@adaas/are/resolver/AreComponentResolver.fragment";
 
 
 
@@ -41,6 +42,30 @@ export class AreLoader extends A_Component {
         ...args: any[]
     ) {
         logger?.debug('red', `Loading node <${node.aseid.toString()}> with content:`, scope);
+
+        /**
+         * If the tag does not resolve to a registered component, give an
+         * (optional) AreComponentResolver a chance to supply it asynchronously
+         * — the engine's runtime / lazy component-loading hook.
+         *
+         * This is strictly opt-in and guarded: it only runs for an unresolved
+         * custom-element tag (must contain a hyphen, per the spec) AND only
+         * when a resolver fragment is registered in the scope. With no resolver
+         * present the load path is byte-for-byte unchanged. A returned class is
+         * registered into the node's scope so `node.component` resolves it from
+         * here on (scope.register bumps the resolution version).
+         */
+        if (!node.component && node.aseid.entity.includes('-')) {
+            const resolver = scope.resolve(AreComponentResolver as A_TYPES__Ctor<AreComponentResolver>);
+
+            if (resolver) {
+                const Component = await resolver.resolve(node.aseid.entity);
+
+                if (Component) {
+                    node.registerComponent(Component);
+                }
+            }
+        }
 
         /**
          * If Node has a custom component Defined

@@ -6,6 +6,7 @@ var aLogger = require('@adaas/a-utils/a-logger');
 var AreNode_entity = require('@adaas/are/node/AreNode.entity');
 var Are_constants = require('@adaas/are/component/Are.constants');
 var Are_context = require('@adaas/are/component/Are.context');
+var AreComponentResolver_fragment = require('@adaas/are/resolver/AreComponentResolver.fragment');
 
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -21,6 +22,15 @@ var __decorateParam = (index, decorator) => (target, key) => decorator(target, k
 exports.AreLoader = class AreLoader extends aConcept.A_Component {
   async load(node, scope, feature, logger, context, ...args) {
     logger?.debug("red", `Loading node <${node.aseid.toString()}> with content:`, scope);
+    if (!node.component && node.aseid.entity.includes("-")) {
+      const resolver = scope.resolve(AreComponentResolver_fragment.AreComponentResolver);
+      if (resolver) {
+        const Component = await resolver.resolve(node.aseid.entity);
+        if (Component) {
+          node.registerComponent(Component);
+        }
+      }
+    }
     if (node.component) {
       context?.startPerformance("Total AreFeatures.onData");
       await feature.chain(node.component, Are_constants.AreFeatures.onData, scope);

@@ -5,10 +5,20 @@ import { A_Logger } from '@adaas/a-utils/a-logger';
 import { AreNode } from '@adaas/are/node/AreNode.entity';
 import { AreFeatures } from '@adaas/are/component/Are.constants';
 import { AreContext } from '@adaas/are/component/Are.context';
+import { AreComponentResolver } from '@adaas/are/resolver/AreComponentResolver.fragment';
 
 let AreLoader = class extends A_Component {
   async load(node, scope, feature, logger, context, ...args) {
     logger?.debug("red", `Loading node <${node.aseid.toString()}> with content:`, scope);
+    if (!node.component && node.aseid.entity.includes("-")) {
+      const resolver = scope.resolve(AreComponentResolver);
+      if (resolver) {
+        const Component = await resolver.resolve(node.aseid.entity);
+        if (Component) {
+          node.registerComponent(Component);
+        }
+      }
+    }
     if (node.component) {
       context?.startPerformance("Total AreFeatures.onData");
       await feature.chain(node.component, AreFeatures.onData, scope);

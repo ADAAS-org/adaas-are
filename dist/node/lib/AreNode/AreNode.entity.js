@@ -323,6 +323,92 @@ exports.AreNode = class AreNode extends aConcept.A_Entity {
       this.scope.deregister(attribute);
     }
   }
+  /**
+   * Registers a component class at runtime — the documented entry point for
+   * injecting a component that was NOT present at bootstrap (e.g. a class
+   * fetched from a backend / lazily imported).
+   *
+   * The class is registered into the ROOT scope (the topmost scope in the
+   * inheritance chain), NOT this node's local scope, so it becomes globally
+   * resolvable for every node in the tree — exactly as if it had been
+   * registered at bootstrap. Registering in the local scope would only make
+   * the tag resolvable for this single node's subtree.
+   *
+   * `scope.register` bumps the resolution version; because version
+   * aggregation walks up the parent chain, registering at the root
+   * invalidates the resolve caches of all descendant scopes, so the new
+   * component is picked up immediately on the next {@link render} / load.
+   *
+   * @param component - the component constructor to register.
+   */
+  registerComponent(component) {
+    let scope = this.scope;
+    while (scope.parent) {
+      scope = scope.parent;
+    }
+    scope.register(component);
+  }
+  /**
+   * Builds and mounts this node's children from its CURRENT content in a
+   * single pass — the canonical "(re)render my content" primitive.
+   *
+   * Call {@link setContent} first, then `render()`. It tokenizes the content
+   * into child nodes and runs the full per-child pipeline
+   * (`init → load → transform → compile → mount`) in document order — the
+   * exact sequence the engine's build + execute applies to a fresh subtree,
+   * so a runtime-injected component is rendered identically to a bootstrap
+   * one.
+   *
+   * `load()` (async data) and `mount()` (time-sliced mount) may be
+   * asynchronous, so `render()` awaits them and resolves only once the whole
+   * subtree has finished mounting.
+   *
+   * [!] This is the single source of truth for runtime subtree construction.
+   * Consumers (e.g. routing outlets) MUST use it instead of re-implementing
+   * the loop, so the proven order lives in one place.
+   */
+  async render() {
+    this.tokenize();
+    for (const child of this.children) {
+      child.init();
+      const loaded = child.load();
+      if (loaded instanceof Promise) await loaded;
+      child.transform();
+      child.compile();
+      const mounted = child.mount();
+      if (mounted instanceof Promise) await mounted;
+    }
+  }
+  /**
+   * Unmounts and detaches every child subtree of this node — the safe
+   * counterpart to {@link render}, used when swapping out content.
+   *
+   * Each child is unmounted (removed from the rendered output) and then
+   * deregistered from this node's scope. The children list is snapshotted up
+   * front because `removeChild` mutates it.
+   *
+   * [!] A child can still appear in this node's children list while its OWN
+   * sub-scope has already been deallocated (e.g. by `cloneWithScope` during
+   * mount). `unmount()` asserts scope inheritance and would throw
+   * "not bound to any context scope" for such a node, so it is guarded by a
+   * cheap `A_Context.has` check — an unbound node has nothing to unmount and
+   * is simply deregistered.
+   *
+   * It intentionally does NOT call `child.destroy()`: `destroy()` recurses
+   * into the subtree where an internal node may likewise have no scope,
+   * reintroducing the same throw. This is the hazard `AreRoot.stashChild`
+   * sidesteps (its post-removeChild `void child.destroy()` rejection is
+   * silently swallowed). Unmounting + deregistering is the empirically-safe
+   * teardown: the detached subtree is unreferenced and collected.
+   */
+  async clear() {
+    for (const child of [...this.children]) {
+      if (aConcept.A_Context.has(child)) {
+        child.unmount();
+      }
+      this.removeChild(child);
+    }
+  }
   clone() {
     const newNode = new this.constructor({
       opening: this._opening,
@@ -372,6 +458,33 @@ exports.AreNode = class AreNode extends aConcept.A_Entity {
   //============================================================================================
   //                                Helpers Methods
   //============================================================================================
+  /**
+   * Serializes the node into its structural (runtime-free) form, recursively including attributes, child nodes and — for nodes that own a scene (root nodes) — the compiled instruction plan.
+   *
+   * Kept (static / structural): `aseid`, the class `type` discriminator, `entity`, `opening`, `closing`, `position`, `content`, `markup`, `payload`, nested `attributes`, `children` and the owned `scene` plan.
+   * Dropped (runtime-only): the live scope, resolved component, the node `status` and any evaluated attribute values — these must be re-established when the tree is reconstructed and re-interpreted.
+   *
+   * [!] Note, the scene is embedded only by the node that owns it (its `id` matches the scene `id`), so the plan is not duplicated across the inheriting child nodes.
+   *
+   * @returns the serialized, runtime-free representation of the node and its subtree.
+   */
+  toJSON() {
+    const scene = this._scope ? this._scope.resolve(AreScene_context.AreScene) : void 0;
+    return {
+      aseid: this.aseid.toString(),
+      type: aConcept.A_CommonHelper.getComponentName(this.constructor),
+      entity: this.aseid.entity,
+      opening: this._opening,
+      closing: this._closing,
+      position: this._position,
+      content: this._content,
+      markup: this._markup,
+      payload: this._payload,
+      attributes: this._scope ? this.attributes.map((attribute) => attribute.toJSON()) : [],
+      children: this._scope ? this.children.map((child) => child.toJSON()) : [],
+      scene: scene && scene.id === this.id ? scene.toJSON() : void 0
+    };
+  }
   /**
    * Method to ensure that the current scope is inherited from the context scope
    * 

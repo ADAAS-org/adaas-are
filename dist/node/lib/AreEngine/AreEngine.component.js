@@ -16,6 +16,7 @@ var AreTokenizer_component = require('@adaas/are/tokenizer/AreTokenizer.componen
 var AreSignals_component = require('@adaas/are/signals/AreSignals.component');
 var AreInit_signal = require('@adaas/are/signals/entities/AreInit.signal');
 var aSignal = require('@adaas/a-utils/a-signal');
+var Are_component = require('@adaas/are/component/Are.component');
 
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -104,6 +105,7 @@ exports.AreEngine = class AreEngine extends aConcept.A_Component {
   async defaultExecute(context, bus, logger) {
     logger?.debug("cyan", "Starting to execute the scene and mount root nodes...");
     for (const root of context.roots) {
+      if (!(root.component instanceof Are_component.Are)) continue;
       context.startPerformance(`Mount root <${root.aseid.id}>`);
       await root.mount();
       context.endPerformance(`Mount root <${root.aseid.id}>`);

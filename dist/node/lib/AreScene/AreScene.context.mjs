@@ -352,6 +352,21 @@ let AreScene = class extends A_Fragment {
     this._planIndex.clear();
     this._stateIndex.clear();
   }
+  /**
+   * Serializes the scene into its structural (runtime-free) form.
+   *
+   * Kept (static / structural): the scene `name` (identity), the `host` declaration and the ordered `plan`.
+   * Dropped (runtime-only): the applied/reverted `_state` (and its index) and the live `_status`. A reconstructed scene must start with an empty applied state so the interpreter re-derives it from the plan.
+   *
+   * @returns the serialized, runtime-free representation of the scene.
+   */
+  toJSON() {
+    return {
+      name: this.name,
+      host: this._host?.toJSON(),
+      plan: this._plan.map((instruction) => instruction.toJSON())
+    };
+  }
 };
 AreScene = __decorateClass([
   A_Frame.Define({

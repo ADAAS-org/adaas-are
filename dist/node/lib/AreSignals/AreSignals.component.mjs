@@ -10,12 +10,14 @@ import { AreEvent } from '@adaas/are/event/AreEvent.context';
 import { A_Frame } from '@adaas/a-frame/core';
 import { AreSignalsMeta } from './AreSignals.meta';
 import { AreSignalsContext } from './AreSignals.context';
+import { Are } from '@adaas/are/component/Are.component';
 
 let AreSignals = class extends A_Component {
   async handleSignalVector(vector, context, state, scope, logger) {
     logger?.debug(`Handling Signal Vector with ${context.subscribers.size} root nodes.`, vector);
     try {
-      for (const root of context.subscribers) {
+      for (const sub of context.subscribers) {
+        if (!(sub.component instanceof Are)) continue;
         const callScope = new A_Scope({
           fragments: [new AreEvent(
             AreFeatures.onSignal,
@@ -23,9 +25,9 @@ let AreSignals = class extends A_Component {
               vector
             }
           )]
-        }).import(scope, root.scope);
-        logger?.debug("Emitting signal for root node:", vector);
-        await root.emit(callScope);
+        }).import(scope, sub.scope);
+        logger?.debug("Emitting signal for sub node:", vector);
+        await sub.emit(callScope);
         callScope.destroy();
         const dispatchedSignals = scope.resolveFlatAll(A_Signal);
         for (const signal of dispatchedSignals) {
@@ -37,8 +39,8 @@ let AreSignals = class extends A_Component {
               vector,
               signal
             })]
-          }).import(scope, root.scope);
-          await root.emit(typedScope);
+          }).import(scope, sub.scope);
+          await sub.emit(typedScope);
           typedScope.destroy();
         }
       }

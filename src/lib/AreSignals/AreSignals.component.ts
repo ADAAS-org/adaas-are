@@ -33,7 +33,21 @@ export class AreSignals extends A_Component {
         logger?.debug(`Handling Signal Vector with ${context.subscribers.size} root nodes.`, vector);
 
         try {
-            for (const root of context.subscribers) {
+            for (const sub of context.subscribers) {
+
+                // Skip subscriber roots that are not backed by a real Are
+                // component. Stray top-level template nodes (whitespace text,
+                // HTML comments, a <script> tag, etc.) are tokenized as roots
+                // and subscribe to the bus, but they own no signal handlers and
+                // no managed outlet — re-emitting to them only triggers a
+                // redundant re-interpret that fails its mount-point lookup.
+                // Note: `node.component` resolves the PascalCase entity name and
+                // for primitive nodes (are-text, are-comment) returns the node's
+                // own class instance, which is NOT an `Are` component — so an
+                // `instanceof Are` check is required to distinguish real
+                // component roots from these. Only `Are`-backed nodes can
+                // meaningfully react to signals.
+                if (!(sub.component instanceof Are)) continue;
 
                 const callScope = new A_Scope({
                     fragments: [new AreEvent(
@@ -41,11 +55,11 @@ export class AreSignals extends A_Component {
                         vector
                     })]
                 })
-                    .import(scope, root.scope);
+                    .import(scope, sub.scope);
 
-                logger?.debug('Emitting signal for root node:', vector);
+                logger?.debug('Emitting signal for sub node:', vector);
 
-                await root.emit(callScope);
+                await sub.emit(callScope);
 
                 callScope.destroy();
 
@@ -84,9 +98,9 @@ export class AreSignals extends A_Component {
                             signal,
                         })]
                     })
-                        .import(scope, root.scope);
+                        .import(scope, sub.scope);
 
-                    await root.emit(typedScope);
+                    await sub.emit(typedScope);
 
                     typedScope.destroy();
                 }

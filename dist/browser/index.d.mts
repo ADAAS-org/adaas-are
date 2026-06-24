@@ -339,8 +339,23 @@ declare class AreInstruction<T extends Record<string, any> = Record<string, any>
      */
     get parent(): string | undefined;
     get id(): string;
+    /**
+     * A stable discriminator that identifies the concrete instruction class (e.g. "AreDeclaration", "AreMutation"). It is used during serialization so a prebuilt/serialized scene can be mapped back to the correct instruction class via `scope.resolveConstructor(type)` during deserialization.
+     *
+     * [!] Note, this uses the canonical component name (`A_CommonHelper.getComponentName`) — the same naming the DI resolution (`resolveConstructor`) consumes — so a serialized instruction is resolvable without a separate registry.
+     */
+    get type(): string;
     get owner(): AreNode;
     fromNew(newEntity: AreInstructionNewProps<T>): void;
+    /**
+     * Reconstructs the instruction from its serialized (runtime-free) form, restoring its identity and structural state.
+     *
+     * Restored: `aseid`, `name`, `payload`, `group` and `parent` (the parent/group references are already stored as ASEID strings, so no remapping is required for a restore-mode rehydration).
+     * Not restored: runtime-only state (store-dependency tracking, applied/reverted state) — it is re-derived when the instruction is interpreted again.
+     *
+     * @param serialized the serialized representation produced by `toJSON()`.
+     */
+    fromJSON(serialized: S): void;
     fromUndefined(): void;
     /**
      * Group this instruction with another instruction. This means that when one of the instructions in the group is applied or reverted, all the instructions in the same group will be applied or reverted together. This can be useful to manage complex changes that involve multiple instructions.
@@ -392,6 +407,15 @@ declare class AreInstruction<T extends Record<string, any> = Record<string, any>
      * @param scope
      */
     revert(scope?: A_Scope): void;
+    /**
+     * Serializes the instruction into its structural form, dropping all runtime-only state.
+     *
+     * Kept (static / structural): `aseid`, `name`, `type` discriminator, `group`, `parent` and `payload`.
+     * Dropped (runtime-only): `_props` (the live store-dependency tracking set) and any applied/reverted state, which must be re-derived when the instruction is interpreted again.
+     *
+     * @returns the serialized, runtime-free representation of the instruction.
+     */
+    toJSON(): S;
 }
 
 /**
@@ -444,7 +468,16 @@ type AreSceneChanges = {
     toRevert: AreInstruction[];
 };
 type AreScene_Serialized = {
-    instructions: AreInstructionSerialized[];
+    /**
+     * The host declaration instruction that represents the node itself in the scene (its mount point). Serialized structurally so the scene's anchor can be reconstructed.
+     */
+    host?: AreInstructionSerialized;
+    /**
+     * The ordered rendering plan — the full FIFO queue of instructions required to render the node. This is the core "interpret-only" payload of a prebuilt scene.
+     *
+     * [!] Note, only the planned instructions are serialized. The applied/reverted runtime state is intentionally dropped and must start empty when the scene is reconstructed and re-interpreted.
+     */
+    plan: AreInstructionSerialized[];
 } & A_TYPES__Fragment_Serialized;
 type AreSceneStatusNames = typeof AreSceneStatuses[keyof typeof AreSceneStatuses];
 
@@ -648,6 +681,15 @@ declare class AreScene extends A_Fragment {
      *
      */
     reset(): void;
+    /**
+     * Serializes the scene into its structural (runtime-free) form.
+     *
+     * Kept (static / structural): the scene `name` (identity), the `host` declaration and the ordered `plan`.
+     * Dropped (runtime-only): the applied/reverted `_state` (and its index) and the live `_status`. A reconstructed scene must start with an empty applied state so the interpreter re-derives it from the plan.
+     *
+     * @returns the serialized, runtime-free representation of the scene.
+     */
+    toJSON(): AreScene_Serialized;
 }
 
 declare const AreAttributeFeatures: {
@@ -695,7 +737,9 @@ type AreAttribute_Init = {
     prefix: string;
 };
 /**
- * The evaluated value of the attribute, which can be different from the raw value depending on the context and type of the attribute. For example, for a directive like `v-if="condition"`, the raw value is "condition", but the evaluated value would be the result of evaluating "condition" in the current scope.
+ * The structural (runtime-free) serialized form of an attribute. It captures only the static description of the attribute — its name, raw text, parsed content and prefix — so a prebuilt node can be reconstructed and interpreted without re-scanning the source.
+ *
+ * [!] Note, the evaluated `value` is intentionally NOT serialized: it is a runtime value derived by evaluating `content` against the live scope, and must be re-computed when the attribute is interpreted again.
  */
 type AreAttribute_Serialized = {
     /**
@@ -707,9 +751,13 @@ type AreAttribute_Serialized = {
      */
     raw: string;
     /**
-     * Attribute value (e.g. "buttonLabel")
+     * Attribute content (e.g. "buttonLabel") — the static expression/text, without runtime evaluation.
      */
-    value: string;
+    content: string;
+    /**
+     * The prefix of the attribute, for example for ':label' it would be ':', for 'v-if' it would be 'v-'. This can be used to determine the type of the attribute and how to process it.
+     */
+    prefix: string;
 } & A_TYPES__Entity_Serialized;
 /**
  * The names of the features that can be implemented by the AreAttribute entity. These features correspond to specific methods that can be defined on the AreAttribute class to provide custom behavior for initializing, transforming, compiling, updating, and validating the attribute based on its content and context. Each feature name is associated with a specific method that should be implemented to handle the corresponding aspect of the attribute's lifecycle and behavior within the ARE framework.
@@ -754,11 +802,29 @@ declare class AreAttribute extends A_Entity<AreAttribute_Init, AreAttribute_Seri
      */
     fromNew(newEntity: AreAttribute_Init): void;
     /**
+     * Reconstructs the attribute from its serialized (runtime-free) form, restoring its identity and static description.
+     *
+     * Restored: `aseid`, `name`, `raw`, `content` and `prefix`.
+     * Not restored: the evaluated `value`, which is derived from `content` against the live scope and is re-evaluated when the attribute is interpreted again.
+     *
+     * @param serialized the serialized representation produced by `toJSON()`.
+     */
+    fromJSON(serialized: AreAttribute_Serialized): void;
+    /**
      * Creates a clone of the current attribute instance. This method can be used to create a new instance of the attribute with the same properties and state as the original, which can be useful in scenarios where you want to reuse an attribute's configuration or create variations of it without modifying the original instance.
      *
      * @returns
      */
     clone(): this;
+    /**
+     * Serializes the attribute into its structural (runtime-free) form.
+     *
+     * Kept (static / structural): `aseid`, `name`, `raw`, `content` and `prefix`.
+     * Dropped (runtime-only): the evaluated `value`, which is derived from `content` against the live scope and must be re-evaluated when the attribute is interpreted again.
+     *
+     * @returns the serialized, runtime-free representation of the attribute.
+     */
+    toJSON(): AreAttribute_Serialized;
     /**
      * Initializes the attribute. This method is called when the attribute is first created and should set up any necessary state or perform any initial processing based on the provided content and context. It can also be used to validate the attribute's content and throw errors if it is invalid.
      *
@@ -1088,8 +1154,59 @@ declare const AreNodeStatuses: {
 type AreNodeNewProps = AreSyntaxTokenMatch;
 type AreNodeFeatureNames = typeof AreNodeFeatures[keyof typeof AreNodeFeatures];
 type AreNodeStatusNames = typeof AreNodeStatuses[keyof typeof AreNodeStatuses];
+/**
+ * The structural (runtime-free) serialized form of an AreNode. It captures the full static description of a node — its identity, source delimiters, content/markup, tokenization payload, attributes, nested children and (for root nodes) the compiled instruction plan — so a prebuilt tree can be reconstructed and interpreted without re-scanning the source.
+ *
+ * [!] Note, runtime-only state is intentionally dropped: the live scope, resolved component, evaluated attribute values and the node `status` are NOT serialized and must be re-established when the tree is reconstructed.
+ */
+type AreNode_Serialized = {
+    /**
+     * The concrete node class discriminator (the runtime constructor name). Used to map a serialized node back to the correct node class during deserialization.
+     */
+    type: string;
+    /**
+     * The node type / tag name (the entity part of the ASEID).
+     */
+    entity: string;
+    /**
+     * The opening delimiter string that defines the start of the node in the source.
+     */
+    opening: string;
+    /**
+     * The closing delimiter string that defines the end of the node in the source.
+     */
+    closing: string;
+    /**
+     * The character position of the node within the original source string.
+     */
+    position: number;
+    /**
+     * The inner content of the node — the text/markup between the opening and closing delimiters.
+     */
+    content: string;
+    /**
+     * The full raw markup string of the node, including delimiters.
+     */
+    markup: string;
+    /**
+     * The tokenization payload extracted for the node (id/entity/scope overrides plus any custom data).
+     */
+    payload?: AreSyntaxTokenPayload;
+    /**
+     * The structural attributes declared on the node.
+     */
+    attributes: AreAttribute_Serialized[];
+    /**
+     * The nested child nodes, serialized recursively.
+     */
+    children: AreNode_Serialized[];
+    /**
+     * The compiled instruction plan owned by the node. Present only for nodes that own a scene (root nodes) and only after compilation; otherwise omitted.
+     */
+    scene?: AreScene_Serialized;
+} & A_TYPES__Entity_Serialized;
 
-declare class AreNode extends A_Entity<AreNodeNewProps> {
+declare class AreNode extends A_Entity<AreNodeNewProps, AreNode_Serialized> {
     static get concept(): string;
     /**
      * The current status of the node, which can be used to track the lifecycle and rendering state of the node within the scene.
@@ -1256,6 +1373,68 @@ declare class AreNode extends A_Entity<AreNodeNewProps> {
     unmount(): void;
     cloneWithScope<T extends AreNode = AreNode>(this: T): T;
     reset(): void;
+    /**
+     * Registers a component class at runtime — the documented entry point for
+     * injecting a component that was NOT present at bootstrap (e.g. a class
+     * fetched from a backend / lazily imported).
+     *
+     * The class is registered into the ROOT scope (the topmost scope in the
+     * inheritance chain), NOT this node's local scope, so it becomes globally
+     * resolvable for every node in the tree — exactly as if it had been
+     * registered at bootstrap. Registering in the local scope would only make
+     * the tag resolvable for this single node's subtree.
+     *
+     * `scope.register` bumps the resolution version; because version
+     * aggregation walks up the parent chain, registering at the root
+     * invalidates the resolve caches of all descendant scopes, so the new
+     * component is picked up immediately on the next {@link render} / load.
+     *
+     * @param component - the component constructor to register.
+     */
+    registerComponent(component: A_TYPES__Ctor<Are>): void;
+    /**
+     * Builds and mounts this node's children from its CURRENT content in a
+     * single pass — the canonical "(re)render my content" primitive.
+     *
+     * Call {@link setContent} first, then `render()`. It tokenizes the content
+     * into child nodes and runs the full per-child pipeline
+     * (`init → load → transform → compile → mount`) in document order — the
+     * exact sequence the engine's build + execute applies to a fresh subtree,
+     * so a runtime-injected component is rendered identically to a bootstrap
+     * one.
+     *
+     * `load()` (async data) and `mount()` (time-sliced mount) may be
+     * asynchronous, so `render()` awaits them and resolves only once the whole
+     * subtree has finished mounting.
+     *
+     * [!] This is the single source of truth for runtime subtree construction.
+     * Consumers (e.g. routing outlets) MUST use it instead of re-implementing
+     * the loop, so the proven order lives in one place.
+     */
+    render(): Promise<void>;
+    /**
+     * Unmounts and detaches every child subtree of this node — the safe
+     * counterpart to {@link render}, used when swapping out content.
+     *
+     * Each child is unmounted (removed from the rendered output) and then
+     * deregistered from this node's scope. The children list is snapshotted up
+     * front because `removeChild` mutates it.
+     *
+     * [!] A child can still appear in this node's children list while its OWN
+     * sub-scope has already been deallocated (e.g. by `cloneWithScope` during
+     * mount). `unmount()` asserts scope inheritance and would throw
+     * "not bound to any context scope" for such a node, so it is guarded by a
+     * cheap `A_Context.has` check — an unbound node has nothing to unmount and
+     * is simply deregistered.
+     *
+     * It intentionally does NOT call `child.destroy()`: `destroy()` recurses
+     * into the subtree where an internal node may likewise have no scope,
+     * reintroducing the same throw. This is the hazard `AreRoot.stashChild`
+     * sidesteps (its post-removeChild `void child.destroy()` rejection is
+     * silently swallowed). Unmounting + deregistering is the empirically-safe
+     * teardown: the detached subtree is unreferenced and collected.
+     */
+    clear(): Promise<void>;
     clone<T extends AreNode = AreNode>(this: T): T;
     /**
      * Emits an event or a scope to the node, which can be used to trigger event handlers or to provide additional context for processing within the node. The method can accept either an AreEvent instance or an A_Scope instance, and it will handle the emission accordingly. This allows for flexible communication and interaction within the node's context, enabling dynamic behavior and responsiveness based on events or changes in scope.
@@ -1270,6 +1449,17 @@ declare class AreNode extends A_Entity<AreNodeNewProps> {
      * [!] Note: The destroy method should ensure that the node's scope is properly inherited from the context scope before performing any cleanup, and it should handle any errors that may occur during destruction to ensure that resources are released correctly.
      */
     destroy(): Promise<any>;
+    /**
+     * Serializes the node into its structural (runtime-free) form, recursively including attributes, child nodes and — for nodes that own a scene (root nodes) — the compiled instruction plan.
+     *
+     * Kept (static / structural): `aseid`, the class `type` discriminator, `entity`, `opening`, `closing`, `position`, `content`, `markup`, `payload`, nested `attributes`, `children` and the owned `scene` plan.
+     * Dropped (runtime-only): the live scope, resolved component, the node `status` and any evaluated attribute values — these must be re-established when the tree is reconstructed and re-interpreted.
+     *
+     * [!] Note, the scene is embedded only by the node that owns it (its `id` matches the scene `id`), so the plan is not duplicated across the inheriting child nodes.
+     *
+     * @returns the serialized, runtime-free representation of the node and its subtree.
+     */
+    toJSON(): AreNode_Serialized;
     /**
      * Method to ensure that the current scope is inherited from the context scope
      *
@@ -1978,6 +2168,43 @@ declare class AreContainer extends A_Service {
     protected [A_ServiceFeatures.onStart](engine: AreEngine, context: AreContext, watchers?: AreWatcher[], logger?: A_Logger): Promise<void>;
 }
 
+/**
+ * Pluggable hook the engine consults when a node's tag does NOT resolve to a
+ * registered component.
+ *
+ * By default the loader treats an unresolved custom tag as a plain element. By
+ * registering a concrete `AreComponentResolver` in the container, an app can
+ * intercept that miss and supply the component class asynchronously — the
+ * canonical mechanism for **runtime / lazy component loading** (fetch a class
+ * from a backend, dynamic `import()`, etc.).
+ *
+ * The engine, on a resolution miss during load:
+ *   1. calls {@link resolve} with the node's tag (the ASEID entity, e.g.
+ *      `about-page`),
+ *   2. if a class comes back, registers it into the node's scope (so the tag
+ *      resolves from now on),
+ *   3. proceeds to load the node as a component — no different from a
+ *      bootstrap-registered one.
+ *
+ * Implementations are responsible for the transport (network, manifest lookup,
+ * bundling) AND for memoizing already-loaded classes so repeated tags don't
+ * refetch. Returning `undefined` means "not a component" and the node stays a
+ * plain element.
+ *
+ * Resolution is OPT-IN: when no `AreComponentResolver` is registered the load
+ * path is byte-for-byte unchanged.
+ */
+declare abstract class AreComponentResolver extends A_Fragment {
+    /**
+     * Resolve a tag to a component constructor, or `undefined` when the tag is
+     * not a (loadable) component.
+     *
+     * @param entity - the node's tag name (kebab-case ASEID entity, e.g.
+     *                 `about-page`).
+     */
+    abstract resolve(entity: string): Promise<A_TYPES__Ctor<Are> | undefined>;
+}
+
 declare class AreSyntaxError extends A_Error {
     static readonly SyntaxParseError = "Are Syntax Parse Error";
     static readonly SyntaxNotSupportedError = "Are Syntax Not Supported Error";
@@ -2082,4 +2309,4 @@ declare class AreEngineError extends A_Error {
     static readonly MissedRequiredDependency = "A Required Dependency is missing in AreEngine";
 }
 
-export { Are, AreAttribute, type AreAttributeFeatureNames, AreAttributeFeatures, type AreAttribute_Init, type AreAttribute_Serialized, AreCompiler, AreCompilerError, type AreConditionOptions, AreContainer, AreContext, type AreContextInit, AreDeclaration, AreEngine, type AreEngineDependencies, AreEngineError, AreEngineFeatures, AreEvent, type AreEventProps, type AreFeatureNames, AreFeatures, AreInit, AreInstruction, AreInstructionDefaultNames, AreInstructionError, AreInstructionFeatures, type AreInstructionNewProps, type AreInstructionSerialized, AreInterpreter, AreInterpreterError, AreLifecycle, AreLifecycleError, AreLoader, AreLoaderError, AreMutation, AreNode, type AreNodeFeatureNames, AreNodeFeatures, type AreNodeNewProps, type AreNodeStatusNames, AreNodeStatuses, type ArePropDefinition, AreRoute, AreScene, type AreSceneChanges, AreSceneError, type AreSceneStatusNames, AreSceneStatuses, type AreScene_Serialized, AreSignal, AreSignalFeatureKey, AreSignals, AreSignalsContext, type AreSignalsContextConfig, AreSignalsMeta, AreStore, type AreStoreAreComponentMetaKeyNames, AreStoreAreComponentMetaKeys, type AreStorePathValue, type AreStoreWatchingEntity, AreSyntax, type AreSyntaxCompiledExpression, AreSyntaxError, type AreSyntaxInitOptions, type AreSyntaxTokenMatch, type AreSyntaxTokenPayload, type AreSyntaxTokenRules, AreTokenizer, AreTokenizerError, AreTransformer, AreWatcher };
+export { Are, AreAttribute, type AreAttributeFeatureNames, AreAttributeFeatures, type AreAttribute_Init, type AreAttribute_Serialized, AreCompiler, AreCompilerError, AreComponentResolver, type AreConditionOptions, AreContainer, AreContext, type AreContextInit, AreDeclaration, AreEngine, type AreEngineDependencies, AreEngineError, AreEngineFeatures, AreEvent, type AreEventProps, type AreFeatureNames, AreFeatures, AreInit, AreInstruction, AreInstructionDefaultNames, AreInstructionError, AreInstructionFeatures, type AreInstructionNewProps, type AreInstructionSerialized, AreInterpreter, AreInterpreterError, AreLifecycle, AreLifecycleError, AreLoader, AreLoaderError, AreMutation, AreNode, type AreNodeFeatureNames, AreNodeFeatures, type AreNodeNewProps, type AreNodeStatusNames, AreNodeStatuses, type AreNode_Serialized, type ArePropDefinition, AreRoute, AreScene, type AreSceneChanges, AreSceneError, type AreSceneStatusNames, AreSceneStatuses, type AreScene_Serialized, AreSignal, AreSignalFeatureKey, AreSignals, AreSignalsContext, type AreSignalsContextConfig, AreSignalsMeta, AreStore, type AreStoreAreComponentMetaKeyNames, AreStoreAreComponentMetaKeys, type AreStorePathValue, type AreStoreWatchingEntity, AreSyntax, type AreSyntaxCompiledExpression, AreSyntaxError, type AreSyntaxInitOptions, type AreSyntaxTokenMatch, type AreSyntaxTokenPayload, type AreSyntaxTokenRules, AreTokenizer, AreTokenizerError, AreTransformer, AreWatcher };

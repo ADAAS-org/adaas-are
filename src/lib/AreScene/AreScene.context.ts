@@ -3,7 +3,7 @@ import { A_Frame } from "@adaas/a-frame/core";
 import type { AreNode } from "@adaas/are/node/AreNode.entity";
 import { AreDeclaration } from "@adaas/are/instruction/types/AreDeclaration.instruction";
 import { AreInstruction } from "@adaas/are/instruction/AreInstruction.entity";
-import { AreSceneChanges, AreSceneStatusNames } from "./AreScene.types";
+import { AreSceneChanges, AreSceneStatusNames, AreScene_Serialized } from "./AreScene.types";
 import { AreSceneError } from "./AreScene.error";
 import { AreMutation } from "@adaas/are/instruction/types/AreMutation.instruction";
 import { AreSceneStatuses } from "./AreScene.constants";
@@ -422,5 +422,21 @@ export class AreScene extends A_Fragment {
         this._state = [];
         this._planIndex.clear();
         this._stateIndex.clear();
+    }
+
+    /**
+     * Serializes the scene into its structural (runtime-free) form.
+     *
+     * Kept (static / structural): the scene `name` (identity), the `host` declaration and the ordered `plan`.
+     * Dropped (runtime-only): the applied/reverted `_state` (and its index) and the live `_status`. A reconstructed scene must start with an empty applied state so the interpreter re-derives it from the plan.
+     *
+     * @returns the serialized, runtime-free representation of the scene.
+     */
+    toJSON(): AreScene_Serialized {
+        return {
+            name: this.name,
+            host: this._host?.toJSON(),
+            plan: this._plan.map(instruction => instruction.toJSON()),
+        };
     }
 }

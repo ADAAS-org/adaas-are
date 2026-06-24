@@ -26,7 +26,9 @@ export type AreAttribute_Init = {
 }
 
 /**
- * The evaluated value of the attribute, which can be different from the raw value depending on the context and type of the attribute. For example, for a directive like `v-if="condition"`, the raw value is "condition", but the evaluated value would be the result of evaluating "condition" in the current scope.
+ * The structural (runtime-free) serialized form of an attribute. It captures only the static description of the attribute — its name, raw text, parsed content and prefix — so a prebuilt node can be reconstructed and interpreted without re-scanning the source.
+ *
+ * [!] Note, the evaluated `value` is intentionally NOT serialized: it is a runtime value derived by evaluating `content` against the live scope, and must be re-computed when the attribute is interpreted again.
  */
 export type AreAttribute_Serialized = {
     /**
@@ -38,9 +40,13 @@ export type AreAttribute_Serialized = {
      */
     raw: string;
     /**
-     * Attribute value (e.g. "buttonLabel")
+     * Attribute content (e.g. "buttonLabel") — the static expression/text, without runtime evaluation.
      */
-    value: string;
+    content: string;
+    /**
+     * The prefix of the attribute, for example for ':label' it would be ':', for 'v-if' it would be 'v-'. This can be used to determine the type of the attribute and how to process it.
+     */
+    prefix: string;
 
 } & A_TYPES__Entity_Serialized
 

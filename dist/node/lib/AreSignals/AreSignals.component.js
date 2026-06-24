@@ -11,6 +11,7 @@ var AreEvent_context = require('@adaas/are/event/AreEvent.context');
 var core = require('@adaas/a-frame/core');
 var AreSignals_meta = require('./AreSignals.meta');
 var AreSignals_context = require('./AreSignals.context');
+var Are_component = require('@adaas/are/component/Are.component');
 
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -27,7 +28,8 @@ exports.AreSignals = class AreSignals extends aConcept.A_Component {
   async handleSignalVector(vector, context, state, scope, logger) {
     logger?.debug(`Handling Signal Vector with ${context.subscribers.size} root nodes.`, vector);
     try {
-      for (const root of context.subscribers) {
+      for (const sub of context.subscribers) {
+        if (!(sub.component instanceof Are_component.Are)) continue;
         const callScope = new aConcept.A_Scope({
           fragments: [new AreEvent_context.AreEvent(
             Are_constants.AreFeatures.onSignal,
@@ -35,9 +37,9 @@ exports.AreSignals = class AreSignals extends aConcept.A_Component {
               vector
             }
           )]
-        }).import(scope, root.scope);
-        logger?.debug("Emitting signal for root node:", vector);
-        await root.emit(callScope);
+        }).import(scope, sub.scope);
+        logger?.debug("Emitting signal for sub node:", vector);
+        await sub.emit(callScope);
         callScope.destroy();
         const dispatchedSignals = scope.resolveFlatAll(aSignal.A_Signal);
         for (const signal of dispatchedSignals) {
@@ -49,8 +51,8 @@ exports.AreSignals = class AreSignals extends aConcept.A_Component {
               vector,
               signal
             })]
-          }).import(scope, root.scope);
-          await root.emit(typedScope);
+          }).import(scope, sub.scope);
+          await sub.emit(typedScope);
           typedScope.destroy();
         }
       }

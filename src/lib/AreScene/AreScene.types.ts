@@ -18,7 +18,16 @@ export type AreSceneChanges = {
 
 
 export type AreScene_Serialized = {
-    instructions: AreInstructionSerialized[];
+    /**
+     * The host declaration instruction that represents the node itself in the scene (its mount point). Serialized structurally so the scene's anchor can be reconstructed.
+     */
+    host?: AreInstructionSerialized;
+    /**
+     * The ordered rendering plan — the full FIFO queue of instructions required to render the node. This is the core "interpret-only" payload of a prebuilt scene.
+     *
+     * [!] Note, only the planned instructions are serialized. The applied/reverted runtime state is intentionally dropped and must start empty when the scene is reconstructed and re-interpreted.
+     */
+    plan: AreInstructionSerialized[];
 } & A_TYPES__Fragment_Serialized;
 
 

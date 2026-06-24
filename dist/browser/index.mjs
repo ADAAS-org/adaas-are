@@ -1,4 +1,4 @@
-import { A_Feature, A_Inject, A_Scope, A_Caller, A_Meta, A_TYPES__EntityFeatures, A_Dependency, A_Concept, A_Error, A_Fragment, A_Context, A_Entity, A_FormatterHelper, A_TypeGuards, A_ComponentMeta, A_Component, A_CommonHelper } from '@adaas/a-concept';
+import { A_Feature, A_Inject, A_Scope, A_Caller, A_Meta, A_TYPES__EntityFeatures, A_Dependency, A_Concept, A_Error, A_Fragment, A_Context, A_Entity, A_FormatterHelper, A_TypeGuards, A_CommonHelper, A_ComponentMeta, ASEID, A_Component } from '@adaas/a-concept';
 import { A_Frame } from '@adaas/a-frame/core';
 import { A_SignalBusFeatures, A_SignalVector, A_SignalState, A_SignalBus, A_Signal } from '@adaas/a-utils/a-signal';
 import { A_Logger } from '@adaas/a-utils/a-logger';
@@ -259,6 +259,14 @@ var AreInstruction = class extends A_Entity {
   get id() {
     return this.aseid.id;
   }
+  /**
+   * A stable discriminator that identifies the concrete instruction class (e.g. "AreDeclaration", "AreMutation"). It is used during serialization so a prebuilt/serialized scene can be mapped back to the correct instruction class via `scope.resolveConstructor(type)` during deserialization.
+   *
+   * [!] Note, this uses the canonical component name (`A_CommonHelper.getComponentName`) — the same naming the DI resolution (`resolveConstructor`) consumes — so a serialized instruction is resolvable without a separate registry.
+   */
+  get type() {
+    return A_CommonHelper.getComponentName(this.constructor);
+  }
   get owner() {
     return A_Context.scope(this).issuer();
   }
@@ -272,6 +280,21 @@ var AreInstruction = class extends A_Entity {
     this._payload = newEntity.payload;
     this._group = newEntity.group?.aseid.toString();
     this._parent = newEntity.parent?.aseid.toString();
+  }
+  /**
+   * Reconstructs the instruction from its serialized (runtime-free) form, restoring its identity and structural state.
+   *
+   * Restored: `aseid`, `name`, `payload`, `group` and `parent` (the parent/group references are already stored as ASEID strings, so no remapping is required for a restore-mode rehydration).
+   * Not restored: runtime-only state (store-dependency tracking, applied/reverted state) — it is re-derived when the instruction is interpreted again.
+   *
+   * @param serialized the serialized representation produced by `toJSON()`.
+   */
+  fromJSON(serialized) {
+    this.aseid = new ASEID(serialized.aseid);
+    this._name = serialized.name;
+    this._payload = serialized.payload;
+    this._group = serialized.group;
+    this._parent = serialized.parent;
   }
   fromUndefined() {
     throw new A_Error({
@@ -352,6 +375,24 @@ var AreInstruction = class extends A_Entity {
    */
   revert(scope) {
     this.call(AreInstructionFeatures.Revert, scope);
+  }
+  /**
+   * Serializes the instruction into its structural form, dropping all runtime-only state.
+   *
+   * Kept (static / structural): `aseid`, `name`, `type` discriminator, `group`, `parent` and `payload`.
+   * Dropped (runtime-only): `_props` (the live store-dependency tracking set) and any applied/reverted state, which must be re-derived when the instruction is interpreted again.
+   *
+   * @returns the serialized, runtime-free representation of the instruction.
+   */
+  toJSON() {
+    return {
+      aseid: this.aseid.toString(),
+      name: this._name,
+      type: this.type,
+      group: this.group,
+      parent: this.parent,
+      payload: this.payload
+    };
   }
 };
 AreInstruction = __decorateClass([
@@ -788,6 +829,21 @@ var AreScene = class extends A_Fragment {
     this._planIndex.clear();
     this._stateIndex.clear();
   }
+  /**
+   * Serializes the scene into its structural (runtime-free) form.
+   *
+   * Kept (static / structural): the scene `name` (identity), the `host` declaration and the ordered `plan`.
+   * Dropped (runtime-only): the applied/reverted `_state` (and its index) and the live `_status`. A reconstructed scene must start with an empty applied state so the interpreter re-derives it from the plan.
+   *
+   * @returns the serialized, runtime-free representation of the scene.
+   */
+  toJSON() {
+    return {
+      name: this.name,
+      host: this._host?.toJSON(),
+      plan: this._plan.map((instruction) => instruction.toJSON())
+    };
+  }
 };
 AreScene = __decorateClass([
   A_Frame.Define({
@@ -852,6 +908,21 @@ var AreAttribute = class extends A_Entity {
     this.raw = newEntity.raw;
     this.content = newEntity.content;
   }
+  /**
+   * Reconstructs the attribute from its serialized (runtime-free) form, restoring its identity and static description.
+   *
+   * Restored: `aseid`, `name`, `raw`, `content` and `prefix`.
+   * Not restored: the evaluated `value`, which is derived from `content` against the live scope and is re-evaluated when the attribute is interpreted again.
+   *
+   * @param serialized the serialized representation produced by `toJSON()`.
+   */
+  fromJSON(serialized) {
+    this.aseid = new ASEID(serialized.aseid);
+    this.name = serialized.name;
+    this.prefix = serialized.prefix;
+    this.raw = serialized.raw;
+    this.content = serialized.content;
+  }
   // =====================================================================================
   // ------------------------------- Attribute Methods ------------------------------
   // =====================================================================================
@@ -867,6 +938,23 @@ var AreAttribute = class extends A_Entity {
       content: this.content,
       prefix: this.prefix
     });
+  }
+  /**
+   * Serializes the attribute into its structural (runtime-free) form.
+   *
+   * Kept (static / structural): `aseid`, `name`, `raw`, `content` and `prefix`.
+   * Dropped (runtime-only): the evaluated `value`, which is derived from `content` against the live scope and must be re-evaluated when the attribute is interpreted again.
+   *
+   * @returns the serialized, runtime-free representation of the attribute.
+   */
+  toJSON() {
+    return {
+      aseid: this.aseid.toString(),
+      name: this.name,
+      raw: this.raw,
+      content: this.content,
+      prefix: this.prefix
+    };
   }
   // =====================================================================================
   // ------------------------------- Attribute Lifecycle ------------------------------
@@ -1340,6 +1428,92 @@ var AreNode = class extends A_Entity {
       this.scope.deregister(attribute);
     }
   }
+  /**
+   * Registers a component class at runtime — the documented entry point for
+   * injecting a component that was NOT present at bootstrap (e.g. a class
+   * fetched from a backend / lazily imported).
+   *
+   * The class is registered into the ROOT scope (the topmost scope in the
+   * inheritance chain), NOT this node's local scope, so it becomes globally
+   * resolvable for every node in the tree — exactly as if it had been
+   * registered at bootstrap. Registering in the local scope would only make
+   * the tag resolvable for this single node's subtree.
+   *
+   * `scope.register` bumps the resolution version; because version
+   * aggregation walks up the parent chain, registering at the root
+   * invalidates the resolve caches of all descendant scopes, so the new
+   * component is picked up immediately on the next {@link render} / load.
+   *
+   * @param component - the component constructor to register.
+   */
+  registerComponent(component) {
+    let scope = this.scope;
+    while (scope.parent) {
+      scope = scope.parent;
+    }
+    scope.register(component);
+  }
+  /**
+   * Builds and mounts this node's children from its CURRENT content in a
+   * single pass — the canonical "(re)render my content" primitive.
+   *
+   * Call {@link setContent} first, then `render()`. It tokenizes the content
+   * into child nodes and runs the full per-child pipeline
+   * (`init → load → transform → compile → mount`) in document order — the
+   * exact sequence the engine's build + execute applies to a fresh subtree,
+   * so a runtime-injected component is rendered identically to a bootstrap
+   * one.
+   *
+   * `load()` (async data) and `mount()` (time-sliced mount) may be
+   * asynchronous, so `render()` awaits them and resolves only once the whole
+   * subtree has finished mounting.
+   *
+   * [!] This is the single source of truth for runtime subtree construction.
+   * Consumers (e.g. routing outlets) MUST use it instead of re-implementing
+   * the loop, so the proven order lives in one place.
+   */
+  async render() {
+    this.tokenize();
+    for (const child of this.children) {
+      child.init();
+      const loaded = child.load();
+      if (loaded instanceof Promise) await loaded;
+      child.transform();
+      child.compile();
+      const mounted = child.mount();
+      if (mounted instanceof Promise) await mounted;
+    }
+  }
+  /**
+   * Unmounts and detaches every child subtree of this node — the safe
+   * counterpart to {@link render}, used when swapping out content.
+   *
+   * Each child is unmounted (removed from the rendered output) and then
+   * deregistered from this node's scope. The children list is snapshotted up
+   * front because `removeChild` mutates it.
+   *
+   * [!] A child can still appear in this node's children list while its OWN
+   * sub-scope has already been deallocated (e.g. by `cloneWithScope` during
+   * mount). `unmount()` asserts scope inheritance and would throw
+   * "not bound to any context scope" for such a node, so it is guarded by a
+   * cheap `A_Context.has` check — an unbound node has nothing to unmount and
+   * is simply deregistered.
+   *
+   * It intentionally does NOT call `child.destroy()`: `destroy()` recurses
+   * into the subtree where an internal node may likewise have no scope,
+   * reintroducing the same throw. This is the hazard `AreRoot.stashChild`
+   * sidesteps (its post-removeChild `void child.destroy()` rejection is
+   * silently swallowed). Unmounting + deregistering is the empirically-safe
+   * teardown: the detached subtree is unreferenced and collected.
+   */
+  async clear() {
+    for (const child of [...this.children]) {
+      if (A_Context.has(child)) {
+        child.unmount();
+      }
+      this.removeChild(child);
+    }
+  }
   clone() {
     const newNode = new this.constructor({
       opening: this._opening,
@@ -1389,6 +1563,33 @@ var AreNode = class extends A_Entity {
   //============================================================================================
   //                                Helpers Methods
   //============================================================================================
+  /**
+   * Serializes the node into its structural (runtime-free) form, recursively including attributes, child nodes and — for nodes that own a scene (root nodes) — the compiled instruction plan.
+   *
+   * Kept (static / structural): `aseid`, the class `type` discriminator, `entity`, `opening`, `closing`, `position`, `content`, `markup`, `payload`, nested `attributes`, `children` and the owned `scene` plan.
+   * Dropped (runtime-only): the live scope, resolved component, the node `status` and any evaluated attribute values — these must be re-established when the tree is reconstructed and re-interpreted.
+   *
+   * [!] Note, the scene is embedded only by the node that owns it (its `id` matches the scene `id`), so the plan is not duplicated across the inheriting child nodes.
+   *
+   * @returns the serialized, runtime-free representation of the node and its subtree.
+   */
+  toJSON() {
+    const scene = this._scope ? this._scope.resolve(AreScene) : void 0;
+    return {
+      aseid: this.aseid.toString(),
+      type: A_CommonHelper.getComponentName(this.constructor),
+      entity: this.aseid.entity,
+      opening: this._opening,
+      closing: this._closing,
+      position: this._position,
+      content: this._content,
+      markup: this._markup,
+      payload: this._payload,
+      attributes: this._scope ? this.attributes.map((attribute) => attribute.toJSON()) : [],
+      children: this._scope ? this.children.map((child) => child.toJSON()) : [],
+      scene: scene && scene.id === this.id ? scene.toJSON() : void 0
+    };
+  }
   /**
    * Method to ensure that the current scope is inherited from the context scope
    * 
@@ -1664,7 +1865,8 @@ var AreSignals = class extends A_Component {
   async handleSignalVector(vector, context, state, scope, logger) {
     logger?.debug(`Handling Signal Vector with ${context.subscribers.size} root nodes.`, vector);
     try {
-      for (const root of context.subscribers) {
+      for (const sub of context.subscribers) {
+        if (!(sub.component instanceof Are)) continue;
         const callScope = new A_Scope({
           fragments: [new AreEvent(
             AreFeatures.onSignal,
@@ -1672,9 +1874,9 @@ var AreSignals = class extends A_Component {
               vector
             }
           )]
-        }).import(scope, root.scope);
-        logger?.debug("Emitting signal for root node:", vector);
-        await root.emit(callScope);
+        }).import(scope, sub.scope);
+        logger?.debug("Emitting signal for sub node:", vector);
+        await sub.emit(callScope);
         callScope.destroy();
         const dispatchedSignals = scope.resolveFlatAll(A_Signal);
         for (const signal of dispatchedSignals) {
@@ -1686,8 +1888,8 @@ var AreSignals = class extends A_Component {
               vector,
               signal
             })]
-          }).import(scope, root.scope);
-          await root.emit(typedScope);
+          }).import(scope, sub.scope);
+          await sub.emit(typedScope);
           typedScope.destroy();
         }
       }
@@ -2415,9 +2617,28 @@ AreTransformer = __decorateClass([
     description: "Reshapes the AreNode tree before compilation without changing its abstraction level. Responsible for structural rewrites that would complicate the compiler if left unhandled \u2014 converting $for nodes into AreGroupNode, extracting AreText and AreInterpolation from raw text, sorting directives via TopologicalSorter, and flagging static nodes."
   })
 ], AreTransformer);
+var AreComponentResolver = class extends A_Fragment {
+};
+AreComponentResolver = __decorateClass([
+  A_Frame.Define({
+    namespace: "A-ARE",
+    description: "Pluggable async resolver the engine consults when a node tag does not match a registered component, enabling runtime/lazy component loading. Implementations fetch the component class (network, dynamic import, manifest) and memoize it; the engine registers the returned class so the tag resolves thereafter."
+  })
+], AreComponentResolver);
+
+// src/lib/AreLoader/AreLoader.component.ts
 var AreLoader = class extends A_Component {
   async load(node, scope, feature, logger, context, ...args) {
     logger?.debug("red", `Loading node <${node.aseid.toString()}> with content:`, scope);
+    if (!node.component && node.aseid.entity.includes("-")) {
+      const resolver = scope.resolve(AreComponentResolver);
+      if (resolver) {
+        const Component = await resolver.resolve(node.aseid.entity);
+        if (Component) {
+          node.registerComponent(Component);
+        }
+      }
+    }
     if (node.component) {
       context?.startPerformance("Total AreFeatures.onData");
       await feature.chain(node.component, AreFeatures.onData, scope);
@@ -3562,6 +3783,7 @@ var AreEngine = class extends A_Component {
   async defaultExecute(context, bus, logger) {
     logger?.debug("cyan", "Starting to execute the scene and mount root nodes...");
     for (const root of context.roots) {
+      if (!(root.component instanceof Are)) continue;
       context.startPerformance(`Mount root <${root.aseid.id}>`);
       await root.mount();
       context.endPerformance(`Mount root <${root.aseid.id}>`);
@@ -3812,6 +4034,6 @@ var AreRoute = class _AreRoute extends AreSignal {
   }
 };
 
-export { Are, AreAttribute, AreAttributeFeatures, AreCompiler, AreCompilerError, AreContainer, AreContext, AreDeclaration, AreEngine, AreEngineError, AreEngineFeatures, AreEvent, AreFeatures, AreInit, AreInstruction, AreInstructionDefaultNames, AreInstructionError, AreInstructionFeatures, AreInterpreter, AreInterpreterError, AreLifecycle, AreLifecycleError, AreLoader, AreLoaderError, AreMutation, AreNode, AreNodeFeatures, AreNodeStatuses, AreRoute, AreScene, AreSceneError, AreSceneStatuses, AreSignal, AreSignalFeatureKey, AreSignals, AreSignalsContext, AreSignalsMeta, AreStore, AreStoreAreComponentMetaKeys, AreSyntax, AreSyntaxError, AreTokenizer, AreTokenizerError, AreTransformer, AreWatcher };
+export { Are, AreAttribute, AreAttributeFeatures, AreCompiler, AreCompilerError, AreComponentResolver, AreContainer, AreContext, AreDeclaration, AreEngine, AreEngineError, AreEngineFeatures, AreEvent, AreFeatures, AreInit, AreInstruction, AreInstructionDefaultNames, AreInstructionError, AreInstructionFeatures, AreInterpreter, AreInterpreterError, AreLifecycle, AreLifecycleError, AreLoader, AreLoaderError, AreMutation, AreNode, AreNodeFeatures, AreNodeStatuses, AreRoute, AreScene, AreSceneError, AreSceneStatuses, AreSignal, AreSignalFeatureKey, AreSignals, AreSignalsContext, AreSignalsMeta, AreStore, AreStoreAreComponentMetaKeys, AreSyntax, AreSyntaxError, AreTokenizer, AreTokenizerError, AreTransformer, AreWatcher };
 //# sourceMappingURL=index.mjs.map
 //# sourceMappingURL=index.mjs.map

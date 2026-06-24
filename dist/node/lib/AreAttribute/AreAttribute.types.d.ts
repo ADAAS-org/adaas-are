@@ -23,7 +23,9 @@ type AreAttribute_Init = {
     prefix: string;
 };
 /**
- * The evaluated value of the attribute, which can be different from the raw value depending on the context and type of the attribute. For example, for a directive like `v-if="condition"`, the raw value is "condition", but the evaluated value would be the result of evaluating "condition" in the current scope.
+ * The structural (runtime-free) serialized form of an attribute. It captures only the static description of the attribute — its name, raw text, parsed content and prefix — so a prebuilt node can be reconstructed and interpreted without re-scanning the source.
+ *
+ * [!] Note, the evaluated `value` is intentionally NOT serialized: it is a runtime value derived by evaluating `content` against the live scope, and must be re-computed when the attribute is interpreted again.
  */
 type AreAttribute_Serialized = {
     /**
@@ -35,9 +37,13 @@ type AreAttribute_Serialized = {
      */
     raw: string;
     /**
-     * Attribute value (e.g. "buttonLabel")
+     * Attribute content (e.g. "buttonLabel") — the static expression/text, without runtime evaluation.
      */
-    value: string;
+    content: string;
+    /**
+     * The prefix of the attribute, for example for ':label' it would be ':', for 'v-if' it would be 'v-'. This can be used to determine the type of the attribute and how to process it.
+     */
+    prefix: string;
 } & A_TYPES__Entity_Serialized;
 /**
  * The names of the features that can be implemented by the AreAttribute entity. These features correspond to specific methods that can be defined on the AreAttribute class to provide custom behavior for initializing, transforming, compiling, updating, and validating the attribute based on its content and context. Each feature name is associated with a specific method that should be implemented to handle the corresponding aspect of the attribute's lifecycle and behavior within the ARE framework.

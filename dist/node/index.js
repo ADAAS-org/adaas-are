@@ -9,6 +9,7 @@ var AreNode_entity = require('./lib/AreNode/AreNode.entity');
 var AreNode_constants = require('./lib/AreNode/AreNode.constants');
 var AreNode_types = require('./lib/AreNode/AreNode.types');
 var AreNode_error = require('./lib/AreNode/AreNode.error');
+var AreComponentResolver_fragment = require('./lib/AreComponentResolver/AreComponentResolver.fragment');
 var AreAttribute_entity = require('./lib/AreAttribute/AreAttribute.entity');
 var AreAttribute_constants = require('./lib/AreAttribute/AreAttribute.constants');
 var AreAttribute_types = require('./lib/AreAttribute/AreAttribute.types');
@@ -122,6 +123,12 @@ Object.keys(AreNode_error).forEach(function (k) {
 	if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
 		enumerable: true,
 		get: function () { return AreNode_error[k]; }
+	});
+});
+Object.keys(AreComponentResolver_fragment).forEach(function (k) {
+	if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function () { return AreComponentResolver_fragment[k]; }
 	});
 });
 Object.keys(AreAttribute_entity).forEach(function (k) {

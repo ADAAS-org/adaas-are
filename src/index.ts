@@ -11,6 +11,9 @@ export * from './lib/AreNode/AreNode.constants';
 export * from './lib/AreNode/AreNode.types';
 export * from './lib/AreNode/AreNode.error';
 
+// ─── AreComponentResolver ─────────────────────────────────────────────────────
+export * from './lib/AreComponentResolver/AreComponentResolver.fragment';
+
 // ─── AreAttribute ─────────────────────────────────────────────────────────────
 export * from './lib/AreAttribute/AreAttribute.entity';
 export * from './lib/AreAttribute/AreAttribute.constants';

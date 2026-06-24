@@ -1,9 +1,10 @@
 export { Are } from './lib/AreComponent/Are.component.mjs';
 export { AreContainer } from './lib/AreComponent/Are.container.mjs';
 export { AreFeatures, AreSignalFeatureKey } from './lib/AreComponent/Are.constants.mjs';
-export { A as AreAttribute, a as AreContext, b as AreDeclaration, c as AreInstruction, d as AreInstructionNewProps, e as AreInstructionSerialized, f as AreMutation, g as AreNode, h as AreNodeFeatureNames, i as AreNodeNewProps, j as AreNodeStatusNames, k as AreScene, l as AreSceneChanges, m as AreSceneStatusNames, n as AreScene_Serialized, o as AreStore, p as AreSyntaxCompiledExpression, q as AreSyntaxInitOptions, r as AreSyntaxTokenMatch, s as AreSyntaxTokenPayload, t as AreSyntaxTokenRules } from './Are.context-1m4-phlW.mjs';
+export { A as AreAttribute, a as AreContext, b as AreDeclaration, c as AreInstruction, d as AreInstructionNewProps, e as AreInstructionSerialized, f as AreMutation, g as AreNode, h as AreNodeFeatureNames, i as AreNodeNewProps, j as AreNodeStatusNames, k as AreNode_Serialized, l as AreScene, m as AreSceneChanges, n as AreSceneStatusNames, o as AreScene_Serialized, p as AreStore, q as AreSyntaxCompiledExpression, r as AreSyntaxInitOptions, s as AreSyntaxTokenMatch, t as AreSyntaxTokenPayload, u as AreSyntaxTokenRules } from './Are.context-CS8hLApz.mjs';
 export { AreConditionOptions, AreContextInit, AreFeatureNames, ArePropDefinition } from './lib/AreComponent/Are.types.mjs';
 export { AreNodeFeatures, AreNodeStatuses } from './lib/AreNode/AreNode.constants.mjs';
+export { AreComponentResolver } from './lib/AreComponentResolver/AreComponentResolver.fragment.mjs';
 export { AreAttributeFeatures } from './lib/AreAttribute/AreAttribute.constants.mjs';
 export { AreAttributeFeatureNames, AreAttribute_Init, AreAttribute_Serialized } from './lib/AreAttribute/AreAttribute.types.mjs';
 export { AreSyntax } from './lib/AreSyntax/AreSyntax.context.mjs';

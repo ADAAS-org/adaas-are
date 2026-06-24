@@ -29,6 +29,7 @@
       "@adaas/are/component/*": ["src/lib/AreComponent/*"],
       "@adaas/are/event/*": ["src/lib/AreEvent/*"],
       "@adaas/are/node/*": ["src/lib/AreNode/*"],
+      "@adaas/are/resolver/*": ["src/lib/AreComponentResolver/*"],
       "@adaas/are/store/*": ["src/lib/AreStore/*"],
       "@adaas/are/scene/*": ["src/lib/AreScene/*"],
       "@adaas/are/instruction/*": ["src/lib/AreInstruction/*"],
