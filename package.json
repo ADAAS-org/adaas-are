@@ -132,6 +132,13 @@
         "require": "./dist/node/lib/AreNode/*.js"
       }
     },
+    "./resolver/*": {
+      "node": {
+        "types": "./dist/node/lib/AreComponentResolver/*.d.ts",
+        "import": "./dist/node/lib/AreComponentResolver/*.mjs",
+        "require": "./dist/node/lib/AreComponentResolver/*.js"
+      }
+    },
     "./scene/*": {
       "node": {
         "types": "./dist/node/lib/AreScene/*.d.ts",
