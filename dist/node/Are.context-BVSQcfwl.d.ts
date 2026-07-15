@@ -1,13 +1,13 @@
 import * as _adaas_a_concept from '@adaas/a-concept';
 import { A_TYPES__Entity_Serialized, A_Entity, A_Scope, A_TYPES__Fragment_Serialized, A_Fragment, ASEID, A_TYPES__Paths, A_TYPES__Entity_Constructor, A_TYPES__Ctor } from '@adaas/a-concept';
 import { A_SignalVector } from '@adaas/a-utils/a-signal';
-import { AreEvent } from './lib/AreEvent/AreEvent.context.mjs';
-import { AreStoreWatchingEntity, AreStorePathValue } from './lib/AreStore/AreStore.types.mjs';
-import { AreSceneStatuses } from './lib/AreScene/AreScene.constants.mjs';
-import { AreAttribute_Init, AreAttribute_Serialized } from './lib/AreAttribute/AreAttribute.types.mjs';
-import { Are } from './lib/AreComponent/Are.component.mjs';
+import { AreEvent } from './lib/AreEvent/AreEvent.context.js';
+import { AreStoreWatchingEntity, AreStorePathValue } from './lib/AreStore/AreStore.types.js';
+import { AreSceneStatuses } from './lib/AreScene/AreScene.constants.js';
+import { AreAttribute_Init, AreAttribute_Serialized } from './lib/AreAttribute/AreAttribute.types.js';
+import { Are } from './lib/AreComponent/Are.component.js';
 import { A_ExecutionContext } from '@adaas/a-utils/a-execution';
-import { AreNodeStatuses, AreNodeFeatures } from './lib/AreNode/AreNode.constants.mjs';
+import { AreNodeStatuses, AreNodeFeatures } from './lib/AreNode/AreNode.constants.js';
 
 type AreInstructionNewProps<T extends any = Record<string, any>> = {
     /**
@@ -997,6 +997,17 @@ declare class AreNode extends A_Entity<AreNodeNewProps, AreNode_Serialized> {
      * `load()` (async data) and `mount()` (time-sliced mount) may be
      * asynchronous, so `render()` awaits them and resolves only once the whole
      * subtree has finished mounting.
+     *
+     * [!] IDEMPOTENT: `render()` first {@link clear}s any previously built
+     * children (unmount + deregister) so calling it again rebuilds the subtree
+     * from scratch instead of appending a duplicate. This is essential because
+     * `@Are.onAfterMount` — where imperative "dynamic component" hosts call
+     * `setContent()` + `render()` — re-runs on EVERY (re)mount, including when
+     * an `AreRoot` outlet restores a stashed subtree from `AreRootCache` on a
+     * tab switch. Without the clear, `tokenize()` (which appends child nodes)
+     * would accumulate a duplicate subtree per re-mount and re-init the stale,
+     * already-live children — cascading scope-inheritance errors / a UI freeze.
+     * A first render has no children, so the clear is a cheap no-op there.
      *
      * [!] This is the single source of truth for runtime subtree construction.
      * Consumers (e.g. routing outlets) MUST use it instead of re-implementing

@@ -1,5 +1,5 @@
 import { A_Component } from '@adaas/a-concept';
-import { g as AreNode, a as AreContext, s as AreSyntaxTokenMatch, u as AreSyntaxTokenRules } from '../../Are.context-DjbYIes7.js';
+import { g as AreNode, a as AreContext, s as AreSyntaxTokenMatch, u as AreSyntaxTokenRules } from '../../Are.context-BVSQcfwl.js';
 import { AreSyntax } from '../AreSyntax/AreSyntax.context.js';
 import { A_Logger } from '@adaas/a-utils/a-logger';
 import '@adaas/a-utils/a-signal';

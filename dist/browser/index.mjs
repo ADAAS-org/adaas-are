@@ -1468,11 +1468,23 @@ var AreNode = class extends A_Entity {
    * asynchronous, so `render()` awaits them and resolves only once the whole
    * subtree has finished mounting.
    *
+   * [!] IDEMPOTENT: `render()` first {@link clear}s any previously built
+   * children (unmount + deregister) so calling it again rebuilds the subtree
+   * from scratch instead of appending a duplicate. This is essential because
+   * `@Are.onAfterMount` — where imperative "dynamic component" hosts call
+   * `setContent()` + `render()` — re-runs on EVERY (re)mount, including when
+   * an `AreRoot` outlet restores a stashed subtree from `AreRootCache` on a
+   * tab switch. Without the clear, `tokenize()` (which appends child nodes)
+   * would accumulate a duplicate subtree per re-mount and re-init the stale,
+   * already-live children — cascading scope-inheritance errors / a UI freeze.
+   * A first render has no children, so the clear is a cheap no-op there.
+   *
    * [!] This is the single source of truth for runtime subtree construction.
    * Consumers (e.g. routing outlets) MUST use it instead of re-implementing
    * the loop, so the proven order lives in one place.
    */
   async render() {
+    await this.clear();
     this.tokenize();
     for (const child of this.children) {
       child.init();
