@@ -1,5 +1,5 @@
 import '@adaas/a-concept';
-export { A as AreAttribute } from '../../Are.context-DfIfWCiL.mjs';
+export { A as AreAttribute } from '../../Are.context-nvCJk-uQ.mjs';
 import './AreAttribute.types.mjs';
 import '@adaas/a-utils/a-signal';
 import '../AreEvent/AreEvent.context.mjs';

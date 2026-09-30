@@ -1,4 +1,4 @@
-import { A_Component, A_Context, A_Feature, A_Meta, A_TYPES__Ctor } from "@adaas/a-concept";
+import { A_Component, A_Context, A_Feature, A_Meta, A_Scope, A_TYPES__Ctor } from "@adaas/a-concept";
 import { A_Frame } from "@adaas/a-frame/core";
 import { A_Signal, A_SignalVector } from "@adaas/a-utils/a-signal";
 import { AreSignals } from "@adaas/are/signals/AreSignals.component";
@@ -6,6 +6,32 @@ import { AreSignalsMeta } from "@adaas/are/signals/AreSignals.meta";
 import { ArePropDefinition, AreConditionOptions } from "./Are.types";
 import { AreMeta } from "./Are.meta";
 import { AreFeatures, AreSignalFeatureKey } from "./Are.constants";
+import { AreComponentTag } from "./Are.tag";
+
+
+/**
+ * Warn once when a second copy of `@adaas/are` is loaded in the same realm.
+ * Components compiled against another copy inject that copy's `AreEvent` /
+ * `AreStore` classes, which the host runtime never registers — so their event
+ * handlers (and other injections) silently fail while plain bindings render.
+ * Skipped under Jest, where `resetModules` legitimately reloads the module.
+ */
+function detectDuplicateAreRuntime(marker: object): void {
+    const g = globalThis as any;
+    const key = Symbol.for('adaas.are.runtime');
+
+    if (g[key] && g[key] !== marker
+        && !(typeof process !== 'undefined' && process.env?.JEST_WORKER_ID)
+    ) {
+        console.warn(
+            '[are] Multiple copies of @adaas/are are loaded. Components built against another copy cannot resolve ' +
+            'its AreEvent/AreStore injections, so their @Are.EventHandler methods never run. Keep @adaas/* packages ' +
+            'external/peer dependencies in library bundles and deduplicate them in the app.'
+        );
+    }
+
+    g[key] = marker;
+}
 
 
 @A_Frame.Define({
@@ -14,6 +40,32 @@ import { AreFeatures, AreSignalFeatureKey } from "./Are.constants";
 })
 @A_Meta.Define(AreMeta)
 export class Are extends A_Component {
+    /**
+     * Explicit, minification-safe tag for this component (kebab-case, e.g.
+     * `user-card`). When omitted the tag is derived from the class name, which
+     * bundlers may rename (`class Foo` → `_Foo`, or mangled when minified).
+     * Set it on components shipped through a build step that can rename classes.
+     *
+     * Only an OWN static `tag` is honored, so a subclass never inherits its
+     * parent's tag.
+     */
+    static tag?: string;
+    /**
+     * Returns the tag a component class is rendered under: its own static
+     * `tag` when defined, otherwise the kebab-cased class name with any
+     * bundler-added leading underscores stripped.
+     */
+    static tagOf(ctor: A_TYPES__Ctor<any>): string {
+        return AreComponentTag.of(ctor);
+    }
+    /**
+     * Resolves the component registered for a tag in the given scope chain:
+     * by class name first, then by {@link Are.tagOf} (explicit `static tag`
+     * or bundler-renamed class).
+     */
+    static resolveByTag(scope: A_Scope, entity: string): Are | undefined {
+        return AreComponentTag.resolve<Are>(scope, entity);
+    }
     /**
      * Allows to apply Signal Vector as a condition for rendering the component. The component will be rendered only if at least one of the signals in the vector is active. This can be used to manage complex rendering logic and to optimize performance by ensuring that components are only rendered when necessary based on the defined conditions.
      *
@@ -295,3 +347,5 @@ export class Are extends A_Component {
 
     }
 }
+
+detectDuplicateAreRuntime(Are);

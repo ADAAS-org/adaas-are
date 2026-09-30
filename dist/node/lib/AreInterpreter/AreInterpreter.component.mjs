@@ -7,6 +7,7 @@ import { AreNodeFeatures } from '@adaas/are/node/AreNode.constants';
 import { AreInstructionFeatures } from '@adaas/are/instruction/AreInstruction.constants';
 import { AreInstruction } from '@adaas/are/instruction/AreInstruction.entity';
 import { AreStore } from '@adaas/are/store/AreStore.context';
+import { A_Logger } from '@adaas/a-utils/a-logger';
 
 let AreInterpreter = class extends A_Component {
   /**
@@ -54,13 +55,14 @@ let AreInterpreter = class extends A_Component {
       })(target, propertyKey, descriptor);
     };
   }
-  interpret(scene) {
+  interpret(scene, logger) {
     const { toApply, toRevert } = scene.changes;
     for (const instruction of toRevert) {
       try {
         instruction.revert();
         scene.unApply(instruction);
       } catch (error) {
+        logger?.error(error);
         instruction.apply();
         scene.apply(instruction);
       }
@@ -70,6 +72,7 @@ let AreInterpreter = class extends A_Component {
         instruction.apply();
         scene.apply(instruction);
       } catch (error) {
+        logger?.error(error);
         instruction.revert();
         scene.unApply(instruction);
       }
@@ -110,7 +113,8 @@ __decorateClass([
     name: AreNodeFeatures.onInterpret,
     scope: [AreNode]
   }),
-  __decorateParam(0, A_Inject(AreScene))
+  __decorateParam(0, A_Inject(AreScene)),
+  __decorateParam(1, A_Inject(A_Logger))
 ], AreInterpreter.prototype, "interpret", 1);
 __decorateClass([
   A_Feature.Extend({

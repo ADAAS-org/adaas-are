@@ -63,7 +63,11 @@ let AreTokenizer = class extends A_Component {
       if (!match) {
         const rest = source.slice(index, to);
         const t = this.tryPlainText(rest, index);
-        if (t && !(this.config.trimWhitespace && !rest.trim())) tokens.push(t);
+        if (t && !(this.config.trimWhitespace && !rest.trim())) {
+          if (this.config.trimWhitespace)
+            this.keepBoundarySpace(t, rest, hasMatchBefore, false);
+          tokens.push(t);
+        }
         break;
       }
       if (match.position > index) {
@@ -76,6 +80,8 @@ let AreTokenizer = class extends A_Component {
               tokens.push(t);
             }
           } else {
+            if (this.config.trimWhitespace)
+              this.keepBoundarySpace(t, plain, hasMatchBefore, true);
             tokens.push(t);
           }
         }
@@ -185,6 +191,15 @@ let AreTokenizer = class extends A_Component {
     const match = { raw, content: trimmed, opening: rule.opening ?? "", closing: closingUsed, position, payload: {}, _rule: rule };
     if (rule.extract) match.payload = rule.extract(raw, match);
     return match;
+  }
+  /**
+   * Trimmed plain text keeps ONE collapsed space on each side that touches a
+   * neighbouring match (`A {{x}} B {{y}}` → `A `, ` B `), matching HTML
+   * whitespace collapsing. Only the outer edges of the content are trimmed.
+   */
+  keepBoundarySpace(t, raw, matchBefore, matchAfter) {
+    if (matchBefore && /^\s/.test(raw)) t.content = " " + t.content;
+    if (matchAfter && /\s$/.test(raw)) t.content = t.content + " ";
   }
   tryPlainText(raw, position) {
     if (!raw) return null;

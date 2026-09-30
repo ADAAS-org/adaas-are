@@ -1,4 +1,4 @@
-import { A_Feature, A_Inject, A_Scope, A_Caller, A_Meta, A_TYPES__EntityFeatures, A_Dependency, A_Concept, A_Error, A_Fragment, A_Context, A_Entity, A_FormatterHelper, A_TypeGuards, A_CommonHelper, A_ComponentMeta, ASEID, A_Component } from '@adaas/a-concept';
+import { A_Feature, A_Inject, A_Scope, A_Caller, A_Meta, A_TYPES__EntityFeatures, A_Dependency, A_Concept, A_Error, A_Fragment, A_Context, A_Entity, A_TypeGuards, A_CommonHelper, A_ComponentMeta, A_FormatterHelper, ASEID, A_Component } from '@adaas/a-concept';
 import { A_Frame } from '@adaas/a-frame/core';
 import { A_SignalBusFeatures, A_SignalVector, A_SignalState, A_SignalBus, A_Signal } from '@adaas/a-utils/a-signal';
 import { A_Logger } from '@adaas/a-utils/a-logger';
@@ -610,7 +610,7 @@ var AreScene = class extends A_Fragment {
    * For example, if we have a node with two instructions in the plan: [Instruction A, Instruction B], and both of them are applied to the node, then the state will be [Instruction B, Instruction A], so when we need to revert the changes, we will revert Instruction B first, and then Instruction A.
    */
   get applied() {
-    return this._state.reverse();
+    return this._state.slice().reverse();
   }
   /**
    * Should return instructions to be reverted and to be applied. 
@@ -1006,6 +1006,60 @@ AreAttribute = __decorateClass([
     description: "Represents an HTML attribute within the A-Concept Rendering Engine (ARE) framework, encapsulating the attribute's name, raw content, evaluated value, and associated features for initialization, transformation, compilation, updating, and validation."
   })
 ], AreAttribute);
+var TAG_MATCH_CACHE_LIMIT = 5e3;
+var _tagOfCache = /* @__PURE__ */ new WeakMap();
+var _pascalCache = /* @__PURE__ */ new Map();
+var _tagMatchCache = /* @__PURE__ */ new Map();
+var AreComponentTag = class _AreComponentTag {
+  /**
+   * Returns the tag a component class is rendered under: its OWN static
+   * `tag` when defined, otherwise the kebab-cased class name with any
+   * bundler-added leading underscores stripped (`_Foo` → `foo`).
+   */
+  static of(ctor) {
+    let tag = _tagOfCache.get(ctor);
+    if (tag === void 0) {
+      const own = Object.prototype.hasOwnProperty.call(ctor, "tag") ? ctor.tag : void 0;
+      tag = typeof own === "string" && own ? own : A_FormatterHelper.toKebabCase(ctor.name.replace(/^_+/, ""));
+      _tagOfCache.set(ctor, tag);
+    }
+    return tag;
+  }
+  /**
+   * Resolves the component registered for a tag in the given scope chain.
+   *
+   * The class-name lookup is tried first (fast and cached by the scope). On a
+   * miss, components visible from the scope are matched by {@link of}, which
+   * covers explicit `static tag` values and bundler-renamed classes. The
+   * fallback result is memoized per scope fingerprint, so repeated misses for
+   * plain elements stay cheap.
+   */
+  static resolve(scope, entity) {
+    let name = _pascalCache.get(entity);
+    if (name === void 0) {
+      name = A_FormatterHelper.toPascalCase(entity);
+      _pascalCache.set(entity, name);
+    }
+    const byName = scope.resolve(name);
+    if (byName) return byName;
+    const key = scope.fingerprint + "|" + entity;
+    let ctor = _tagMatchCache.get(key);
+    if (ctor === void 0) {
+      ctor = null;
+      for (let current = scope; current && !ctor; current = current.parent) {
+        for (const candidate of current.allowedComponents) {
+          if (_AreComponentTag.of(candidate) === entity) {
+            ctor = candidate;
+            break;
+          }
+        }
+      }
+      if (_tagMatchCache.size >= TAG_MATCH_CACHE_LIMIT) _tagMatchCache.clear();
+      _tagMatchCache.set(key, ctor);
+    }
+    return ctor ? scope.resolve(ctor) : void 0;
+  }
+};
 
 // src/lib/AreNode/AreNode.constants.ts
 var AreNodeFeatures = {
@@ -1175,7 +1229,7 @@ var AreNode = class extends A_Entity {
    * [!] Note: The component is optional and may not be defined for all nodes. If no component is associated with the node, it will be treated as a standard HTML element or a basic node without custom logic.
    */
   get component() {
-    return this.scope.resolve(A_FormatterHelper.toPascalCase(this.aseid.entity));
+    return AreComponentTag.resolve(this.scope, this.aseid.entity);
   }
   /**
    * The parent node of this node, which is the node that registered the current node in its scope. This is typically the node that is responsible for rendering the current node and managing its lifecycle within the scene. The parent node can be used to access shared context, propagate events, and manage interactions between nodes in a hierarchical structure.
@@ -2010,6 +2064,16 @@ var AreMeta = class extends A_ComponentMeta {
 };
 
 // src/lib/AreComponent/Are.component.ts
+function detectDuplicateAreRuntime(marker) {
+  const g = globalThis;
+  const key = /* @__PURE__ */ Symbol.for("adaas.are.runtime");
+  if (g[key] && g[key] !== marker && !(typeof process !== "undefined" && process.env?.JEST_WORKER_ID)) {
+    console.warn(
+      "[are] Multiple copies of @adaas/are are loaded. Components built against another copy cannot resolve its AreEvent/AreStore injections, so their @Are.EventHandler methods never run. Keep @adaas/* packages external/peer dependencies in library bundles and deduplicate them in the app."
+    );
+  }
+  g[key] = marker;
+}
 var Are = class extends A_Component {
   constructor() {
     super(...arguments);
@@ -2020,6 +2084,22 @@ var Are = class extends A_Component {
      * Props can be used to store any additional data or configuration for the component. They are not reactive by default but can be used in the component's methods and lifecycle hooks to manage state or pass information. Props can be defined as a simple object with key-value pairs, where keys are the prop names and values are the prop values. They can be accessed and modified within the component's methods to influence rendering or behavior based on the component's state or external inputs.
      */
     this.props = {};
+  }
+  /**
+   * Returns the tag a component class is rendered under: its own static
+   * `tag` when defined, otherwise the kebab-cased class name with any
+   * bundler-added leading underscores stripped.
+   */
+  static tagOf(ctor) {
+    return AreComponentTag.of(ctor);
+  }
+  /**
+   * Resolves the component registered for a tag in the given scope chain:
+   * by class name first, then by {@link Are.tagOf} (explicit `static tag`
+   * or bundler-renamed class).
+   */
+  static resolveByTag(scope, entity) {
+    return AreComponentTag.resolve(scope, entity);
   }
   static Condition(signals, options) {
     return function(target) {
@@ -2218,6 +2298,675 @@ Are = __decorateClass([
   }),
   A_Meta.Define(AreMeta)
 ], Are);
+detectDuplicateAreRuntime(Are);
+
+// src/lib/AreSyntax/AreSyntax.evaluator.ts
+var Unsupported = class extends Error {
+};
+var UNSAFE_MEMBERS = /* @__PURE__ */ new Set([
+  "__proto__",
+  "constructor",
+  "prototype",
+  "__defineGetter__",
+  "__defineSetter__",
+  "__lookupGetter__",
+  "__lookupSetter__"
+]);
+var LITERAL_KEYWORDS = {
+  true: true,
+  false: false,
+  null: null,
+  undefined: void 0
+};
+var UNSUPPORTED_KEYWORDS = /* @__PURE__ */ new Set([
+  "this",
+  "new",
+  "function",
+  "class",
+  "in",
+  "instanceof",
+  "void",
+  "delete",
+  "yield",
+  "await",
+  "async",
+  "let",
+  "var",
+  "const",
+  "return",
+  "if",
+  "else",
+  "for",
+  "while",
+  "do",
+  "switch",
+  "case",
+  "break",
+  "continue",
+  "throw",
+  "try",
+  "catch",
+  "finally",
+  "import",
+  "export",
+  "super",
+  "with",
+  "debugger"
+]);
+var OPERATORS = [
+  "===",
+  "!==",
+  "...",
+  "?.",
+  "??",
+  "==",
+  "!=",
+  "<=",
+  ">=",
+  "&&",
+  "||",
+  "=>",
+  "(",
+  ")",
+  "[",
+  "]",
+  "{",
+  "}",
+  ",",
+  ".",
+  "?",
+  ":",
+  "+",
+  "-",
+  "*",
+  "/",
+  "%",
+  "<",
+  ">",
+  "!"
+];
+var BINARY_PRECEDENCE = {
+  "??": 1,
+  "||": 1,
+  "&&": 2,
+  "==": 3,
+  "!=": 3,
+  "===": 3,
+  "!==": 3,
+  "<": 4,
+  ">": 4,
+  "<=": 4,
+  ">=": 4,
+  "+": 5,
+  "-": 5,
+  "*": 6,
+  "/": 6,
+  "%": 6
+};
+var IDENT_START = /[\p{L}_$]/u;
+var IDENT_PART = /[\p{L}\p{N}_$\u200C\u200D]/u;
+function isDigit(ch) {
+  return ch !== void 0 && ch >= "0" && ch <= "9";
+}
+function readEscape(src, i) {
+  const ch = src[i];
+  switch (ch) {
+    case "n":
+      return ["\n", i + 1];
+    case "t":
+      return ["	", i + 1];
+    case "r":
+      return ["\r", i + 1];
+    case "b":
+      return ["\b", i + 1];
+    case "f":
+      return ["\f", i + 1];
+    case "v":
+      return ["\v", i + 1];
+    case "0":
+      return ["\0", i + 1];
+    case "u": {
+      if (src[i + 1] === "{") {
+        const end = src.indexOf("}", i + 2);
+        if (end < 0) throw new Unsupported("bad unicode escape");
+        return [String.fromCodePoint(parseInt(src.slice(i + 2, end), 16)), end + 1];
+      }
+      const hex = src.slice(i + 1, i + 5);
+      if (!/^[0-9a-fA-F]{4}$/.test(hex)) throw new Unsupported("bad unicode escape");
+      return [String.fromCharCode(parseInt(hex, 16)), i + 5];
+    }
+    case "x": {
+      const hex = src.slice(i + 1, i + 3);
+      if (!/^[0-9a-fA-F]{2}$/.test(hex)) throw new Unsupported("bad hex escape");
+      return [String.fromCharCode(parseInt(hex, 16)), i + 3];
+    }
+    case void 0:
+      throw new Unsupported("unterminated escape");
+    default:
+      return [ch, i + 1];
+  }
+}
+function tokenize(src) {
+  const tokens = [];
+  const n = src.length;
+  let i = 0;
+  while (i < n) {
+    const ch = src[i];
+    if (/\s/.test(ch)) {
+      i++;
+      continue;
+    }
+    if (isDigit(ch) || ch === "." && isDigit(src[i + 1])) {
+      const m = /^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/.exec(src.slice(i));
+      tokens.push({ type: "num", value: Number(m[0]) });
+      i += m[0].length;
+      continue;
+    }
+    if (IDENT_START.test(ch)) {
+      let j = i + 1;
+      while (j < n && IDENT_PART.test(src[j])) j++;
+      tokens.push({ type: "id", value: src.slice(i, j) });
+      i = j;
+      continue;
+    }
+    if (ch === "'" || ch === '"') {
+      let j = i + 1;
+      let out = "";
+      while (j < n && src[j] !== ch) {
+        if (src[j] === "\\") {
+          const [c, next] = readEscape(src, j + 1);
+          out += c;
+          j = next;
+        } else if (src[j] === "\n") {
+          throw new Unsupported("unterminated string");
+        } else {
+          out += src[j++];
+        }
+      }
+      if (j >= n) throw new Unsupported("unterminated string");
+      tokens.push({ type: "str", value: out });
+      i = j + 1;
+      continue;
+    }
+    if (ch === "`") {
+      const quasis = [];
+      const exprs = [];
+      let j = i + 1;
+      let cur = "";
+      while (true) {
+        if (j >= n) throw new Unsupported("unterminated template");
+        const c = src[j];
+        if (c === "`") {
+          j++;
+          break;
+        }
+        if (c === "\\") {
+          const [e, next] = readEscape(src, j + 1);
+          cur += e;
+          j = next;
+          continue;
+        }
+        if (c === "$" && src[j + 1] === "{") {
+          quasis.push(cur);
+          cur = "";
+          const start = j + 2;
+          j = skipBalanced(src, start);
+          exprs.push(src.slice(start, j));
+          j++;
+          continue;
+        }
+        cur += c;
+        j++;
+      }
+      quasis.push(cur);
+      tokens.push({ type: "tpl", value: { quasis, exprs } });
+      i = j;
+      continue;
+    }
+    let matched;
+    for (const op of OPERATORS) {
+      if (src.startsWith(op, i)) {
+        matched = op;
+        break;
+      }
+    }
+    if (matched === "?." && isDigit(src[i + 2])) matched = "?";
+    if (!matched) throw new Unsupported(`unsupported character "${ch}"`);
+    tokens.push({ type: "op", value: matched });
+    i += matched.length;
+  }
+  tokens.push({ type: "eof", value: "" });
+  return tokens;
+}
+function skipBalanced(src, start) {
+  let depth = 0;
+  let j = start;
+  while (j < src.length) {
+    const c = src[j];
+    if (c === "'" || c === '"' || c === "`") {
+      const quote = c;
+      j++;
+      while (j < src.length && src[j] !== quote) {
+        if (src[j] === "\\") j++;
+        j++;
+      }
+      j++;
+      continue;
+    }
+    if (c === "{") depth++;
+    else if (c === "}") {
+      if (depth === 0) return j;
+      depth--;
+    }
+    j++;
+  }
+  throw new Unsupported("unterminated template expression");
+}
+var Parser = class _Parser {
+  constructor(tokens) {
+    this.tokens = tokens;
+    this.pos = 0;
+  }
+  parseProgram() {
+    const expr = this.parseExpression();
+    if (this.peek().type !== "eof") throw new Unsupported("unexpected token");
+    return expr;
+  }
+  peek(offset = 0) {
+    return this.tokens[Math.min(this.pos + offset, this.tokens.length - 1)];
+  }
+  next() {
+    return this.tokens[this.pos++];
+  }
+  isOp(value, offset = 0) {
+    const t = this.peek(offset);
+    return t.type === "op" && t.value === value;
+  }
+  expectOp(value) {
+    if (!this.isOp(value)) throw new Unsupported(`expected "${value}"`);
+    this.pos++;
+  }
+  parseExpression() {
+    if (this.isArrowStart()) return this.parseArrow();
+    const test = this.parseBinary(1);
+    if (this.isOp("?")) {
+      this.next();
+      const yes = this.parseExpression();
+      this.expectOp(":");
+      const no = this.parseExpression();
+      return { t: "cond", test, yes, no };
+    }
+    return test;
+  }
+  isArrowStart() {
+    const t = this.peek();
+    if (t.type === "id" && this.isOp("=>", 1)) return true;
+    if (!this.isOp("(")) return false;
+    let k = 1;
+    if (this.isOp(")", k)) return this.isOp("=>", k + 1);
+    while (true) {
+      if (this.peek(k).type !== "id") return false;
+      k++;
+      if (this.isOp(")", k)) return this.isOp("=>", k + 1);
+      if (!this.isOp(",", k)) return false;
+      k++;
+    }
+  }
+  parseArrow() {
+    const params = [];
+    if (this.peek().type === "id") {
+      params.push(this.checkBindingName(this.next().value));
+    } else {
+      this.expectOp("(");
+      while (!this.isOp(")")) {
+        params.push(this.checkBindingName(this.next().value));
+        if (this.isOp(",")) this.next();
+      }
+      this.expectOp(")");
+    }
+    this.expectOp("=>");
+    if (this.isOp("{")) throw new Unsupported("arrow block body");
+    return { t: "arrow", params, body: this.parseExpression() };
+  }
+  checkBindingName(name) {
+    if (name in LITERAL_KEYWORDS || UNSUPPORTED_KEYWORDS.has(name) || name === "typeof")
+      throw new Unsupported("invalid parameter name");
+    return name;
+  }
+  parseBinary(minPrec) {
+    let left = this.parseUnary();
+    while (true) {
+      const t = this.peek();
+      if (t.type !== "op") break;
+      const prec = BINARY_PRECEDENCE[t.value];
+      if (prec === void 0 || prec < minPrec) break;
+      this.next();
+      const right = this.parseBinary(prec + 1);
+      left = { t: "bin", op: t.value, l: left, r: right };
+    }
+    return left;
+  }
+  parseUnary() {
+    const t = this.peek();
+    if (t.type === "op" && (t.value === "!" || t.value === "-" || t.value === "+")) {
+      this.next();
+      return { t: "un", op: t.value, a: this.parseUnary() };
+    }
+    if (t.type === "id" && t.value === "typeof") {
+      this.next();
+      return { t: "un", op: "typeof", a: this.parseUnary() };
+    }
+    return this.parsePostfix();
+  }
+  parsePostfix() {
+    let expr = this.parsePrimary();
+    while (true) {
+      if (this.isOp(".")) {
+        this.next();
+        expr = { t: "mem", o: expr, p: { t: "lit", v: this.expectName() }, computed: false, opt: false };
+      } else if (this.isOp("?.")) {
+        this.next();
+        if (this.isOp("(")) {
+          this.next();
+          expr = { t: "call", c: expr, a: this.parseArguments(), opt: true };
+        } else if (this.isOp("[")) {
+          this.next();
+          const p = this.parseExpression();
+          this.expectOp("]");
+          expr = { t: "mem", o: expr, p, computed: true, opt: true };
+        } else {
+          expr = { t: "mem", o: expr, p: { t: "lit", v: this.expectName() }, computed: false, opt: true };
+        }
+      } else if (this.isOp("[")) {
+        this.next();
+        const p = this.parseExpression();
+        this.expectOp("]");
+        expr = { t: "mem", o: expr, p, computed: true, opt: false };
+      } else if (this.isOp("(")) {
+        this.next();
+        expr = { t: "call", c: expr, a: this.parseArguments(), opt: false };
+      } else {
+        break;
+      }
+    }
+    return expr;
+  }
+  expectName() {
+    const t = this.next();
+    if (t.type !== "id") throw new Unsupported("expected property name");
+    return t.value;
+  }
+  parseArguments() {
+    const args = [];
+    while (!this.isOp(")")) {
+      if (this.isOp("...")) throw new Unsupported("spread");
+      args.push(this.parseExpression());
+      if (this.isOp(",")) this.next();
+      else break;
+    }
+    this.expectOp(")");
+    return args;
+  }
+  parsePrimary() {
+    const t = this.next();
+    switch (t.type) {
+      case "num":
+      case "str":
+        return { t: "lit", v: t.value };
+      case "tpl":
+        return {
+          t: "tpl",
+          quasis: t.value.quasis,
+          exprs: t.value.exprs.map((src) => new _Parser(tokenize(src)).parseProgram())
+        };
+      case "id": {
+        if (t.value in LITERAL_KEYWORDS) return { t: "lit", v: LITERAL_KEYWORDS[t.value] };
+        if (UNSUPPORTED_KEYWORDS.has(t.value)) throw new Unsupported(`keyword "${t.value}"`);
+        return { t: "id", n: t.value };
+      }
+      case "op": {
+        if (t.value === "(") {
+          const expr = this.parseExpression();
+          this.expectOp(")");
+          return expr;
+        }
+        if (t.value === "[") {
+          const items = [];
+          while (!this.isOp("]")) {
+            if (this.isOp(",") || this.isOp("...")) throw new Unsupported("array hole / spread");
+            items.push(this.parseExpression());
+            if (this.isOp(",")) this.next();
+            else break;
+          }
+          this.expectOp("]");
+          return { t: "arr", items };
+        }
+        if (t.value === "{") {
+          const props = [];
+          while (!this.isOp("}")) {
+            const k = this.next();
+            let key;
+            if (k.type === "id" || k.type === "str") key = k.value;
+            else if (k.type === "num") key = String(k.value);
+            else throw new Unsupported("computed / spread object key");
+            if (UNSAFE_MEMBERS.has(key)) throw new Unsupported("unsafe object key");
+            if (k.type === "id" && (this.isOp(",") || this.isOp("}"))) {
+              props.push([key, { t: "id", n: key }]);
+            } else {
+              this.expectOp(":");
+              props.push([key, this.parseExpression()]);
+            }
+            if (this.isOp(",")) this.next();
+            else break;
+          }
+          this.expectOp("}");
+          return { t: "obj", props };
+        }
+        throw new Unsupported(`unexpected "${t.value}"`);
+      }
+      default:
+        throw new Unsupported("unexpected end of expression");
+    }
+  }
+};
+function parseAreExpression(src) {
+  try {
+    return new Parser(tokenize(src)).parseProgram();
+  } catch (e) {
+    if (e instanceof Unsupported) return null;
+    throw e;
+  }
+}
+var SHORT = /* @__PURE__ */ Symbol("short-circuit");
+function assertMember(key) {
+  if (typeof key === "string" && UNSAFE_MEMBERS.has(key)) {
+    throw new Error(`Access to "${key}" is not allowed in expressions`);
+  }
+}
+function lookupLocal(frame, name) {
+  for (let f = frame; f; f = f.parent) {
+    if (name in f.vars) return { found: true, value: f.vars[name] };
+  }
+  return { found: false };
+}
+function isStoreRoot(name, frame, ctx) {
+  if (lookupLocal(frame, name).found) return false;
+  return !(ctx.scope && name in ctx.scope);
+}
+function staticPath(node) {
+  if (node.t === "id") return [node.n];
+  if (node.t === "mem" && !node.opt && node.p.t === "lit" && (typeof node.p.v === "string" || typeof node.p.v === "number")) {
+    const base = staticPath(node.o);
+    return base ? [...base, String(node.p.v)] : null;
+  }
+  return null;
+}
+function describeCallee(node) {
+  const path = staticPath(node);
+  return path ? path.join(".") : "expression";
+}
+function evalIdentifier(name, frame, ctx) {
+  assertMember(name);
+  const local = lookupLocal(frame, name);
+  if (local.found) return local.value;
+  if (ctx.scope && name in ctx.scope) return ctx.scope[name];
+  ctx.assertIdentifier(name);
+  const value = ctx.storeGet(name);
+  return typeof value === "function" ? value.bind(ctx.storeThis) : value;
+}
+function evalChain(node, frame, ctx) {
+  if (node.t === "mem") return evalMember(node, frame, ctx);
+  if (node.t === "call") return evalCall(node, frame, ctx);
+  return evalNode(node, frame, ctx);
+}
+function evalMember(node, frame, ctx) {
+  const path = staticPath(node);
+  if (path && isStoreRoot(path[0], frame, ctx)) {
+    ctx.assertIdentifier(path[0]);
+    for (const seg of path) assertMember(seg);
+    const value = ctx.storeGet(path.join("."));
+    if (value !== void 0) return value;
+    let obj2 = ctx.storeGet(path[0]);
+    for (let i = 1; i < path.length; i++) {
+      if (obj2 === null || obj2 === void 0) return void 0;
+      obj2 = obj2[path[i]];
+    }
+    return obj2;
+  }
+  const obj = evalChain(node.o, frame, ctx);
+  if (obj === SHORT) return SHORT;
+  const key = node.computed ? evalNode(node.p, frame, ctx) : node.p.v;
+  assertMember(String(key));
+  if (obj === null || obj === void 0) {
+    if (node.opt) return SHORT;
+    throw new TypeError(`Cannot read properties of ${obj} (reading '${String(key)}')`);
+  }
+  return obj[key];
+}
+function evalCall(node, frame, ctx) {
+  let fn;
+  let thisArg = void 0;
+  const callee = node.c;
+  if (callee.t === "mem") {
+    thisArg = evalChain(callee.o, frame, ctx);
+    if (thisArg === SHORT) return SHORT;
+    const key = callee.computed ? evalNode(callee.p, frame, ctx) : callee.p.v;
+    assertMember(String(key));
+    if (thisArg === null || thisArg === void 0) {
+      if (callee.opt) return SHORT;
+      throw new TypeError(`Cannot read properties of ${thisArg} (reading '${String(key)}')`);
+    }
+    fn = thisArg[key];
+  } else {
+    fn = evalChain(callee, frame, ctx);
+    if (fn === SHORT) return SHORT;
+  }
+  if ((fn === null || fn === void 0) && node.opt) return SHORT;
+  if (typeof fn !== "function") {
+    throw new TypeError(`${describeCallee(callee)} is not a function`);
+  }
+  const args = node.a.map((arg) => evalNode(arg, frame, ctx));
+  return fn.apply(thisArg, args);
+}
+function evalNode(node, frame, ctx) {
+  switch (node.t) {
+    case "lit":
+      return node.v;
+    case "id":
+      return evalIdentifier(node.n, frame, ctx);
+    case "mem":
+    case "call": {
+      const value = evalChain(node, frame, ctx);
+      return value === SHORT ? void 0 : value;
+    }
+    case "un": {
+      const a = evalNode(node.a, frame, ctx);
+      switch (node.op) {
+        case "!":
+          return !a;
+        case "-":
+          return -a;
+        case "+":
+          return +a;
+        case "typeof":
+          return typeof a;
+      }
+      throw new Error(`Unknown unary operator ${node.op}`);
+    }
+    case "bin": {
+      switch (node.op) {
+        case "&&":
+          return evalNode(node.l, frame, ctx) && evalNode(node.r, frame, ctx);
+        case "||":
+          return evalNode(node.l, frame, ctx) || evalNode(node.r, frame, ctx);
+        case "??":
+          return evalNode(node.l, frame, ctx) ?? evalNode(node.r, frame, ctx);
+      }
+      const l = evalNode(node.l, frame, ctx);
+      const r = evalNode(node.r, frame, ctx);
+      switch (node.op) {
+        case "+":
+          return l + r;
+        case "-":
+          return l - r;
+        case "*":
+          return l * r;
+        case "/":
+          return l / r;
+        case "%":
+          return l % r;
+        case "==":
+          return l == r;
+        case "!=":
+          return l != r;
+        case "===":
+          return l === r;
+        case "!==":
+          return l !== r;
+        case "<":
+          return l < r;
+        case ">":
+          return l > r;
+        case "<=":
+          return l <= r;
+        case ">=":
+          return l >= r;
+      }
+      throw new Error(`Unknown binary operator ${node.op}`);
+    }
+    case "cond":
+      return evalNode(node.test, frame, ctx) ? evalNode(node.yes, frame, ctx) : evalNode(node.no, frame, ctx);
+    case "arr":
+      return node.items.map((item) => evalNode(item, frame, ctx));
+    case "obj": {
+      const out = {};
+      for (const [key, value] of node.props) out[key] = evalNode(value, frame, ctx);
+      return out;
+    }
+    case "tpl": {
+      let out = node.quasis[0];
+      for (let i = 0; i < node.exprs.length; i++) {
+        out += String(evalNode(node.exprs[i], frame, ctx)) + node.quasis[i + 1];
+      }
+      return out;
+    }
+    case "arrow": {
+      const { params, body } = node;
+      return (...args) => {
+        const vars = /* @__PURE__ */ Object.create(null);
+        for (let i = 0; i < params.length; i++) vars[params[i]] = args[i];
+        return evalNode(body, { vars, parent: frame }, ctx);
+      };
+    }
+  }
+}
+function evaluateAreExpression(node, ctx) {
+  return evalNode(node, null, ctx);
+}
+
+// src/lib/AreSyntax/AreSyntax.context.ts
+var NOT_FOUND = /* @__PURE__ */ Symbol("not-found");
+var EXPRESSION_CACHE_LIMIT = 5e3;
 var AreSyntax = class extends A_Fragment {
   constructor(config) {
     super({ name: "AreSyntax" });
@@ -2301,6 +3050,15 @@ var AreSyntax = class extends A_Fragment {
      * Matches strings that consist solely of identifier characters separated by dots.
      */
     this.SIMPLE_PATH = /^[a-zA-Z_$][\w$]*(?:\.[a-zA-Z_$][\w$]*)*$/;
+    /**
+     * String literals ('...', "...", `...`) — their content is exempt from the ALLOWED_CHARS guard.
+     */
+    this.STRING_LITERALS = /'(?:[^'\\]|\\[\s\S])*'|"(?:[^"\\]|\\[\s\S])*"|`(?:[^`\\]|\\[\s\S])*`/g;
+    /**
+     * Validated expressions → parsed AST, or `null` when the expression uses syntax
+     * outside the CSP-safe subset (then the legacy `new Function` path is used).
+     */
+    this._expressions = /* @__PURE__ */ new Map();
     this._trimWhitespace = config?.trimWhitespace !== false;
     this._strictMode = config?.strictMode !== false;
     this._rules = [...config?.rules ?? []].sort(
@@ -2343,30 +3101,28 @@ var AreSyntax = class extends A_Fragment {
    */
   compile(expr) {
     const trimmed = expr.trim();
-    this.validate(trimmed);
+    const ast = this.prepare(trimmed);
     const isCallable = this.isCallableExpression(trimmed);
     const isSimplePath = this.SIMPLE_PATH.test(trimmed);
     let compiled = null;
-    if (!isSimplePath) {
+    if (!ast) {
       try {
         compiled = new Function("scope", `"use strict"; with(scope) { return (${trimmed}) }`);
       } catch (e) {
         throw new Error(`Expression syntax error in "${trimmed}": ${e.message}`);
       }
     }
-    const createSandboxFn = this.createSandbox.bind(this);
+    const self = this;
     return {
       isCallable,
       execute(store, scope) {
         if (isSimplePath) {
-          if (scope && trimmed in scope) return scope[trimmed];
-          const value = store.get(trimmed);
-          if (value !== void 0) return value;
+          const value = self.resolveSimplePath(trimmed, store, scope);
+          if (value !== NOT_FOUND) return value;
         }
-        const sandbox = createSandboxFn(store, scope);
         let result;
         try {
-          result = compiled ? compiled(sandbox) : new Function("scope", `"use strict"; with(scope) { return (${trimmed}) }`)(sandbox);
+          result = ast ? evaluateAreExpression(ast, self.createContext(store, scope)) : compiled(self.createSandbox(store, scope));
         } catch (e) {
           throw new Error(`Expression evaluation error in "${trimmed}": ${e.message}`);
         }
@@ -2410,14 +3166,21 @@ var AreSyntax = class extends A_Fragment {
    */
   evaluate(expr, store, scope) {
     const trimmed = expr.trim();
-    this.validate(trimmed);
+    const ast = this.prepare(trimmed);
     if (this.SIMPLE_PATH.test(trimmed)) {
-      if (scope && trimmed in scope) return scope[trimmed];
-      const value = store.get(trimmed);
-      if (value !== void 0) return value;
+      const value = this.resolveSimplePath(trimmed, store, scope);
+      if (value !== NOT_FOUND) return value;
     }
-    const sandbox = this.createSandbox(store, scope);
-    const result = this.execute(trimmed, sandbox);
+    let result;
+    if (ast) {
+      try {
+        result = evaluateAreExpression(ast, this.createContext(store, scope));
+      } catch (e) {
+        throw new Error(`Expression evaluation error in "${trimmed}": ${e.message}`);
+      }
+    } else {
+      result = this.execute(trimmed, this.createSandbox(store, scope));
+    }
     if (this.isCallableExpression(trimmed)) {
       if (typeof result !== "function") {
         throw new Error(
@@ -2453,6 +3216,20 @@ var AreSyntax = class extends A_Fragment {
     return false;
   }
   // ── Validation ────────────────────────────────────────────────────────────
+  /**
+   * Validates and parses an expression once; later calls with the same string
+   * reuse the cached result (validation is deterministic per string).
+   */
+  prepare(expr) {
+    const cached = this._expressions.get(expr);
+    if (cached !== void 0) return cached;
+    if (this._expressions.has(expr)) return null;
+    this.validate(expr);
+    const ast = parseAreExpression(expr);
+    if (this._expressions.size >= EXPRESSION_CACHE_LIMIT) this._expressions.clear();
+    this._expressions.set(expr, ast);
+    return ast;
+  }
   validate(expr) {
     if (expr.length > this.MAX_LENGTH) {
       throw new Error(
@@ -2464,7 +3241,7 @@ var AreSyntax = class extends A_Fragment {
         throw new Error(`Expression contains blocked pattern: ${pattern.source}`);
       }
     }
-    if (!this.ALLOWED_CHARS.test(expr)) {
+    if (!this.ALLOWED_CHARS.test(expr.replace(this.STRING_LITERALS, '""'))) {
       throw new Error(`Expression contains disallowed characters`);
     }
     this.checkDepth(expr);
@@ -2484,6 +3261,42 @@ var AreSyntax = class extends A_Fragment {
     }
   }
   // ── Sandbox ───────────────────────────────────────────────────────────────
+  /**
+   * Resolves a simple dotted path (`name`, `user.name`, `t.label`) without the
+   * evaluator: the whole path or its first segment from `scope`, otherwise the store.
+   * Returns NOT_FOUND when the path should go through the full evaluator.
+   */
+  resolveSimplePath(path, store, scope) {
+    if (scope) {
+      if (path in scope) return scope[path];
+      const dot = path.indexOf(".");
+      if (dot > 0) {
+        const head = path.slice(0, dot);
+        if (head in scope) {
+          let value2 = scope[head];
+          for (const segment of path.slice(dot + 1).split(".")) {
+            if (value2 === null || value2 === void 0) return NOT_FOUND;
+            value2 = value2[segment];
+          }
+          return value2;
+        }
+      }
+    }
+    const value = store?.get(path);
+    return value !== void 0 ? value : NOT_FOUND;
+  }
+  createContext(store, scope) {
+    return {
+      scope,
+      storeGet: (path) => store?.get(path),
+      storeThis: store,
+      assertIdentifier: (name) => {
+        if (this.BLOCKED_GLOBALS.has(name)) {
+          throw new Error(`Access to "${name}" is not allowed in expressions`);
+        }
+      }
+    };
+  }
   createSandbox(store, scope) {
     return new Proxy({}, {
       has: (_, key) => {
@@ -2638,54 +3451,6 @@ AreComponentResolver = __decorateClass([
   })
 ], AreComponentResolver);
 
-// src/lib/AreLoader/AreLoader.component.ts
-var AreLoader = class extends A_Component {
-  async load(node, scope, feature, logger, context, ...args) {
-    logger?.debug("red", `Loading node <${node.aseid.toString()}> with content:`, scope);
-    if (!node.component && node.aseid.entity.includes("-")) {
-      const resolver = scope.resolve(AreComponentResolver);
-      if (resolver) {
-        const Component = await resolver.resolve(node.aseid.entity);
-        if (Component) {
-          node.registerComponent(Component);
-        }
-      }
-    }
-    if (node.component) {
-      context?.startPerformance("Total AreFeatures.onData");
-      await feature.chain(node.component, AreFeatures.onData, scope);
-      context?.endPerformance("Total AreFeatures.onData");
-      context?.startPerformance("Total AreFeatures.onLoad");
-      await feature.chain(node.component, AreFeatures.onStyles, scope);
-      context?.endPerformance("Total AreFeatures.onLoad");
-      context?.startPerformance("Total AreFeatures.onTemplate");
-      await feature.chain(node.component, AreFeatures.onTemplate, scope);
-      context?.endPerformance("Total AreFeatures.onTemplate");
-    }
-    context?.startPerformance("Tokenization");
-    node.tokenize();
-    context?.endPerformance("Tokenization");
-    await Promise.all(node.children.map((childNode) => childNode.load()));
-  }
-};
-__decorateClass([
-  A_Feature.Extend({
-    name: A_TYPES__EntityFeatures.LOAD,
-    scope: [AreNode]
-  }),
-  __decorateParam(0, A_Inject(A_Caller)),
-  __decorateParam(1, A_Inject(A_Scope)),
-  __decorateParam(2, A_Inject(A_Feature)),
-  __decorateParam(3, A_Inject(A_Logger)),
-  __decorateParam(4, A_Inject(AreContext))
-], AreLoader.prototype, "load", 1);
-AreLoader = __decorateClass([
-  A_Frame.Define({
-    namespace: "A-ARE",
-    description: "Entry point of the pipeline. Accepts a raw template string and orchestrates the initial processing by delegating to Syntax. Returns a structured AreNode tree ready for transformation. Knows nothing about the template content or grammar rules."
-  })
-], AreLoader);
-
 // src/lib/AreStore/AreStore.constants.ts
 var AreStoreAreComponentMetaKeys = {
   StoreExtensions: "_AreStore_StoreExtensions"
@@ -2727,7 +3492,7 @@ var AreStore = class extends A_ExecutionContext {
     return A_Context.scope(this).issuer();
   }
   get parent() {
-    return this.owner.parent?.scope.resolve(AreStore);
+    return this.owner?.parent?.scope.resolve(AreStore);
   }
   get context() {
     return A_Context.scope(this).resolve(AreContext);
@@ -2775,7 +3540,9 @@ var AreStore = class extends A_ExecutionContext {
   set(param1, param2) {
     if (typeof param1 === "string" && param2 !== void 0) {
       this.setAsKeyValue(param1, param2);
-    } else if (typeof param1 === "object") {
+    } else if (typeof param1 === "string" && arguments.length >= 2) {
+      this.drop(param1);
+    } else if (typeof param1 === "object" && param1 !== null) {
       this.setAsObject(param1);
     } else {
       throw new Error("Invalid parameters for set method. Expected either (key: string, value: any) or (values: object).");
@@ -2813,8 +3580,13 @@ var AreStore = class extends A_ExecutionContext {
     const entires = Object.entries(values);
     const affected = /* @__PURE__ */ new Set();
     for (const [key, value] of entires) {
-      this._keys.add(key);
-      super.set(key, value);
+      if (value === void 0) {
+        this._keys.delete(key);
+        super.drop(key);
+      } else {
+        this._keys.add(key);
+        super.set(key, value);
+      }
       for (const watcher of this.collectAffected(String(key))) {
         affected.add(watcher);
       }
@@ -3013,7 +3785,72 @@ AreStore = __decorateClass([
   })
 ], AreStore);
 
-// src/lib/AreInterpreter/AreInterpreter.component.ts
+// src/lib/AreLoader/AreLoader.component.ts
+var AreLoader = class extends A_Component {
+  async load(node, scope, feature, logger, context, ...args) {
+    logger?.debug("red", `Loading node <${node.aseid.toString()}> with content:`, scope);
+    if (!node.component && node.aseid.entity.includes("-")) {
+      const resolver = scope.resolve(AreComponentResolver);
+      if (resolver) {
+        const Component = await resolver.resolve(node.aseid.entity);
+        if (Component) {
+          node.registerComponent(Component);
+          this.initResolvedComponent(node, scope, feature);
+        }
+      }
+    }
+    if (node.component) {
+      context?.startPerformance("Total AreFeatures.onData");
+      await feature.chain(node.component, AreFeatures.onData, scope);
+      context?.endPerformance("Total AreFeatures.onData");
+      context?.startPerformance("Total AreFeatures.onLoad");
+      await feature.chain(node.component, AreFeatures.onStyles, scope);
+      context?.endPerformance("Total AreFeatures.onLoad");
+      context?.startPerformance("Total AreFeatures.onTemplate");
+      await feature.chain(node.component, AreFeatures.onTemplate, scope);
+      context?.endPerformance("Total AreFeatures.onTemplate");
+    }
+    context?.startPerformance("Tokenization");
+    node.tokenize();
+    context?.endPerformance("Tokenization");
+    await Promise.all(node.children.map((childNode) => childNode.load()));
+  }
+  /**
+   * Catch a lazily-resolved node up on the component-specific part of `init`.
+   *
+   * `AreLifecycle.init` ran BEFORE the resolver supplied the class, so it saw
+   * no component: the node got no store of its own and its component init
+   * hooks never fired. Without its own store the node's reads/writes (data,
+   * props injected by the compiler) land in the PARENT's store — so props
+   * bound on a lazy tag were lost and its data leaked into the host.
+   */
+  initResolvedComponent(node, scope, feature) {
+    const component = node.component;
+    if (!component || scope.resolveFlat(AreStore)) return;
+    feature.chain(component, AreFeatures.onBeforeInit, scope);
+    const store = new AreStore(node.aseid);
+    scope.register(store);
+    store.loadExtensions(component);
+    feature.chain(component, AreFeatures.onAfterInit, scope);
+  }
+};
+__decorateClass([
+  A_Feature.Extend({
+    name: A_TYPES__EntityFeatures.LOAD,
+    scope: [AreNode]
+  }),
+  __decorateParam(0, A_Inject(A_Caller)),
+  __decorateParam(1, A_Inject(A_Scope)),
+  __decorateParam(2, A_Inject(A_Feature)),
+  __decorateParam(3, A_Inject(A_Logger)),
+  __decorateParam(4, A_Inject(AreContext))
+], AreLoader.prototype, "load", 1);
+AreLoader = __decorateClass([
+  A_Frame.Define({
+    namespace: "A-ARE",
+    description: "Entry point of the pipeline. Accepts a raw template string and orchestrates the initial processing by delegating to Syntax. Returns a structured AreNode tree ready for transformation. Knows nothing about the template content or grammar rules."
+  })
+], AreLoader);
 var AreInterpreter = class extends A_Component {
   /**
    * Decorator to mark a method as an instruction Apply handler for the specific instruction type. The method will be called during the render phase of the ARE component when the corresponding instruction needs to be applied. The method should contain logic to perform the necessary operations on the rendering target based on the instruction's content and context.
@@ -3060,13 +3897,14 @@ var AreInterpreter = class extends A_Component {
       })(target, propertyKey, descriptor);
     };
   }
-  interpret(scene) {
+  interpret(scene, logger) {
     const { toApply, toRevert } = scene.changes;
     for (const instruction of toRevert) {
       try {
         instruction.revert();
         scene.unApply(instruction);
       } catch (error) {
+        logger?.error(error);
         instruction.apply();
         scene.apply(instruction);
       }
@@ -3076,6 +3914,7 @@ var AreInterpreter = class extends A_Component {
         instruction.apply();
         scene.apply(instruction);
       } catch (error) {
+        logger?.error(error);
         instruction.revert();
         scene.unApply(instruction);
       }
@@ -3116,7 +3955,8 @@ __decorateClass([
     name: AreNodeFeatures.onInterpret,
     scope: [AreNode]
   }),
-  __decorateParam(0, A_Inject(AreScene))
+  __decorateParam(0, A_Inject(AreScene)),
+  __decorateParam(1, A_Inject(A_Logger))
 ], AreInterpreter.prototype, "interpret", 1);
 __decorateClass([
   A_Feature.Extend({
@@ -3543,7 +4383,11 @@ var AreTokenizer = class extends A_Component {
       if (!match) {
         const rest = source.slice(index, to);
         const t = this.tryPlainText(rest, index);
-        if (t && !(this.config.trimWhitespace && !rest.trim())) tokens.push(t);
+        if (t && !(this.config.trimWhitespace && !rest.trim())) {
+          if (this.config.trimWhitespace)
+            this.keepBoundarySpace(t, rest, hasMatchBefore, false);
+          tokens.push(t);
+        }
         break;
       }
       if (match.position > index) {
@@ -3556,6 +4400,8 @@ var AreTokenizer = class extends A_Component {
               tokens.push(t);
             }
           } else {
+            if (this.config.trimWhitespace)
+              this.keepBoundarySpace(t, plain, hasMatchBefore, true);
             tokens.push(t);
           }
         }
@@ -3665,6 +4511,15 @@ var AreTokenizer = class extends A_Component {
     const match = { raw, content: trimmed, opening: rule.opening ?? "", closing: closingUsed, position, payload: {}, _rule: rule };
     if (rule.extract) match.payload = rule.extract(raw, match);
     return match;
+  }
+  /**
+   * Trimmed plain text keeps ONE collapsed space on each side that touches a
+   * neighbouring match (`A {{x}} B {{y}}` → `A `, ` B `), matching HTML
+   * whitespace collapsing. Only the outer edges of the content are trimmed.
+   */
+  keepBoundarySpace(t, raw, matchBefore, matchAfter) {
+    if (matchBefore && /^\s/.test(raw)) t.content = " " + t.content;
+    if (matchAfter && /\s$/.test(raw)) t.content = t.content + " ";
   }
   tryPlainText(raw, position) {
     if (!raw) return null;

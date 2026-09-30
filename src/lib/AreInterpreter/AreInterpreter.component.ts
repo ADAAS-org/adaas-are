@@ -75,6 +75,7 @@ export class AreInterpreter extends A_Component {
     })
     interpret(
         @A_Inject(AreScene) scene: AreScene,
+        @A_Inject(A_Logger) logger?: A_Logger,
     ) {
         /**
           * 1. First we need to get all changes to be applied and reverted during render operation
@@ -89,6 +90,7 @@ export class AreInterpreter extends A_Component {
                 instruction.revert();
                 scene.unApply(instruction);
             } catch (error) {
+                logger?.error(error);
                 instruction.apply();
                 scene.apply(instruction);
             }
@@ -105,8 +107,9 @@ export class AreInterpreter extends A_Component {
                 scene.apply(instruction);
             } catch (error) {
                 /**
-                 * 2.2. if any error happened we simply revert the instruction and remove it from the state
+                 * 2.2. if any error happened we log it, then revert the instruction and remove it from the state
                  */
+                logger?.error(error);
                 instruction.revert();
                 scene.unApply(instruction);
             }

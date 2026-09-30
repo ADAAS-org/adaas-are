@@ -155,7 +155,10 @@ export class AreScene extends A_Fragment {
      * For example, if we have a node with two instructions in the plan: [Instruction A, Instruction B], and both of them are applied to the node, then the state will be [Instruction B, Instruction A], so when we need to revert the changes, we will revert Instruction B first, and then Instruction A.
      */
     get applied(): AreInstruction[] {
-        return this._state.reverse(); // we reverse the state to have the correct order of instructions, so the first instruction in the state is the first one that should be reverted when we need to revert the changes, and so on.
+        // Return a reversed COPY. Reversing `_state` in place would flip the
+        // stored order on every access (and `changes` reads it on each mount /
+        // update), making revert order depend on how often the getter was hit.
+        return this._state.slice().reverse();
     }
 
     /**

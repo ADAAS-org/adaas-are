@@ -1,8 +1,9 @@
 import { __decorateClass } from '../../chunk-EQQGB2QZ.mjs';
-import { A_Entity, A_Context, A_Scope, A_FormatterHelper, A_TypeGuards, A_CommonHelper, A_Error } from '@adaas/a-concept';
+import { A_Entity, A_Context, A_Scope, A_TypeGuards, A_CommonHelper, A_Error } from '@adaas/a-concept';
 import { A_Frame } from '@adaas/a-frame/core';
 import { AreScene } from '@adaas/are/scene/AreScene.context';
 import { AreAttribute } from '@adaas/are/attribute/AreAttribute.entity';
+import { AreComponentTag } from '@adaas/are/component/Are.tag';
 import { AreNodeStatuses, AreNodeFeatures } from './AreNode.constants';
 import { AreContext } from '@adaas/are/component/Are.context';
 
@@ -61,7 +62,7 @@ let AreNode = class extends A_Entity {
    * [!] Note: The component is optional and may not be defined for all nodes. If no component is associated with the node, it will be treated as a standard HTML element or a basic node without custom logic.
    */
   get component() {
-    return this.scope.resolve(A_FormatterHelper.toPascalCase(this.aseid.entity));
+    return AreComponentTag.resolve(this.scope, this.aseid.entity);
   }
   /**
    * The parent node of this node, which is the node that registered the current node in its scope. This is typically the node that is responsible for rendering the current node and managing its lifecycle within the scene. The parent node can be used to access shared context, propagate events, and manage interactions between nodes in a hierarchical structure.

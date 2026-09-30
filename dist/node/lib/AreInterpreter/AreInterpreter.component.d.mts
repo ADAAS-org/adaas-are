@@ -1,5 +1,6 @@
 import { A_Component, A_Scope, A_Feature } from '@adaas/a-concept';
-import { l as AreScene, c as AreInstruction, p as AreStore } from '../../Are.context-DfIfWCiL.mjs';
+import { l as AreScene, c as AreInstruction, p as AreStore } from '../../Are.context-nvCJk-uQ.mjs';
+import { A_Logger } from '@adaas/a-utils/a-logger';
 import '@adaas/a-utils/a-signal';
 import '../AreEvent/AreEvent.context.mjs';
 import '@adaas/a-utils/a-execution';
@@ -40,7 +41,7 @@ declare class AreInterpreter extends A_Component {
      *
      * @param scene
      */
-    interpret(scene: AreScene): void;
+    interpret(scene: AreScene, logger?: A_Logger): void;
     protected applyInstruction(instruction: AreInstruction, interpreter: AreInterpreter, store: AreStore, scope: A_Scope, feature: A_Feature, ...args: any[]): void;
     protected updateInstruction(instruction: AreInstruction, interpreter: AreInterpreter, store: AreStore, scope: A_Scope, feature: A_Feature, ...args: any[]): void;
     protected revertInstruction(instruction: AreInstruction, interpreter: AreInterpreter, store: AreStore, scope: A_Scope, feature: A_Feature, ...args: any[]): void;

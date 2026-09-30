@@ -2,6 +2,13 @@ import { A_Fragment } from "@adaas/a-concept";
 import { A_Frame } from "@adaas/a-frame/core";
 import { AreSyntaxCompiledExpression, AreSyntaxInitOptions, AreSyntaxTokenRules } from "./AreSyntax.types";
 import { AreStore } from "@adaas/are/store/AreStore.context";
+import { AreExprContext, AreExprNode, evaluateAreExpression, parseAreExpression } from "./AreSyntax.evaluator";
+
+/** Returned by `resolveSimplePath` when the fast path could not resolve the value. */
+const NOT_FOUND = Symbol('not-found')
+
+/** Max number of distinct expressions kept in the validate+parse cache. */
+const EXPRESSION_CACHE_LIMIT = 5000
 
 @A_Frame.Define({
     namespace: 'A-ARE',
@@ -70,6 +77,15 @@ export class AreSyntax extends A_Fragment {
      */
     private readonly SIMPLE_PATH = /^[a-zA-Z_$][\w$]*(?:\.[a-zA-Z_$][\w$]*)*$/
     /**
+     * String literals ('...', "...", `...`) — their content is exempt from the ALLOWED_CHARS guard.
+     */
+    private readonly STRING_LITERALS = /'(?:[^'\\]|\\[\s\S])*'|"(?:[^"\\]|\\[\s\S])*"|`(?:[^`\\]|\\[\s\S])*`/g
+    /**
+     * Validated expressions → parsed AST, or `null` when the expression uses syntax
+     * outside the CSP-safe subset (then the legacy `new Function` path is used).
+     */
+    private readonly _expressions = new Map<string, AreExprNode | null>()
+    /**
      * Compiled expression — a pre-parsed function ready for repeated execution.
      * Created once via compile(), reused on every apply/click.
      */
@@ -127,16 +143,16 @@ export class AreSyntax extends A_Fragment {
     compile(expr: string): AreSyntaxCompiledExpression {
         const trimmed = expr.trim()
 
-        // validate once — throws if expression is unsafe or malformed
-        this.validate(trimmed)
+        // validate + parse once — throws if expression is unsafe or malformed
+        const ast = this.prepare(trimmed)
 
         const isCallable = this.isCallableExpression(trimmed)
         const isSimplePath = this.SIMPLE_PATH.test(trimmed)
 
-        // pre-build the Function once — most expensive part
+        // Only expressions outside the CSP-safe subset need a Function
         let compiled: Function | null = null
 
-        if (!isSimplePath) {
+        if (!ast) {
             try {
                 compiled = new Function('scope', `"use strict"; with(scope) { return (${trimmed}) }`)
             } catch (e) {
@@ -144,7 +160,7 @@ export class AreSyntax extends A_Fragment {
             }
         }
 
-        const createSandboxFn = this.createSandbox.bind(this)
+        const self = this
 
         return {
             isCallable,
@@ -152,19 +168,15 @@ export class AreSyntax extends A_Fragment {
             execute(store: AreStore, scope?: Record<string, any>): any {
                 // fast path — simple property path, no sandbox needed
                 if (isSimplePath) {
-                    if (scope && trimmed in scope) return scope[trimmed]
-                    const value = store.get(trimmed)
-                    if (value !== undefined) return value
-                    // fall through to sandbox if store didn't resolve it
+                    const value = self.resolveSimplePath(trimmed, store, scope)
+                    if (value !== NOT_FOUND) return value
                 }
-
-                const sandbox = createSandboxFn(store, scope)
 
                 let result: any
                 try {
-                    result = compiled
-                        ? compiled(sandbox)
-                        : new Function('scope', `"use strict"; with(scope) { return (${trimmed}) }`)(sandbox)
+                    result = ast
+                        ? evaluateAreExpression(ast, self.createContext(store, scope))
+                        : compiled!(self.createSandbox(store, scope))
                 } catch (e) {
                     throw new Error(`Expression evaluation error in "${trimmed}": ${(e as Error).message}`)
                 }
@@ -211,27 +223,27 @@ export class AreSyntax extends A_Fragment {
     evaluate(expr: string, store: AreStore, scope?: Record<string, any>): any {
         const trimmed = expr.trim()
 
-        this.validate(trimmed)
+        const ast = this.prepare(trimmed)
 
         /**
-         * Fast path: if the expression is a simple property path (e.g. "name", "user.name"),
-         * resolve it directly — first from scope, then from the store — without going
-         * through the sandbox/Function constructor.
+         * Fast path: if the expression is a simple property path (e.g. "name", "user.name", "t.label"),
+         * resolve it directly — first from scope (walking the dotted path), then from the store.
          */
         if (this.SIMPLE_PATH.test(trimmed)) {
-            if (scope && trimmed in scope) return scope[trimmed]
-
-            const value = store.get(trimmed)
-            if (value !== undefined) return value
-
-            /**
-             * If the full dot-path didn't resolve, fall back to the sandbox approach
-             * in case the store holds a nested object under the first key.
-             */
+            const value = this.resolveSimplePath(trimmed, store, scope)
+            if (value !== NOT_FOUND) return value
         }
 
-        const sandbox = this.createSandbox(store, scope)
-        const result = this.execute(trimmed, sandbox)
+        let result: any
+        if (ast) {
+            try {
+                result = evaluateAreExpression(ast, this.createContext(store, scope))
+            } catch (e) {
+                throw new Error(`Expression evaluation error in "${trimmed}": ${(e as Error).message}`)
+            }
+        } else {
+            result = this.execute(trimmed, this.createSandbox(store, scope))
+        }
 
         if (this.isCallableExpression(trimmed)) {
             if (typeof result !== 'function') {
@@ -282,7 +294,23 @@ export class AreSyntax extends A_Fragment {
     }
 
     // ── Validation ────────────────────────────────────────────────────────────
+    /**
+     * Validates and parses an expression once; later calls with the same string
+     * reuse the cached result (validation is deterministic per string).
+     */
+    private prepare(expr: string): AreExprNode | null {
+        const cached = this._expressions.get(expr)
+        if (cached !== undefined) return cached
+        if (this._expressions.has(expr)) return null
 
+        this.validate(expr)
+        const ast = parseAreExpression(expr)
+
+        if (this._expressions.size >= EXPRESSION_CACHE_LIMIT) this._expressions.clear()
+        this._expressions.set(expr, ast)
+
+        return ast
+    }
     private validate(expr: string): void {
         if (expr.length > this.MAX_LENGTH) {
             throw new Error(
@@ -296,7 +324,8 @@ export class AreSyntax extends A_Fragment {
             }
         }
 
-        if (!this.ALLOWED_CHARS.test(expr)) {
+        // Characters inside string literals are not restricted (e.g. '…', '·', '•')
+        if (!this.ALLOWED_CHARS.test(expr.replace(this.STRING_LITERALS, '""'))) {
             throw new Error(`Expression contains disallowed characters`)
         }
 
@@ -316,7 +345,46 @@ export class AreSyntax extends A_Fragment {
     }
 
     // ── Sandbox ───────────────────────────────────────────────────────────────
+    /**
+     * Resolves a simple dotted path (`name`, `user.name`, `t.label`) without the
+     * evaluator: the whole path or its first segment from `scope`, otherwise the store.
+     * Returns NOT_FOUND when the path should go through the full evaluator.
+     */
+    private resolveSimplePath(path: string, store: AreStore | undefined, scope?: Record<string, any>): any {
+        if (scope) {
+            if (path in scope) return scope[path]
 
+            const dot = path.indexOf('.')
+            if (dot > 0) {
+                const head = path.slice(0, dot)
+                if (head in scope) {
+                    let value = scope[head]
+                    for (const segment of path.slice(dot + 1).split('.')) {
+                        // let the evaluator raise the proper error
+                        if (value === null || value === undefined) return NOT_FOUND
+                        value = value[segment]
+                    }
+                    return value
+                }
+            }
+        }
+
+        const value = store?.get(path)
+        return value !== undefined ? value : NOT_FOUND
+    }
+
+    private createContext(store: AreStore | undefined, scope?: Record<string, any>): AreExprContext {
+        return {
+            scope,
+            storeGet: (path: string) => store?.get(path),
+            storeThis: store,
+            assertIdentifier: (name: string) => {
+                if (this.BLOCKED_GLOBALS.has(name)) {
+                    throw new Error(`Access to "${name}" is not allowed in expressions`)
+                }
+            },
+        }
+    }
     private createSandbox(store: AreStore, scope?: Record<string, any>): object {
         return new Proxy({}, {
             has: (_, key) => {

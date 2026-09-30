@@ -87,6 +87,33 @@ describe('AreStore — baseline behavior', () => {
         store.unwatch(watcher);
         expect(store.watchers.size).toBe(0);
     });
+
+    it('set(key, undefined) unsets the key and notifies watchers instead of throwing', () => {
+        const { store } = makeStore();
+        store.set({ name: 'Alice', other: 1 });
+        const watcher = makeWatcher(store);
+        track(store, watcher, ['name']);
+
+        expect(() => store.set('name', undefined)).not.toThrow();
+        expect(store.get('name')).toBeUndefined();
+        expect(store.keys.has('name')).toBe(false);
+        expect(watcher.update).toHaveBeenCalledTimes(1);
+        expect(store.get('other')).toBe(1);
+    });
+
+    it('undefined values in an object set unset those keys', () => {
+        const { store } = makeStore<{ a?: number; b: number }>();
+        store.set({ a: 1, b: 2 });
+        store.set({ a: undefined, b: 3 });
+        expect(store.keys.has('a')).toBe(false);
+        expect(store.get('a')).toBeUndefined();
+        expect(store.get('b')).toBe(3);
+    });
+
+    it('set(key) without a value still throws', () => {
+        const { store } = makeStore();
+        expect(() => (store as any).set('name')).toThrow('Invalid parameters for set method');
+    });
 });
 
 

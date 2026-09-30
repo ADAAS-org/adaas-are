@@ -121,7 +121,11 @@ export class AreTokenizer extends A_Component {
                  * discard it if it is whitespace-only — it is edge indentation/newlines.
                  */
                 const t = this.tryPlainText(rest, index)
-                if (t && !(this.config.trimWhitespace && !rest.trim())) tokens.push(t)
+                if (t && !(this.config.trimWhitespace && !rest.trim())) {
+                    if (this.config.trimWhitespace)
+                        this.keepBoundarySpace(t, rest, hasMatchBefore, false)
+                    tokens.push(t)
+                }
                 break
             }
             if (match.position > index) {
@@ -140,6 +144,8 @@ export class AreTokenizer extends A_Component {
                         }
                         // else: leading whitespace — skip
                     } else {
+                        if (this.config.trimWhitespace)
+                            this.keepBoundarySpace(t, plain, hasMatchBefore, true)
                         tokens.push(t)
                     }
                 }
@@ -268,6 +274,16 @@ export class AreTokenizer extends A_Component {
         const match: AreSyntaxTokenMatch = { raw, content: trimmed, opening: rule.opening ?? '', closing: closingUsed, position, payload: {}, _rule: rule }
         if (rule.extract) match.payload = rule.extract(raw, match)
         return match
+    }
+
+    /**
+     * Trimmed plain text keeps ONE collapsed space on each side that touches a
+     * neighbouring match (`A {{x}} B {{y}}` → `A `, ` B `), matching HTML
+     * whitespace collapsing. Only the outer edges of the content are trimmed.
+     */
+    protected keepBoundarySpace(t: AreSyntaxTokenMatch, raw: string, matchBefore: boolean, matchAfter: boolean): void {
+        if (matchBefore && /^\s/.test(raw)) t.content = ' ' + t.content
+        if (matchAfter && /\s$/.test(raw)) t.content = t.content + ' '
     }
 
     protected tryPlainText(raw: string, position: number): AreSyntaxTokenMatch | null {

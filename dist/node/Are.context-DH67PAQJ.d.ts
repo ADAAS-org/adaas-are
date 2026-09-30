@@ -1,13 +1,13 @@
 import * as _adaas_a_concept from '@adaas/a-concept';
 import { A_TYPES__Entity_Serialized, A_Entity, A_Scope, A_TYPES__Fragment_Serialized, A_Fragment, ASEID, A_TYPES__Paths, A_TYPES__Entity_Constructor, A_TYPES__Ctor } from '@adaas/a-concept';
 import { A_SignalVector } from '@adaas/a-utils/a-signal';
-import { AreEvent } from './lib/AreEvent/AreEvent.context.mjs';
-import { AreStoreWatchingEntity, AreStorePathValue } from './lib/AreStore/AreStore.types.mjs';
-import { AreSceneStatuses } from './lib/AreScene/AreScene.constants.mjs';
-import { AreAttribute_Init, AreAttribute_Serialized } from './lib/AreAttribute/AreAttribute.types.mjs';
-import { Are } from './lib/AreComponent/Are.component.mjs';
+import { AreEvent } from './lib/AreEvent/AreEvent.context.js';
+import { AreStoreWatchingEntity, AreStorePathValue } from './lib/AreStore/AreStore.types.js';
+import { AreSceneStatuses } from './lib/AreScene/AreScene.constants.js';
+import { AreAttribute_Init, AreAttribute_Serialized } from './lib/AreAttribute/AreAttribute.types.js';
+import { Are } from './lib/AreComponent/Are.component.js';
 import { A_ExecutionContext } from '@adaas/a-utils/a-execution';
-import { AreNodeStatuses, AreNodeFeatures } from './lib/AreNode/AreNode.constants.mjs';
+import { AreNodeStatuses, AreNodeFeatures } from './lib/AreNode/AreNode.constants.js';
 
 type AreInstructionNewProps<T extends any = Record<string, any>> = {
     /**
@@ -591,7 +591,7 @@ declare class AreStore<T extends Record<string, any> = Record<string, any>> exte
      */
     drop<P extends A_TYPES__Paths<T>>(key: P | keyof T): void;
     set<K extends keyof T>(values: Partial<T>): this;
-    set<P extends A_TYPES__Paths<T>>(key: P, value: AreStorePathValue<T, P>): this;
+    set<P extends A_TYPES__Paths<T>>(key: P, value: AreStorePathValue<T, P> | undefined): this;
     get<K extends keyof T>(key: K): T[K] | undefined;
     protected setAsObject(values: Partial<T>): this;
     protected setAsKeyValue<K extends keyof T, P extends A_TYPES__Paths<T>>(key: K | P, value: T[K] | AreStorePathValue<T, P>): this;

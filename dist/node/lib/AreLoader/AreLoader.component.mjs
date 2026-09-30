@@ -6,6 +6,7 @@ import { AreNode } from '@adaas/are/node/AreNode.entity';
 import { AreFeatures } from '@adaas/are/component/Are.constants';
 import { AreContext } from '@adaas/are/component/Are.context';
 import { AreComponentResolver } from '@adaas/are/resolver/AreComponentResolver.fragment';
+import { AreStore } from '@adaas/are/store/AreStore.context';
 
 let AreLoader = class extends A_Component {
   async load(node, scope, feature, logger, context, ...args) {
@@ -16,6 +17,7 @@ let AreLoader = class extends A_Component {
         const Component = await resolver.resolve(node.aseid.entity);
         if (Component) {
           node.registerComponent(Component);
+          this.initResolvedComponent(node, scope, feature);
         }
       }
     }
@@ -34,6 +36,24 @@ let AreLoader = class extends A_Component {
     node.tokenize();
     context?.endPerformance("Tokenization");
     await Promise.all(node.children.map((childNode) => childNode.load()));
+  }
+  /**
+   * Catch a lazily-resolved node up on the component-specific part of `init`.
+   *
+   * `AreLifecycle.init` ran BEFORE the resolver supplied the class, so it saw
+   * no component: the node got no store of its own and its component init
+   * hooks never fired. Without its own store the node's reads/writes (data,
+   * props injected by the compiler) land in the PARENT's store — so props
+   * bound on a lazy tag were lost and its data leaked into the host.
+   */
+  initResolvedComponent(node, scope, feature) {
+    const component = node.component;
+    if (!component || scope.resolveFlat(AreStore)) return;
+    feature.chain(component, AreFeatures.onBeforeInit, scope);
+    const store = new AreStore(node.aseid);
+    scope.register(store);
+    store.loadExtensions(component);
+    feature.chain(component, AreFeatures.onAfterInit, scope);
   }
 };
 __decorateClass([

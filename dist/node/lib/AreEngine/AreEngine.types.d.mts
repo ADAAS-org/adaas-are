@@ -1,6 +1,6 @@
 import { A_TYPES__Component_Constructor } from '@adaas/a-concept';
 import { AreCompiler } from '../AreCompiler/AreCompiler.component.mjs';
-import { a as AreContext } from '../../Are.context-DfIfWCiL.mjs';
+import { a as AreContext } from '../../Are.context-nvCJk-uQ.mjs';
 import { AreLoader } from '../AreLoader/AreLoader.component.mjs';
 import { AreSyntax } from '../AreSyntax/AreSyntax.context.mjs';
 import { AreTokenizer } from '../AreTokenizer/AreTokenizer.component.mjs';

@@ -6,6 +6,7 @@ var aSignal = require('@adaas/a-utils/a-signal');
 var AreSignals_component = require('@adaas/are/signals/AreSignals.component');
 var Are_meta = require('./Are.meta');
 var Are_constants = require('./Are.constants');
+var Are_tag = require('./Are.tag');
 
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -17,6 +18,16 @@ var __decorateClass = (decorators, target, key, kind) => {
   if (kind && result) __defProp(target, key, result);
   return result;
 };
+function detectDuplicateAreRuntime(marker) {
+  const g = globalThis;
+  const key = /* @__PURE__ */ Symbol.for("adaas.are.runtime");
+  if (g[key] && g[key] !== marker && !(typeof process !== "undefined" && process.env?.JEST_WORKER_ID)) {
+    console.warn(
+      "[are] Multiple copies of @adaas/are are loaded. Components built against another copy cannot resolve its AreEvent/AreStore injections, so their @Are.EventHandler methods never run. Keep @adaas/* packages external/peer dependencies in library bundles and deduplicate them in the app."
+    );
+  }
+  g[key] = marker;
+}
 exports.Are = class Are extends aConcept.A_Component {
   constructor() {
     super(...arguments);
@@ -27,6 +38,22 @@ exports.Are = class Are extends aConcept.A_Component {
      * Props can be used to store any additional data or configuration for the component. They are not reactive by default but can be used in the component's methods and lifecycle hooks to manage state or pass information. Props can be defined as a simple object with key-value pairs, where keys are the prop names and values are the prop values. They can be accessed and modified within the component's methods to influence rendering or behavior based on the component's state or external inputs.
      */
     this.props = {};
+  }
+  /**
+   * Returns the tag a component class is rendered under: its own static
+   * `tag` when defined, otherwise the kebab-cased class name with any
+   * bundler-added leading underscores stripped.
+   */
+  static tagOf(ctor) {
+    return Are_tag.AreComponentTag.of(ctor);
+  }
+  /**
+   * Resolves the component registered for a tag in the given scope chain:
+   * by class name first, then by {@link Are.tagOf} (explicit `static tag`
+   * or bundler-renamed class).
+   */
+  static resolveByTag(scope, entity) {
+    return Are_tag.AreComponentTag.resolve(scope, entity);
   }
   static Condition(signals, options) {
     return function(target) {
@@ -225,5 +252,6 @@ exports.Are = __decorateClass([
   }),
   aConcept.A_Meta.Define(Are_meta.AreMeta)
 ], exports.Are);
+detectDuplicateAreRuntime(exports.Are);
 //# sourceMappingURL=Are.component.js.map
 //# sourceMappingURL=Are.component.js.map

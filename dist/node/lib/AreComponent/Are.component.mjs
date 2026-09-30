@@ -5,7 +5,18 @@ import { A_SignalVector } from '@adaas/a-utils/a-signal';
 import { AreSignals } from '@adaas/are/signals/AreSignals.component';
 import { AreMeta } from './Are.meta';
 import { AreFeatures, AreSignalFeatureKey } from './Are.constants';
+import { AreComponentTag } from './Are.tag';
 
+function detectDuplicateAreRuntime(marker) {
+  const g = globalThis;
+  const key = /* @__PURE__ */ Symbol.for("adaas.are.runtime");
+  if (g[key] && g[key] !== marker && !(typeof process !== "undefined" && process.env?.JEST_WORKER_ID)) {
+    console.warn(
+      "[are] Multiple copies of @adaas/are are loaded. Components built against another copy cannot resolve its AreEvent/AreStore injections, so their @Are.EventHandler methods never run. Keep @adaas/* packages external/peer dependencies in library bundles and deduplicate them in the app."
+    );
+  }
+  g[key] = marker;
+}
 let Are = class extends A_Component {
   constructor() {
     super(...arguments);
@@ -16,6 +27,22 @@ let Are = class extends A_Component {
      * Props can be used to store any additional data or configuration for the component. They are not reactive by default but can be used in the component's methods and lifecycle hooks to manage state or pass information. Props can be defined as a simple object with key-value pairs, where keys are the prop names and values are the prop values. They can be accessed and modified within the component's methods to influence rendering or behavior based on the component's state or external inputs.
      */
     this.props = {};
+  }
+  /**
+   * Returns the tag a component class is rendered under: its own static
+   * `tag` when defined, otherwise the kebab-cased class name with any
+   * bundler-added leading underscores stripped.
+   */
+  static tagOf(ctor) {
+    return AreComponentTag.of(ctor);
+  }
+  /**
+   * Resolves the component registered for a tag in the given scope chain:
+   * by class name first, then by {@link Are.tagOf} (explicit `static tag`
+   * or bundler-renamed class).
+   */
+  static resolveByTag(scope, entity) {
+    return AreComponentTag.resolve(scope, entity);
   }
   static Condition(signals, options) {
     return function(target) {
@@ -214,6 +241,7 @@ Are = __decorateClass([
   }),
   A_Meta.Define(AreMeta)
 ], Are);
+detectDuplicateAreRuntime(Are);
 
 export { Are };
 //# sourceMappingURL=Are.component.mjs.map

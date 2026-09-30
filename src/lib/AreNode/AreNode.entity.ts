@@ -3,7 +3,8 @@ import { A_Frame } from "@adaas/a-frame/core";
 import { AreEvent } from "@adaas/are/event/AreEvent.context";
 import { AreScene } from "@adaas/are/scene/AreScene.context";
 import { AreAttribute } from "@adaas/are/attribute/AreAttribute.entity";
-import { Are } from "@adaas/are/component/Are.component";
+import type { Are } from "@adaas/are/component/Are.component";
+import { AreComponentTag } from "@adaas/are/component/Are.tag";
 import { AreNodeFeatures, AreNodeStatuses } from "./AreNode.constants";
 import { AreNodeNewProps, AreNodeStatusNames, AreNode_Serialized } from "./AreNode.types";
 import { AreSyntaxTokenPayload } from "@adaas/are/syntax/AreSyntax.types";
@@ -110,7 +111,7 @@ export class AreNode extends A_Entity<AreNodeNewProps, AreNode_Serialized> {
      * [!] Note: The component is optional and may not be defined for all nodes. If no component is associated with the node, it will be treated as a standard HTML element or a basic node without custom logic.
      */
     get component(): Are | undefined {
-        return this.scope.resolve<Are>(A_FormatterHelper.toPascalCase(this.aseid.entity)) as Are | undefined;
+        return AreComponentTag.resolve<Are>(this.scope, this.aseid.entity);
     }
     /**
      * The parent node of this node, which is the node that registered the current node in its scope. This is typically the node that is responsible for rendering the current node and managing its lifecycle within the scene. The parent node can be used to access shared context, propagate events, and manage interactions between nodes in a hierarchical structure.

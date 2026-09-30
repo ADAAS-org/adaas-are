@@ -69,7 +69,7 @@ export class AreStore<
     }
 
     get parent(): AreStore | undefined {
-        return this.owner.parent?.scope.resolve<AreStore>(AreStore);
+        return this.owner?.parent?.scope.resolve<AreStore>(AreStore);
     }
 
     get context(): AreContext {
@@ -144,14 +144,17 @@ export class AreStore<
     }
 
     set<K extends keyof T>(values: Partial<T>): this
-    set<P extends A_TYPES__Paths<T>>(key: P, value: AreStorePathValue<T, P>): this
+    set<P extends A_TYPES__Paths<T>>(key: P, value: AreStorePathValue<T, P> | undefined): this
     set<K extends keyof T, P extends A_TYPES__Paths<T>>(
         param1: K | Partial<T> | P,
         param2?: T[K] | AreStorePathValue<T, P>
     ): this {
         if (typeof param1 === 'string' && param2 !== undefined) {
             this.setAsKeyValue(param1 as P, param2 as AreStorePathValue<T, P>);
-        } else if (typeof param1 === 'object') {
+        } else if (typeof param1 === 'string' && arguments.length >= 2) {
+            // `set(key, undefined)` unsets the key (same as `drop(key)`)
+            this.drop(param1 as P);
+        } else if (typeof param1 === 'object' && param1 !== null) {
             this.setAsObject(param1 as Partial<T>);
         } else {
             throw new Error('Invalid parameters for set method. Expected either (key: string, value: any) or (values: object).');
@@ -212,8 +215,14 @@ export class AreStore<
         const affected = new Set<AreStoreWatchingEntity>();
 
         for (const [key, value] of entires) {
-            this._keys.add(key as keyof T);
-            super.set(key as keyof T, value as T[keyof T]);
+            if (value === undefined) {
+                // `undefined` unsets the key (same as `drop(key)`)
+                this._keys.delete(key as keyof T);
+                super.drop(key as keyof T);
+            } else {
+                this._keys.add(key as keyof T);
+                super.set(key as keyof T, value as T[keyof T]);
+            }
 
             for (const watcher of this.collectAffected(String(key))) {
                 affected.add(watcher);

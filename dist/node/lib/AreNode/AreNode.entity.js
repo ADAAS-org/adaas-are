@@ -4,6 +4,7 @@ var aConcept = require('@adaas/a-concept');
 var core = require('@adaas/a-frame/core');
 var AreScene_context = require('@adaas/are/scene/AreScene.context');
 var AreAttribute_entity = require('@adaas/are/attribute/AreAttribute.entity');
+var Are_tag = require('@adaas/are/component/Are.tag');
 var AreNode_constants = require('./AreNode.constants');
 var Are_context = require('@adaas/are/component/Are.context');
 
@@ -70,7 +71,7 @@ exports.AreNode = class AreNode extends aConcept.A_Entity {
    * [!] Note: The component is optional and may not be defined for all nodes. If no component is associated with the node, it will be treated as a standard HTML element or a basic node without custom logic.
    */
   get component() {
-    return this.scope.resolve(aConcept.A_FormatterHelper.toPascalCase(this.aseid.entity));
+    return Are_tag.AreComponentTag.resolve(this.scope, this.aseid.entity);
   }
   /**
    * The parent node of this node, which is the node that registered the current node in its scope. This is typically the node that is responsible for rendering the current node and managing its lifecycle within the scene. The parent node can be used to access shared context, propagate events, and manage interactions between nodes in a hierarchical structure.

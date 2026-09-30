@@ -133,7 +133,7 @@ let AreScene = class extends A_Fragment {
    * For example, if we have a node with two instructions in the plan: [Instruction A, Instruction B], and both of them are applied to the node, then the state will be [Instruction B, Instruction A], so when we need to revert the changes, we will revert Instruction B first, and then Instruction A.
    */
   get applied() {
-    return this._state.reverse();
+    return this._state.slice().reverse();
   }
   /**
    * Should return instructions to be reverted and to be applied. 

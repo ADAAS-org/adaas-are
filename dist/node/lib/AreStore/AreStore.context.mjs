@@ -44,7 +44,7 @@ let AreStore = class extends A_ExecutionContext {
     return A_Context.scope(this).issuer();
   }
   get parent() {
-    return this.owner.parent?.scope.resolve(AreStore);
+    return this.owner?.parent?.scope.resolve(AreStore);
   }
   get context() {
     return A_Context.scope(this).resolve(AreContext);
@@ -92,7 +92,9 @@ let AreStore = class extends A_ExecutionContext {
   set(param1, param2) {
     if (typeof param1 === "string" && param2 !== void 0) {
       this.setAsKeyValue(param1, param2);
-    } else if (typeof param1 === "object") {
+    } else if (typeof param1 === "string" && arguments.length >= 2) {
+      this.drop(param1);
+    } else if (typeof param1 === "object" && param1 !== null) {
       this.setAsObject(param1);
     } else {
       throw new Error("Invalid parameters for set method. Expected either (key: string, value: any) or (values: object).");
@@ -130,8 +132,13 @@ let AreStore = class extends A_ExecutionContext {
     const entires = Object.entries(values);
     const affected = /* @__PURE__ */ new Set();
     for (const [key, value] of entires) {
-      this._keys.add(key);
-      super.set(key, value);
+      if (value === void 0) {
+        this._keys.delete(key);
+        super.drop(key);
+      } else {
+        this._keys.add(key);
+        super.set(key, value);
+      }
       for (const watcher of this.collectAffected(String(key))) {
         affected.add(watcher);
       }

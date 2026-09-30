@@ -157,7 +157,8 @@ describe('AreTokenizer Tests', () => {
         const spanNode = divNode.children[0];
         expect(spanNode.content).toBe('Hello');
         const textNode = divNode.children[1];
-        expect(textNode.content).toBe('Test');
+        // the boundary space after </span> is kept (HTML collapsing: "Hello Test")
+        expect(textNode.content).toBe(' Test');
     });
     it('Should return no children on empty content', async () => {
         const node = new AreNode({

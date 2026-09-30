@@ -1,5 +1,5 @@
 import { A_Fragment } from '@adaas/a-concept';
-import { r as AreSyntaxInitOptions, u as AreSyntaxTokenRules, g as AreNode, q as AreSyntaxCompiledExpression, p as AreStore } from '../../Are.context-DfIfWCiL.mjs';
+import { r as AreSyntaxInitOptions, u as AreSyntaxTokenRules, g as AreNode, q as AreSyntaxCompiledExpression, p as AreStore } from '../../Are.context-nvCJk-uQ.mjs';
 import '@adaas/a-utils/a-signal';
 import '../AreEvent/AreEvent.context.mjs';
 import '@adaas/a-utils/a-execution';
@@ -43,6 +43,15 @@ declare class AreSyntax extends A_Fragment {
      * Matches strings that consist solely of identifier characters separated by dots.
      */
     private readonly SIMPLE_PATH;
+    /**
+     * String literals ('...', "...", `...`) — their content is exempt from the ALLOWED_CHARS guard.
+     */
+    private readonly STRING_LITERALS;
+    /**
+     * Validated expressions → parsed AST, or `null` when the expression uses syntax
+     * outside the CSP-safe subset (then the legacy `new Function` path is used).
+     */
+    private readonly _expressions;
     /**
      * Compiled expression — a pre-parsed function ready for repeated execution.
      * Created once via compile(), reused on every apply/click.
@@ -121,8 +130,20 @@ declare class AreSyntax extends A_Fragment {
      */
     extractEmitHandlers(expr: string): Set<string>;
     private isCallableExpression;
+    /**
+     * Validates and parses an expression once; later calls with the same string
+     * reuse the cached result (validation is deterministic per string).
+     */
+    private prepare;
     private validate;
     private checkDepth;
+    /**
+     * Resolves a simple dotted path (`name`, `user.name`, `t.label`) without the
+     * evaluator: the whole path or its first segment from `scope`, otherwise the store.
+     * Returns NOT_FOUND when the path should go through the full evaluator.
+     */
+    private resolveSimplePath;
+    private createContext;
     private createSandbox;
     private nestedHandler;
     private assertSafeKey;

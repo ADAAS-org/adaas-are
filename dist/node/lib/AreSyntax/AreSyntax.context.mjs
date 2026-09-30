@@ -1,7 +1,10 @@
 import { __decorateClass } from '../../chunk-EQQGB2QZ.mjs';
 import { A_Fragment } from '@adaas/a-concept';
 import { A_Frame } from '@adaas/a-frame/core';
+import { evaluateAreExpression, parseAreExpression } from './AreSyntax.evaluator';
 
+const NOT_FOUND = /* @__PURE__ */ Symbol("not-found");
+const EXPRESSION_CACHE_LIMIT = 5e3;
 let AreSyntax = class extends A_Fragment {
   constructor(config) {
     super({ name: "AreSyntax" });
@@ -85,6 +88,15 @@ let AreSyntax = class extends A_Fragment {
      * Matches strings that consist solely of identifier characters separated by dots.
      */
     this.SIMPLE_PATH = /^[a-zA-Z_$][\w$]*(?:\.[a-zA-Z_$][\w$]*)*$/;
+    /**
+     * String literals ('...', "...", `...`) — their content is exempt from the ALLOWED_CHARS guard.
+     */
+    this.STRING_LITERALS = /'(?:[^'\\]|\\[\s\S])*'|"(?:[^"\\]|\\[\s\S])*"|`(?:[^`\\]|\\[\s\S])*`/g;
+    /**
+     * Validated expressions → parsed AST, or `null` when the expression uses syntax
+     * outside the CSP-safe subset (then the legacy `new Function` path is used).
+     */
+    this._expressions = /* @__PURE__ */ new Map();
     this._trimWhitespace = config?.trimWhitespace !== false;
     this._strictMode = config?.strictMode !== false;
     this._rules = [...config?.rules ?? []].sort(
@@ -127,30 +139,28 @@ let AreSyntax = class extends A_Fragment {
    */
   compile(expr) {
     const trimmed = expr.trim();
-    this.validate(trimmed);
+    const ast = this.prepare(trimmed);
     const isCallable = this.isCallableExpression(trimmed);
     const isSimplePath = this.SIMPLE_PATH.test(trimmed);
     let compiled = null;
-    if (!isSimplePath) {
+    if (!ast) {
       try {
         compiled = new Function("scope", `"use strict"; with(scope) { return (${trimmed}) }`);
       } catch (e) {
         throw new Error(`Expression syntax error in "${trimmed}": ${e.message}`);
       }
     }
-    const createSandboxFn = this.createSandbox.bind(this);
+    const self = this;
     return {
       isCallable,
       execute(store, scope) {
         if (isSimplePath) {
-          if (scope && trimmed in scope) return scope[trimmed];
-          const value = store.get(trimmed);
-          if (value !== void 0) return value;
+          const value = self.resolveSimplePath(trimmed, store, scope);
+          if (value !== NOT_FOUND) return value;
         }
-        const sandbox = createSandboxFn(store, scope);
         let result;
         try {
-          result = compiled ? compiled(sandbox) : new Function("scope", `"use strict"; with(scope) { return (${trimmed}) }`)(sandbox);
+          result = ast ? evaluateAreExpression(ast, self.createContext(store, scope)) : compiled(self.createSandbox(store, scope));
         } catch (e) {
           throw new Error(`Expression evaluation error in "${trimmed}": ${e.message}`);
         }
@@ -194,14 +204,21 @@ let AreSyntax = class extends A_Fragment {
    */
   evaluate(expr, store, scope) {
     const trimmed = expr.trim();
-    this.validate(trimmed);
+    const ast = this.prepare(trimmed);
     if (this.SIMPLE_PATH.test(trimmed)) {
-      if (scope && trimmed in scope) return scope[trimmed];
-      const value = store.get(trimmed);
-      if (value !== void 0) return value;
+      const value = this.resolveSimplePath(trimmed, store, scope);
+      if (value !== NOT_FOUND) return value;
     }
-    const sandbox = this.createSandbox(store, scope);
-    const result = this.execute(trimmed, sandbox);
+    let result;
+    if (ast) {
+      try {
+        result = evaluateAreExpression(ast, this.createContext(store, scope));
+      } catch (e) {
+        throw new Error(`Expression evaluation error in "${trimmed}": ${e.message}`);
+      }
+    } else {
+      result = this.execute(trimmed, this.createSandbox(store, scope));
+    }
     if (this.isCallableExpression(trimmed)) {
       if (typeof result !== "function") {
         throw new Error(
@@ -237,6 +254,20 @@ let AreSyntax = class extends A_Fragment {
     return false;
   }
   // ── Validation ────────────────────────────────────────────────────────────
+  /**
+   * Validates and parses an expression once; later calls with the same string
+   * reuse the cached result (validation is deterministic per string).
+   */
+  prepare(expr) {
+    const cached = this._expressions.get(expr);
+    if (cached !== void 0) return cached;
+    if (this._expressions.has(expr)) return null;
+    this.validate(expr);
+    const ast = parseAreExpression(expr);
+    if (this._expressions.size >= EXPRESSION_CACHE_LIMIT) this._expressions.clear();
+    this._expressions.set(expr, ast);
+    return ast;
+  }
   validate(expr) {
     if (expr.length > this.MAX_LENGTH) {
       throw new Error(
@@ -248,7 +279,7 @@ let AreSyntax = class extends A_Fragment {
         throw new Error(`Expression contains blocked pattern: ${pattern.source}`);
       }
     }
-    if (!this.ALLOWED_CHARS.test(expr)) {
+    if (!this.ALLOWED_CHARS.test(expr.replace(this.STRING_LITERALS, '""'))) {
       throw new Error(`Expression contains disallowed characters`);
     }
     this.checkDepth(expr);
@@ -268,6 +299,42 @@ let AreSyntax = class extends A_Fragment {
     }
   }
   // ── Sandbox ───────────────────────────────────────────────────────────────
+  /**
+   * Resolves a simple dotted path (`name`, `user.name`, `t.label`) without the
+   * evaluator: the whole path or its first segment from `scope`, otherwise the store.
+   * Returns NOT_FOUND when the path should go through the full evaluator.
+   */
+  resolveSimplePath(path, store, scope) {
+    if (scope) {
+      if (path in scope) return scope[path];
+      const dot = path.indexOf(".");
+      if (dot > 0) {
+        const head = path.slice(0, dot);
+        if (head in scope) {
+          let value2 = scope[head];
+          for (const segment of path.slice(dot + 1).split(".")) {
+            if (value2 === null || value2 === void 0) return NOT_FOUND;
+            value2 = value2[segment];
+          }
+          return value2;
+        }
+      }
+    }
+    const value = store?.get(path);
+    return value !== void 0 ? value : NOT_FOUND;
+  }
+  createContext(store, scope) {
+    return {
+      scope,
+      storeGet: (path) => store?.get(path),
+      storeThis: store,
+      assertIdentifier: (name) => {
+        if (this.BLOCKED_GLOBALS.has(name)) {
+          throw new Error(`Access to "${name}" is not allowed in expressions`);
+        }
+      }
+    };
+  }
   createSandbox(store, scope) {
     return new Proxy({}, {
       has: (_, key) => {

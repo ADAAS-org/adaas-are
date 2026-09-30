@@ -1,5 +1,5 @@
 import { A_Component } from '@adaas/a-concept';
-import { g as AreNode, a as AreContext, s as AreSyntaxTokenMatch, u as AreSyntaxTokenRules } from '../../Are.context-DfIfWCiL.mjs';
+import { g as AreNode, a as AreContext, s as AreSyntaxTokenMatch, u as AreSyntaxTokenRules } from '../../Are.context-nvCJk-uQ.mjs';
 import { AreSyntax } from '../AreSyntax/AreSyntax.context.mjs';
 import { A_Logger } from '@adaas/a-utils/a-logger';
 import '@adaas/a-utils/a-signal';
@@ -36,6 +36,12 @@ declare class AreTokenizer extends A_Component {
     protected matchPrefixedRule(source: string, rule: AreSyntaxTokenRules, from: number, to: number): AreSyntaxTokenMatch | null;
     protected findMatchingClose(source: string, opening: string, closing: string, from: number, to: number): number;
     protected buildMatch(rule: AreSyntaxTokenRules, raw: string, content: string, position: number, closingUsed: string): AreSyntaxTokenMatch;
+    /**
+     * Trimmed plain text keeps ONE collapsed space on each side that touches a
+     * neighbouring match (`A {{x}} B {{y}}` → `A `, ` B `), matching HTML
+     * whitespace collapsing. Only the outer edges of the content are trimmed.
+     */
+    protected keepBoundarySpace(t: AreSyntaxTokenMatch, raw: string, matchBefore: boolean, matchAfter: boolean): void;
     protected tryPlainText(raw: string, position: number): AreSyntaxTokenMatch | null;
     protected findRuleForMatch(match: AreSyntaxTokenMatch): AreSyntaxTokenRules | undefined;
 }

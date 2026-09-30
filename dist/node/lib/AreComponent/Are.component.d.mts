@@ -1,9 +1,31 @@
-import { A_Component, A_TYPES__Ctor } from '@adaas/a-concept';
+import { A_Component, A_TYPES__Ctor, A_Scope } from '@adaas/a-concept';
 import { A_SignalVector, A_Signal } from '@adaas/a-utils/a-signal';
 import { AreConditionOptions, ArePropDefinition } from './Are.types.mjs';
 import './Are.constants.mjs';
 
 declare class Are extends A_Component {
+    /**
+     * Explicit, minification-safe tag for this component (kebab-case, e.g.
+     * `user-card`). When omitted the tag is derived from the class name, which
+     * bundlers may rename (`class Foo` → `_Foo`, or mangled when minified).
+     * Set it on components shipped through a build step that can rename classes.
+     *
+     * Only an OWN static `tag` is honored, so a subclass never inherits its
+     * parent's tag.
+     */
+    static tag?: string;
+    /**
+     * Returns the tag a component class is rendered under: its own static
+     * `tag` when defined, otherwise the kebab-cased class name with any
+     * bundler-added leading underscores stripped.
+     */
+    static tagOf(ctor: A_TYPES__Ctor<any>): string;
+    /**
+     * Resolves the component registered for a tag in the given scope chain:
+     * by class name first, then by {@link Are.tagOf} (explicit `static tag`
+     * or bundler-renamed class).
+     */
+    static resolveByTag(scope: A_Scope, entity: string): Are | undefined;
     /**
      * Allows to apply Signal Vector as a condition for rendering the component. The component will be rendered only if at least one of the signals in the vector is active. This can be used to manage complex rendering logic and to optimize performance by ensuring that components are only rendered when necessary based on the defined conditions.
      *

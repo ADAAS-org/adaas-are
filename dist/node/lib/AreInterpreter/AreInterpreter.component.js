@@ -8,6 +8,7 @@ var AreNode_constants = require('@adaas/are/node/AreNode.constants');
 var AreInstruction_constants = require('@adaas/are/instruction/AreInstruction.constants');
 var AreInstruction_entity = require('@adaas/are/instruction/AreInstruction.entity');
 var AreStore_context = require('@adaas/are/store/AreStore.context');
+var aLogger = require('@adaas/a-utils/a-logger');
 
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -66,13 +67,14 @@ exports.AreInterpreter = class AreInterpreter extends aConcept.A_Component {
       })(target, propertyKey, descriptor);
     };
   }
-  interpret(scene) {
+  interpret(scene, logger) {
     const { toApply, toRevert } = scene.changes;
     for (const instruction of toRevert) {
       try {
         instruction.revert();
         scene.unApply(instruction);
       } catch (error) {
+        logger?.error(error);
         instruction.apply();
         scene.apply(instruction);
       }
@@ -82,6 +84,7 @@ exports.AreInterpreter = class AreInterpreter extends aConcept.A_Component {
         instruction.apply();
         scene.apply(instruction);
       } catch (error) {
+        logger?.error(error);
         instruction.revert();
         scene.unApply(instruction);
       }
@@ -122,7 +125,8 @@ __decorateClass([
     name: AreNode_constants.AreNodeFeatures.onInterpret,
     scope: [AreNode_entity.AreNode]
   }),
-  __decorateParam(0, aConcept.A_Inject(AreScene_context.AreScene))
+  __decorateParam(0, aConcept.A_Inject(AreScene_context.AreScene)),
+  __decorateParam(1, aConcept.A_Inject(aLogger.A_Logger))
 ], exports.AreInterpreter.prototype, "interpret", 1);
 __decorateClass([
   aConcept.A_Feature.Extend({

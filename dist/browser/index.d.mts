@@ -1,5 +1,5 @@
 import * as _adaas_a_concept from '@adaas/a-concept';
-import { A_Component, A_TYPES__Ctor, A_TYPES__Entity_Serialized, A_Entity, A_Scope, A_TYPES__Fragment_Serialized, A_Fragment, ASEID, A_TYPES__Paths, A_TYPES__Entity_Constructor, A_Feature, A_ComponentMeta, A_TYPES__ComponentMeta, A_TYPES__Component_Constructor, A_TYPES__A_DependencyInjectable, A_Error } from '@adaas/a-concept';
+import { A_Component, A_TYPES__Ctor, A_Scope, A_TYPES__Entity_Serialized, A_Entity, A_TYPES__Fragment_Serialized, A_Fragment, ASEID, A_TYPES__Paths, A_TYPES__Entity_Constructor, A_Feature, A_ComponentMeta, A_TYPES__ComponentMeta, A_TYPES__Component_Constructor, A_TYPES__A_DependencyInjectable, A_Error } from '@adaas/a-concept';
 import { A_SignalVector, A_Signal, A_SignalState, A_SignalBus } from '@adaas/a-utils/a-signal';
 import { A_Service, A_ServiceFeatures } from '@adaas/a-utils/a-service';
 import { A_Logger } from '@adaas/a-utils/a-logger';
@@ -104,6 +104,28 @@ type ArePropDefinition = {
 type AreFeatureNames = typeof AreFeatures[keyof typeof AreFeatures];
 
 declare class Are extends A_Component {
+    /**
+     * Explicit, minification-safe tag for this component (kebab-case, e.g.
+     * `user-card`). When omitted the tag is derived from the class name, which
+     * bundlers may rename (`class Foo` → `_Foo`, or mangled when minified).
+     * Set it on components shipped through a build step that can rename classes.
+     *
+     * Only an OWN static `tag` is honored, so a subclass never inherits its
+     * parent's tag.
+     */
+    static tag?: string;
+    /**
+     * Returns the tag a component class is rendered under: its own static
+     * `tag` when defined, otherwise the kebab-cased class name with any
+     * bundler-added leading underscores stripped.
+     */
+    static tagOf(ctor: A_TYPES__Ctor<any>): string;
+    /**
+     * Resolves the component registered for a tag in the given scope chain:
+     * by class name first, then by {@link Are.tagOf} (explicit `static tag`
+     * or bundler-renamed class).
+     */
+    static resolveByTag(scope: A_Scope, entity: string): Are | undefined;
     /**
      * Allows to apply Signal Vector as a condition for rendering the component. The component will be rendered only if at least one of the signals in the vector is active. This can be used to manage complex rendering logic and to optimize performance by ensuring that components are only rendered when necessary based on the defined conditions.
      *
@@ -895,7 +917,7 @@ declare class AreStore<T extends Record<string, any> = Record<string, any>> exte
      */
     drop<P extends A_TYPES__Paths<T>>(key: P | keyof T): void;
     set<K extends keyof T>(values: Partial<T>): this;
-    set<P extends A_TYPES__Paths<T>>(key: P, value: AreStorePathValue<T, P>): this;
+    set<P extends A_TYPES__Paths<T>>(key: P, value: AreStorePathValue<T, P> | undefined): this;
     get<K extends keyof T>(key: K): T[K] | undefined;
     protected setAsObject(values: Partial<T>): this;
     protected setAsKeyValue<K extends keyof T, P extends A_TYPES__Paths<T>>(key: K | P, value: T[K] | AreStorePathValue<T, P>): this;
@@ -1567,6 +1589,15 @@ declare class AreSyntax extends A_Fragment {
      */
     private readonly SIMPLE_PATH;
     /**
+     * String literals ('...', "...", `...`) — their content is exempt from the ALLOWED_CHARS guard.
+     */
+    private readonly STRING_LITERALS;
+    /**
+     * Validated expressions → parsed AST, or `null` when the expression uses syntax
+     * outside the CSP-safe subset (then the legacy `new Function` path is used).
+     */
+    private readonly _expressions;
+    /**
      * Compiled expression — a pre-parsed function ready for repeated execution.
      * Created once via compile(), reused on every apply/click.
      */
@@ -1644,8 +1675,20 @@ declare class AreSyntax extends A_Fragment {
      */
     extractEmitHandlers(expr: string): Set<string>;
     private isCallableExpression;
+    /**
+     * Validates and parses an expression once; later calls with the same string
+     * reuse the cached result (validation is deterministic per string).
+     */
+    private prepare;
     private validate;
     private checkDepth;
+    /**
+     * Resolves a simple dotted path (`name`, `user.name`, `t.label`) without the
+     * evaluator: the whole path or its first segment from `scope`, otherwise the store.
+     * Returns NOT_FOUND when the path should go through the full evaluator.
+     */
+    private resolveSimplePath;
+    private createContext;
     private createSandbox;
     private nestedHandler;
     private assertSafeKey;
@@ -1684,6 +1727,16 @@ declare class AreLoader extends A_Component {
      * @param args
      */
     load(node: AreNode, scope: A_Scope, feature: A_Feature, logger?: A_Logger, context?: AreContext, ...args: any[]): Promise<void>;
+    /**
+     * Catch a lazily-resolved node up on the component-specific part of `init`.
+     *
+     * `AreLifecycle.init` ran BEFORE the resolver supplied the class, so it saw
+     * no component: the node got no store of its own and its component init
+     * hooks never fired. Without its own store the node's reads/writes (data,
+     * props injected by the compiler) land in the PARENT's store — so props
+     * bound on a lazy tag were lost and its data leaked into the host.
+     */
+    protected initResolvedComponent(node: AreNode, scope: A_Scope, feature: A_Feature): void;
 }
 
 declare class AreInterpreter extends A_Component {
@@ -1713,7 +1766,7 @@ declare class AreInterpreter extends A_Component {
      *
      * @param scene
      */
-    interpret(scene: AreScene): void;
+    interpret(scene: AreScene, logger?: A_Logger): void;
     protected applyInstruction(instruction: AreInstruction, interpreter: AreInterpreter, store: AreStore, scope: A_Scope, feature: A_Feature, ...args: any[]): void;
     protected updateInstruction(instruction: AreInstruction, interpreter: AreInterpreter, store: AreStore, scope: A_Scope, feature: A_Feature, ...args: any[]): void;
     protected revertInstruction(instruction: AreInstruction, interpreter: AreInterpreter, store: AreStore, scope: A_Scope, feature: A_Feature, ...args: any[]): void;
@@ -1911,6 +1964,12 @@ declare class AreTokenizer extends A_Component {
     protected matchPrefixedRule(source: string, rule: AreSyntaxTokenRules, from: number, to: number): AreSyntaxTokenMatch | null;
     protected findMatchingClose(source: string, opening: string, closing: string, from: number, to: number): number;
     protected buildMatch(rule: AreSyntaxTokenRules, raw: string, content: string, position: number, closingUsed: string): AreSyntaxTokenMatch;
+    /**
+     * Trimmed plain text keeps ONE collapsed space on each side that touches a
+     * neighbouring match (`A {{x}} B {{y}}` → `A `, ` B `), matching HTML
+     * whitespace collapsing. Only the outer edges of the content are trimmed.
+     */
+    protected keepBoundarySpace(t: AreSyntaxTokenMatch, raw: string, matchBefore: boolean, matchAfter: boolean): void;
     protected tryPlainText(raw: string, position: number): AreSyntaxTokenMatch | null;
     protected findRuleForMatch(match: AreSyntaxTokenMatch): AreSyntaxTokenRules | undefined;
 }
