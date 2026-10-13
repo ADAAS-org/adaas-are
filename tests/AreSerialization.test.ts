@@ -127,6 +127,17 @@ describe('AreAttribute serialization', () => {
         expect(restored.prefix).toBe(':');
         expect(restored.value).toBeUndefined();
     });
+
+    it('should accept names with chars an ASEID entity rejects (e.g. `a-button:click`)', () => {
+        const attr = new AreAttribute({ name: 'a-button:click', raw: ' @a-button:click="go" ', content: 'go', prefix: '@' });
+
+        expect(attr.name).toBe('a-button:click');
+        expect(attr.aseid.entity).toBe('a-button-click');
+
+        const restored = new AreAttribute(JSON.parse(JSON.stringify(attr)));
+        expect(restored.name).toBe('a-button:click');
+        expect(restored.aseid.toString()).toBe(attr.aseid.toString());
+    });
 });
 
 

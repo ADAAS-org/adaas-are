@@ -900,7 +900,9 @@ var AreAttribute = class extends A_Entity {
    */
   fromNew(newEntity) {
     this.aseid = this.generateASEID({
-      entity: newEntity.name
+      // ASEID entities allow only [a-zA-Z0-9_.-]; attribute names may hold
+      // more (`@a-button:click`, `xlink:href`). The real name is `this.name`.
+      entity: newEntity.name.replace(/[^a-zA-Z0-9_.-]/g, "-") || "attribute"
       // id: id,
     });
     this.name = newEntity.name;
@@ -3712,6 +3714,7 @@ var AreStore = class extends A_ExecutionContext {
    */
   notify(instructions) {
     for (const instruction of instructions) {
+      if (!this.watcherPaths.has(instruction)) continue;
       try {
         instruction.update();
       } catch (error) {
@@ -3737,6 +3740,10 @@ var AreStore = class extends A_ExecutionContext {
     }
     this.watcherPaths.delete(instruction);
     this._pendingNotify.delete(instruction);
+    try {
+      this.parent?.unregister(instruction);
+    } catch {
+    }
   }
   /**
    * Normalizes a path once — reused in both get and set.

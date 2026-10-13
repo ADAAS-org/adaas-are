@@ -264,6 +264,7 @@ let AreStore = class extends A_ExecutionContext {
    */
   notify(instructions) {
     for (const instruction of instructions) {
+      if (!this.watcherPaths.has(instruction)) continue;
       try {
         instruction.update();
       } catch (error) {
@@ -289,6 +290,10 @@ let AreStore = class extends A_ExecutionContext {
     }
     this.watcherPaths.delete(instruction);
     this._pendingNotify.delete(instruction);
+    try {
+      this.parent?.unregister(instruction);
+    } catch {
+    }
   }
   /**
    * Normalizes a path once — reused in both get and set.

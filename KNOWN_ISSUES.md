@@ -4,7 +4,15 @@ Found while building apps on the framework. Each entry: what happens, and the wo
 
 ## Bugs
 
-_No open bugs._ ARE-3 and ARE-4 are listed under Fixed, but still need confirming in a-automation before their workarounds are dropped.
+### ARE-5. Published 0.0.28 breaks on the published a-concept 0.3.31
+- What happens:
+  - The npm build of `are@0.0.28` uses the raw attribute name as the ASEID entity.
+  - The npm build of `a-concept@0.3.31` rejects anything outside `[a-zA-Z0-9_.-]`.
+  - As a result, `@a-input:submit` and similar bindings throw `Invalid ASEID entity provided` during tokenize, and the page renders black (hit a-os/ui after `npm install`).
+- Already fixed in the local source (`AreAttribute.fromNew` sanitizes the name). It needs publishing.
+- Workaround: apps use the local builds.
+
+ARE-3 and ARE-4 are listed under Fixed, but still need confirming in a-automation before their workarounds are dropped.
 
 ## Fixed
 
@@ -48,3 +56,16 @@ _No open bugs._ ARE-3 and ARE-4 are listed under Fixed, but still need confirmin
 - The interpreter now logs evaluation errors (`logger.error`) instead of silently rendering empty values.
 - `'unsafe-eval'` is no longer needed in `script-src` for the common template shapes.
 - Tests: `tests/AreSyntax.test.ts`.
+
+### ARE-F6. Event/binding attributes with `:` crashed the whole UI under a-concept 0.3.31
+- a-concept 0.3.31 validates ASEID parts strictly (entity `[a-zA-Z0-9_.-]`). `AreAttribute.fromNew` used the raw attribute name as the entity, so `@a-button:click` threw `Invalid ASEID entity provided` during tokenize and the page rendered blank.
+- Fixed: the entity is the name with every other char replaced by `-` (`a-button-click`). `attr.name` keeps the real name; nothing reads `aseid.entity` of an attribute.
+- Test: `tests/AreSerialization.test.ts`.
+- Needs a release (0.0.29). Until then the dist is copied by hand into the composer-new `node_modules`.
+- Note: `AreNode` still uses the HTML `id="…"` as the ASEID id (it must match the DOM id for roots), so an element id outside `[a-zA-Z0-9_-]` would still throw.
+
+### ARE-F7. A store change that both hid a `$if` and changed a binding inside it threw "Element Not Found"
+- `store.set({ isNote: false, note: '' })` with `{{note}}` inside `$if="isNote"`. `AreStore.notify` walked a snapshot of the affected watchers. The `$if` update unmounted its subtree first, which reverted and unregistered the `{{note}}` instruction. The snapshot still updated it, so AddText targeted a removed element. Every later update of that subtree logged A_ERROR, and later `$if` siblings could stop re-appearing (seen in a-folder's details pane).
+- Fixed: `notify` skips watchers unregistered during the flush. `unregister` also clears the parent store, since reads can be delegated there.
+- Tests: `tests/AreStore.test.ts` here, and `tests/ForInsideIf.test.ts` in are-html.
+- Needs a release (with ARE-F6). Until then the dist is copied by hand.

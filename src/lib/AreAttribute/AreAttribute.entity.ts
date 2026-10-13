@@ -65,7 +65,9 @@ export class AreAttribute extends A_Entity<AreAttribute_Init, AreAttribute_Seria
         // const id = A_UtilsHelper.hash(identity);
 
         this.aseid = this.generateASEID({
-            entity: newEntity.name,
+            // ASEID entities allow only [a-zA-Z0-9_.-]; attribute names may hold
+            // more (`@a-button:click`, `xlink:href`). The real name is `this.name`.
+            entity: newEntity.name.replace(/[^a-zA-Z0-9_.-]/g, '-') || 'attribute',
             // id: id,
         });
 

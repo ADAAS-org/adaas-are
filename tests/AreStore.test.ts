@@ -387,4 +387,23 @@ describe('AreStore — unregister cleanup (#1)', () => {
 
         expect(watcher.update).not.toHaveBeenCalled();
     });
+
+    it('skips a watcher torn down by an earlier watcher in the same flush', () => {
+        // Models `$if="show"` + `{{text}}` inside it, both changed by one
+        // object set: the `$if` update unmounts its subtree (unregistering the
+        // text instruction) before the snapshot reaches the text watcher.
+        const { store } = makeStore<{ show: boolean; text: string }>();
+        store.set({ show: true, text: 'a' });
+        const inner = makeWatcher(store);
+        const outer: AreStoreWatchingEntity & { update: jest.Mock } = {
+            update: jest.fn(() => store.unregister(inner)),
+        };
+        track(store, outer, ['show']);
+        track(store, inner, ['text']);
+
+        store.set({ show: false, text: '' });
+
+        expect(outer.update).toHaveBeenCalledTimes(1);
+        expect(inner.update).not.toHaveBeenCalled();
+    });
 });

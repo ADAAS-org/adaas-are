@@ -379,6 +379,12 @@ export class AreStore<
      */
     private notify(instructions: Set<AreStoreWatchingEntity>): void {
         for (const instruction of instructions) {
+            // The affected set is a snapshot taken before the flush. An earlier
+            // watcher in this same flush may have torn this one down (e.g. a
+            // `$if` turning false unmounts its subtree, reverting + unregistering
+            // the instructions inside it). Updating such a zombie targets an
+            // element that no longer exists, so skip anything unregistered.
+            if (!this.watcherPaths.has(instruction)) continue;
 
             try {
                 instruction.update()
@@ -408,6 +414,14 @@ export class AreStore<
         }
         this.watcherPaths.delete(instruction);
         this._pendingNotify.delete(instruction);
+
+        // Reads can be delegated to a parent store (see `get()`), so the
+        // subscription may live there too. Guarded like `pruneWatcher`.
+        try {
+            this.parent?.unregister(instruction);
+        } catch {
+            // no node owner / standalone store — nothing to unregister upstream
+        }
     }
     /**
      * Normalizes a path once — reused in both get and set.
