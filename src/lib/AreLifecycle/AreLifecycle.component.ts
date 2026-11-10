@@ -9,6 +9,7 @@ import { AreStore } from "@adaas/are/store/AreStore.context";
 import { AreAttribute } from "@adaas/are/attribute/AreAttribute.entity";
 import { AreAttributeFeatures } from "@adaas/are/attribute/AreAttribute.constants";
 import { AreContext } from "@adaas/are/component/Are.context";
+import { AreSignalsContext } from "@adaas/are/signals/AreSignals.context";
 
 
 
@@ -597,10 +598,11 @@ export class AreLifecycle extends A_Component {
     destroy(
         @A_Inject(A_Caller) node: AreNode,
         @A_Inject(AreScene) scene: AreScene,
-
+        @A_Inject(AreSignalsContext) signalsContext?: AreSignalsContext,
         ...args: any[]
     ) {
-
+        // A destroyed node takes no more signals (its subscription mirrors its init).
+        signalsContext?.unsubscribe(node);
     }
 
     /**

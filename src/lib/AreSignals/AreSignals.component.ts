@@ -33,7 +33,13 @@ export class AreSignals extends A_Component {
         logger?.debug(`Handling Signal Vector with ${context.subscribers.size} root nodes.`, vector);
 
         try {
-            for (const sub of context.subscribers) {
+            // A snapshot: handlers may unmount (and unsubscribe) nodes while the vector goes round.
+            for (const sub of [...context.subscribers]) {
+
+                // Gone meanwhile, or not live: removed from its scope, or under a
+                // `$if` / outlet that took it out (its or an ancestor's scene is
+                // not active). It gets signals again once it is back.
+                if (!context.subscribers.has(sub) || !this.receives(sub)) continue;
 
                 // Skip subscriber roots that are not backed by a real Are
                 // component. Stray top-level template nodes (whitespace text,
@@ -229,5 +235,14 @@ export class AreSignals extends A_Component {
         for (const child of node.children) {
             await this.traverseAndNotify(child, event, match);
         }
+    }
+
+    /** A node takes signals while it is registered and it and its ancestors are on stage (their scenes are active). */
+    protected receives(node: AreNode): boolean {
+        for (let n: AreNode | undefined = node; n; n = n.parent) {
+            if (!A_Context.has(n)) return false;
+            if (!n.scene || !n.scene.isActive) return false;
+        }
+        return true;
     }
 }

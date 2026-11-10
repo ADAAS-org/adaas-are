@@ -1,7 +1,12 @@
 import { A_Component, A_TYPES__Entity_Constructor, A_Scope, A_Feature } from '@adaas/a-concept';
-import { g as AreNode, A as AreAttribute, l as AreScene, a as AreContext } from '../../Are.context-nvCJk-uQ.mjs';
+import { g as AreNode, A as AreAttribute, l as AreScene, a as AreContext, p as AreSignalsContext } from '../../Are.context-CGuVNQ-q.mjs';
 import { A_Logger } from '@adaas/a-utils/a-logger';
 import '@adaas/a-utils/a-signal';
+import '../AreComponent/Are.component.mjs';
+import '../AreComponent/Are.types.mjs';
+import '../AreComponent/Are.constants.mjs';
+import '../AreSignals/AreSignals.types.mjs';
+import '../AreSignals/AreSignals.meta.mjs';
 import '../AreEvent/AreEvent.context.mjs';
 import '@adaas/a-utils/a-execution';
 import '../AreStore/AreStore.types.mjs';
@@ -9,9 +14,6 @@ import '../AreStore/AreStore.constants.mjs';
 import '../AreScene/AreScene.constants.mjs';
 import '../AreAttribute/AreAttribute.types.mjs';
 import '../AreAttribute/AreAttribute.constants.mjs';
-import '../AreComponent/Are.component.mjs';
-import '../AreComponent/Are.types.mjs';
-import '../AreComponent/Are.constants.mjs';
 import '../AreNode/AreNode.constants.mjs';
 
 declare class AreLifecycle extends A_Component {
@@ -172,7 +174,7 @@ declare class AreLifecycle extends A_Component {
      * @param args
      *
      */
-    destroy(node: AreNode, scene: AreScene, ...args: any[]): void;
+    destroy(node: AreNode, scene: AreScene, signalsContext?: AreSignalsContext, ...args: any[]): void;
     /**
      * Handles after destroy lifecycle of the AreNode
      *

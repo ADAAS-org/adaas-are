@@ -6,9 +6,14 @@ import { AreTransformer } from '../AreTransformer/AreTransformer.component.mjs';
 import { AreLoader } from '../AreLoader/AreLoader.component.mjs';
 import { AreInterpreter } from '../AreInterpreter/AreInterpreter.component.mjs';
 import { AreLifecycle } from '../AreLifecycle/AreLifecycle.component.mjs';
-import { a as AreContext } from '../../Are.context-nvCJk-uQ.mjs';
+import { a as AreContext } from '../../Are.context-CGuVNQ-q.mjs';
 import { AreEngineDependencies } from './AreEngine.types.mjs';
 import { A_SignalBus } from '@adaas/a-utils/a-signal';
+import '../AreComponent/Are.component.mjs';
+import '../AreComponent/Are.types.mjs';
+import '../AreComponent/Are.constants.mjs';
+import '../AreSignals/AreSignals.types.mjs';
+import '../AreSignals/AreSignals.meta.mjs';
 import '../AreEvent/AreEvent.context.mjs';
 import '@adaas/a-utils/a-execution';
 import '../AreStore/AreStore.types.mjs';
@@ -16,15 +21,9 @@ import '../AreStore/AreStore.constants.mjs';
 import '../AreScene/AreScene.constants.mjs';
 import '../AreAttribute/AreAttribute.types.mjs';
 import '../AreAttribute/AreAttribute.constants.mjs';
-import '../AreComponent/Are.component.mjs';
-import '../AreComponent/Are.types.mjs';
-import '../AreComponent/Are.constants.mjs';
 import '../AreNode/AreNode.constants.mjs';
 import '../AreTokenizer/AreTokenizer.component.mjs';
 import '../AreSignals/AreSignals.component.mjs';
-import '../AreSignals/AreSignals.context.mjs';
-import '../AreSignals/AreSignals.types.mjs';
-import '../AreSignals/AreSignals.meta.mjs';
 
 declare class AreEngine extends A_Component {
     /**

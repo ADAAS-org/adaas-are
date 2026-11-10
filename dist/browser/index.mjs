@@ -1575,12 +1575,20 @@ var AreNode = class extends A_Entity {
    * teardown: the detached subtree is unreferenced and collected.
    */
   async clear() {
+    const signals = A_Context.has(this) ? this.scope.resolve("AreSignalsContext") : void 0;
     for (const child of [...this.children]) {
+      if (signals) this.unsubscribeTree(child, signals);
       if (A_Context.has(child)) {
         child.unmount();
       }
       this.removeChild(child);
     }
+  }
+  /** Takes a subtree off the signal bus (a node without a scope has no reachable children). */
+  unsubscribeTree(node, signals) {
+    signals.unsubscribe(node);
+    if (!A_Context.has(node)) return;
+    for (const child of node.children) this.unsubscribeTree(child, signals);
   }
   clone() {
     const newNode = new this.constructor({
@@ -1933,7 +1941,8 @@ var AreSignals = class extends A_Component {
   async handleSignalVector(vector, context, state, scope, logger) {
     logger?.debug(`Handling Signal Vector with ${context.subscribers.size} root nodes.`, vector);
     try {
-      for (const sub of context.subscribers) {
+      for (const sub of [...context.subscribers]) {
+        if (!context.subscribers.has(sub) || !this.receives(sub)) continue;
         if (!(sub.component instanceof Are)) continue;
         const callScope = new A_Scope({
           fragments: [new AreEvent(
@@ -2032,6 +2041,14 @@ var AreSignals = class extends A_Component {
     for (const child of node.children) {
       await this.traverseAndNotify(child, event, match);
     }
+  }
+  /** A node takes signals while it is registered and it and its ancestors are on stage (their scenes are active). */
+  receives(node) {
+    for (let n = node; n; n = n.parent) {
+      if (!A_Context.has(n)) return false;
+      if (!n.scene || !n.scene.isActive) return false;
+    }
+    return true;
   }
 };
 __decorateClass([
@@ -4160,7 +4177,8 @@ var AreLifecycle = class extends A_Component {
     if (node.component)
       feature.chain(node.component, AreFeatures.onBeforeDestroy, node.scope);
   }
-  destroy(node, scene, ...args) {
+  destroy(node, scene, signalsContext, ...args) {
+    signalsContext?.unsubscribe(node);
   }
   afterDestroy(node, scope, feature, ...args) {
     const logger = scope.resolve(A_Logger);
@@ -4309,7 +4327,8 @@ __decorateClass([
     scope: [AreNode]
   }),
   __decorateParam(0, A_Inject(A_Caller)),
-  __decorateParam(1, A_Inject(AreScene))
+  __decorateParam(1, A_Inject(AreScene)),
+  __decorateParam(2, A_Inject(AreSignalsContext))
 ], AreLifecycle.prototype, "destroy", 1);
 __decorateClass([
   A_Feature.Extend({

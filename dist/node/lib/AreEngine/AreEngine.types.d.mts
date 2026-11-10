@@ -1,6 +1,6 @@
 import { A_TYPES__Component_Constructor } from '@adaas/a-concept';
 import { AreCompiler } from '../AreCompiler/AreCompiler.component.mjs';
-import { a as AreContext } from '../../Are.context-nvCJk-uQ.mjs';
+import { a as AreContext } from '../../Are.context-CGuVNQ-q.mjs';
 import { AreLoader } from '../AreLoader/AreLoader.component.mjs';
 import { AreSyntax } from '../AreSyntax/AreSyntax.context.mjs';
 import { AreTokenizer } from '../AreTokenizer/AreTokenizer.component.mjs';
@@ -10,6 +10,11 @@ import { AreLifecycle } from '../AreLifecycle/AreLifecycle.component.mjs';
 import { AreSignals } from '../AreSignals/AreSignals.component.mjs';
 import '@adaas/a-utils/a-logger';
 import '@adaas/a-utils/a-signal';
+import '../AreComponent/Are.component.mjs';
+import '../AreComponent/Are.types.mjs';
+import '../AreComponent/Are.constants.mjs';
+import '../AreSignals/AreSignals.types.mjs';
+import '../AreSignals/AreSignals.meta.mjs';
 import '../AreEvent/AreEvent.context.mjs';
 import '@adaas/a-utils/a-execution';
 import '../AreStore/AreStore.types.mjs';
@@ -17,13 +22,7 @@ import '../AreStore/AreStore.constants.mjs';
 import '../AreScene/AreScene.constants.mjs';
 import '../AreAttribute/AreAttribute.types.mjs';
 import '../AreAttribute/AreAttribute.constants.mjs';
-import '../AreComponent/Are.component.mjs';
-import '../AreComponent/Are.types.mjs';
-import '../AreComponent/Are.constants.mjs';
 import '../AreNode/AreNode.constants.mjs';
-import '../AreSignals/AreSignals.context.mjs';
-import '../AreSignals/AreSignals.types.mjs';
-import '../AreSignals/AreSignals.meta.mjs';
 
 type AreEngineDependencies = {
     context: AreContext;

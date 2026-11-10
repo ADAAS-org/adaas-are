@@ -1,3 +1,4 @@
+import type { AreSignalsContext } from "@adaas/are/signals/AreSignals.context";
 import { A_CommonHelper, A_Context, A_Entity, A_Error, A_FormatterHelper, A_Scope, A_TYPES__Ctor, A_TypeGuards, ASEID } from "@adaas/a-concept";
 import { A_Frame } from "@adaas/a-frame/core";
 import { AreEvent } from "@adaas/are/event/AreEvent.context";
@@ -540,13 +541,27 @@ export class AreNode extends A_Entity<AreNodeNewProps, AreNode_Serialized> {
      * teardown: the detached subtree is unreferenced and collected.
      */
     async clear(): Promise<void> {
+        // The cleared subtrees leave the signal bus with the content: otherwise
+        // they keep getting vectors (and, once their scope is gone, fail on them).
+        // Resolved by name — the signals context imports this module.
+        const signals = A_Context.has(this) ? this.scope.resolve('AreSignalsContext') as AreSignalsContext | undefined : undefined;
+
         for (const child of [...this.children]) {
+            if (signals) this.unsubscribeTree(child, signals);
+
             if (A_Context.has(child)) {
                 child.unmount();
             }
 
             this.removeChild(child);
         }
+    }
+
+    /** Takes a subtree off the signal bus (a node without a scope has no reachable children). */
+    protected unsubscribeTree(node: AreNode, signals: AreSignalsContext): void {
+        signals.unsubscribe(node);
+        if (!A_Context.has(node)) return;
+        for (const child of node.children) this.unsubscribeTree(child, signals);
     }
 
     clone<T extends AreNode = AreNode>(this: T): T {

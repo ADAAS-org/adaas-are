@@ -28,7 +28,8 @@ exports.AreSignals = class AreSignals extends aConcept.A_Component {
   async handleSignalVector(vector, context, state, scope, logger) {
     logger?.debug(`Handling Signal Vector with ${context.subscribers.size} root nodes.`, vector);
     try {
-      for (const sub of context.subscribers) {
+      for (const sub of [...context.subscribers]) {
+        if (!context.subscribers.has(sub) || !this.receives(sub)) continue;
         if (!(sub.component instanceof Are_component.Are)) continue;
         const callScope = new aConcept.A_Scope({
           fragments: [new AreEvent_context.AreEvent(
@@ -127,6 +128,14 @@ exports.AreSignals = class AreSignals extends aConcept.A_Component {
     for (const child of node.children) {
       await this.traverseAndNotify(child, event, match);
     }
+  }
+  /** A node takes signals while it is registered and it and its ancestors are on stage (their scenes are active). */
+  receives(node) {
+    for (let n = node; n; n = n.parent) {
+      if (!aConcept.A_Context.has(n)) return false;
+      if (!n.scene || !n.scene.isActive) return false;
+    }
+    return true;
   }
 };
 __decorateClass([

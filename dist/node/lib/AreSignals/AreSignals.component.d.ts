@@ -1,10 +1,11 @@
 import { A_Component, A_Scope, A_Feature, A_TYPES__Ctor } from '@adaas/a-concept';
 import { A_SignalVector, A_SignalState } from '@adaas/a-utils/a-signal';
 import { A_Logger } from '@adaas/a-utils/a-logger';
-import { g as AreNode } from '../../Are.context-DH67PAQJ.js';
+import { p as AreSignalsContext, g as AreNode } from '../../Are.context-BX9KwdNy.js';
 import { AreEvent } from '../AreEvent/AreEvent.context.js';
-import { AreSignalsContext } from './AreSignals.context.js';
 import { Are } from '../AreComponent/Are.component.js';
+import './AreSignals.types.js';
+import './AreSignals.meta.js';
 import '../AreStore/AreStore.types.js';
 import '../AreStore/AreStore.constants.js';
 import '../AreScene/AreScene.constants.js';
@@ -12,8 +13,6 @@ import '../AreAttribute/AreAttribute.types.js';
 import '../AreAttribute/AreAttribute.constants.js';
 import '@adaas/a-utils/a-execution';
 import '../AreNode/AreNode.constants.js';
-import './AreSignals.types.js';
-import './AreSignals.meta.js';
 import '../AreComponent/Are.types.js';
 import '../AreComponent/Are.constants.js';
 
@@ -60,6 +59,8 @@ declare class AreSignals extends A_Component {
         exact?: boolean;
     }): Promise<void>;
     protected traverseAndNotify(node: AreNode, event: AreEvent, match: (component: Are) => boolean): Promise<void>;
+    /** A node takes signals while it is registered and it and its ancestors are on stage (their scenes are active). */
+    protected receives(node: AreNode): boolean;
 }
 
 export { AreSignals };

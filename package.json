@@ -216,14 +216,14 @@
     "build": "tsup --config tsup.config.ts"
   },
   "peerDependencies": {
-    "@adaas/a-concept": "^0.3.31",
-    "@adaas/a-frame": "^0.1.18",
-    "@adaas/a-utils": "^0.3.35"
+    "@adaas/a-concept": "^0.4.0",
+    "@adaas/a-frame": "^0.2.2",
+    "@adaas/a-utils": "^0.4.0"
   },
   "devDependencies": {
-    "@adaas/a-concept": "^0.3.31",
-    "@adaas/a-frame": "^0.1.18",
-    "@adaas/a-utils": "^0.3.35",
+    "@adaas/a-concept": "^0.4.0",
+    "@adaas/a-frame": "^0.2.2",
+    "@adaas/a-utils": "^0.4.0",
     "@types/chai": "^4.3.14",
     "@types/jest": "^29.5.12",
     "@types/mocha": "^10.0.6",

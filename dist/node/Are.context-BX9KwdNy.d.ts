@@ -1,13 +1,83 @@
 import * as _adaas_a_concept from '@adaas/a-concept';
-import { A_TYPES__Entity_Serialized, A_Entity, A_Scope, A_TYPES__Fragment_Serialized, A_Fragment, ASEID, A_TYPES__Paths, A_TYPES__Entity_Constructor, A_TYPES__Ctor } from '@adaas/a-concept';
+import { A_Fragment, A_TYPES__Ctor, A_TYPES__Entity_Serialized, A_Entity, A_Scope, A_TYPES__Fragment_Serialized, ASEID, A_TYPES__Paths, A_TYPES__Entity_Constructor } from '@adaas/a-concept';
 import { A_SignalVector } from '@adaas/a-utils/a-signal';
+import { Are } from './lib/AreComponent/Are.component.js';
+import { AreSignalsContextConfig } from './lib/AreSignals/AreSignals.types.js';
+import { AreSignalsMeta } from './lib/AreSignals/AreSignals.meta.js';
 import { AreEvent } from './lib/AreEvent/AreEvent.context.js';
 import { AreStoreWatchingEntity, AreStorePathValue } from './lib/AreStore/AreStore.types.js';
 import { AreSceneStatuses } from './lib/AreScene/AreScene.constants.js';
 import { AreAttribute_Init, AreAttribute_Serialized } from './lib/AreAttribute/AreAttribute.types.js';
-import { Are } from './lib/AreComponent/Are.component.js';
 import { A_ExecutionContext } from '@adaas/a-utils/a-execution';
 import { AreNodeStatuses, AreNodeFeatures } from './lib/AreNode/AreNode.constants.js';
+
+declare class AreSignalsContext<T extends Are = Are> extends A_Fragment {
+    /**
+     * Where key is the root ID and the value is an Array of components that participate in conditional compilation.
+     */
+    protected _componentMap: Map<string, Set<A_TYPES__Ctor<T>>>;
+    protected _defaultsMap: Map<string, A_TYPES__Ctor<T>>;
+    protected _conditionsMap: Map<string, Array<{
+        vector: Array<any>;
+        component: A_TYPES__Ctor<T>;
+    }>>;
+    protected _subscribers: Set<AreNode>;
+    protected signalsMeta(): AreSignalsMeta;
+    subscribe<S extends AreNode>(subscriber: S): void;
+    unsubscribe<S extends AreNode>(subscriber: S): void;
+    get subscribers(): Set<AreNode>;
+    constructor(
+    /**
+     * Where key is the root ID and the value is an Array of components that participate in conditional compilation.
+     */
+    config?: Partial<AreSignalsContextConfig<T>>);
+    /**
+     * Returns the components associated with the given ID. If no components are found, returns an empty array.
+     *
+     * @param id The ID of the component group.
+     * @returns An array of component constructors.
+     */
+    getComponentById(id: string): Array<A_TYPES__Ctor<T>>;
+    /**
+     * Returns the components associated with the root ID of the given node. If no components are found, returns an empty array.
+     *
+     * @param node The AreNode whose root ID is used to retrieve the components.
+     * @returns An array of component constructors.
+     */
+    getComponentByRoot(node: AreNode): Array<A_TYPES__Ctor<T>>;
+    /**
+     * Adds a new component to the specified root ID. If the root ID does not exist, it will be created.
+     *
+     * @param rootId The ID of the root component group.
+     * @param components An array of component constructors to add.
+     */
+    extendRoot(rootId: string, components: Array<A_TYPES__Ctor<T>>): void;
+    /**
+     * Whether routing is configured for the given root ID.
+     * When false, the root should leave its original template content untouched.
+     *
+     * @param rootId The id attribute of the <are-root> element.
+     */
+    hasRoot(rootId: string): boolean;
+    /**
+     * Returns the default component associated with the given root ID, if any.
+     *
+     * @param rootId The ID of the root component group.
+     */
+    getDefault(rootId: string): A_TYPES__Ctor<T> | undefined;
+    /**
+     * Finds the matching component for the given root ID and incoming signal vector.
+     *
+     * Matching priorities (mirroring AreSignalsMeta):
+     * 1. Full equivalence  — vector.equals(conditionVector)
+     * 2. Logical match     — vector.match(conditionVector)
+     * 3. Inclusion         — incoming vector contains every signal type from condition, checked with signal.compare()
+     *
+     * @param rootId  The id attribute of the <are-root> element.
+     * @param vector  The incoming signal vector from the bus.
+     */
+    findComponentByVector(rootId: string, vector: A_SignalVector): A_TYPES__Ctor<T> | undefined;
+}
 
 type AreInstructionNewProps<T extends any = Record<string, any>> = {
     /**
@@ -1037,6 +1107,8 @@ declare class AreNode extends A_Entity<AreNodeNewProps, AreNode_Serialized> {
      * teardown: the detached subtree is unreferenced and collected.
      */
     clear(): Promise<void>;
+    /** Takes a subtree off the signal bus (a node without a scope has no reachable children). */
+    protected unsubscribeTree(node: AreNode, signals: AreSignalsContext): void;
     clone<T extends AreNode = AreNode>(this: T): T;
     /**
      * Emits an event or a scope to the node, which can be used to trigger event handlers or to provide additional context for processing within the node. The method can accept either an AreEvent instance or an A_Scope instance, and it will handle the emission accordingly. This allows for flexible communication and interaction within the node's context, enabling dynamic behavior and responsiveness based on events or changes in scope.
@@ -1127,4 +1199,4 @@ declare class AreContext extends A_ExecutionContext {
     endPerformance(label: string): void;
 }
 
-export { AreAttribute as A, AreContext as a, AreDeclaration as b, AreInstruction as c, type AreInstructionNewProps as d, type AreInstructionSerialized as e, AreMutation as f, AreNode as g, type AreNodeFeatureNames as h, type AreNodeNewProps as i, type AreNodeStatusNames as j, type AreNode_Serialized as k, AreScene as l, type AreSceneChanges as m, type AreSceneStatusNames as n, type AreScene_Serialized as o, AreStore as p, type AreSyntaxCompiledExpression as q, type AreSyntaxInitOptions as r, type AreSyntaxTokenMatch as s, type AreSyntaxTokenPayload as t, type AreSyntaxTokenRules as u };
+export { AreAttribute as A, AreContext as a, AreDeclaration as b, AreInstruction as c, type AreInstructionNewProps as d, type AreInstructionSerialized as e, AreMutation as f, AreNode as g, type AreNodeFeatureNames as h, type AreNodeNewProps as i, type AreNodeStatusNames as j, type AreNode_Serialized as k, AreScene as l, type AreSceneChanges as m, type AreSceneStatusNames as n, type AreScene_Serialized as o, AreSignalsContext as p, AreStore as q, type AreSyntaxCompiledExpression as r, type AreSyntaxInitOptions as s, type AreSyntaxTokenMatch as t, type AreSyntaxTokenPayload as u, type AreSyntaxTokenRules as v };

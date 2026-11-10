@@ -9,6 +9,7 @@ import { AreFeatures } from '@adaas/are/component/Are.constants';
 import { AreStore } from '@adaas/are/store/AreStore.context';
 import { AreAttributeFeatures } from '@adaas/are/attribute/AreAttribute.constants';
 import { AreContext } from '@adaas/are/component/Are.context';
+import { AreSignalsContext } from '@adaas/are/signals/AreSignals.context';
 
 let AreLifecycle = class extends A_Component {
   static Init(param1) {
@@ -163,7 +164,8 @@ let AreLifecycle = class extends A_Component {
     if (node.component)
       feature.chain(node.component, AreFeatures.onBeforeDestroy, node.scope);
   }
-  destroy(node, scene, ...args) {
+  destroy(node, scene, signalsContext, ...args) {
+    signalsContext?.unsubscribe(node);
   }
   afterDestroy(node, scope, feature, ...args) {
     const logger = scope.resolve(A_Logger);
@@ -312,7 +314,8 @@ __decorateClass([
     scope: [AreNode]
   }),
   __decorateParam(0, A_Inject(A_Caller)),
-  __decorateParam(1, A_Inject(AreScene))
+  __decorateParam(1, A_Inject(AreScene)),
+  __decorateParam(2, A_Inject(AreSignalsContext))
 ], AreLifecycle.prototype, "destroy", 1);
 __decorateClass([
   A_Feature.Extend({

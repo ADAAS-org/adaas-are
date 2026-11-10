@@ -406,12 +406,20 @@ let AreNode = class extends A_Entity {
    * teardown: the detached subtree is unreferenced and collected.
    */
   async clear() {
+    const signals = A_Context.has(this) ? this.scope.resolve("AreSignalsContext") : void 0;
     for (const child of [...this.children]) {
+      if (signals) this.unsubscribeTree(child, signals);
       if (A_Context.has(child)) {
         child.unmount();
       }
       this.removeChild(child);
     }
+  }
+  /** Takes a subtree off the signal bus (a node without a scope has no reachable children). */
+  unsubscribeTree(node, signals) {
+    signals.unsubscribe(node);
+    if (!A_Context.has(node)) return;
+    for (const child of node.children) this.unsubscribeTree(child, signals);
   }
   clone() {
     const newNode = new this.constructor({

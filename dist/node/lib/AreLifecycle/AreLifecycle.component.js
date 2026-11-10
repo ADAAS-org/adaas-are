@@ -10,6 +10,7 @@ var Are_constants = require('@adaas/are/component/Are.constants');
 var AreStore_context = require('@adaas/are/store/AreStore.context');
 var AreAttribute_constants = require('@adaas/are/attribute/AreAttribute.constants');
 var Are_context = require('@adaas/are/component/Are.context');
+var AreSignals_context = require('@adaas/are/signals/AreSignals.context');
 
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -175,7 +176,8 @@ exports.AreLifecycle = class AreLifecycle extends aConcept.A_Component {
     if (node.component)
       feature.chain(node.component, Are_constants.AreFeatures.onBeforeDestroy, node.scope);
   }
-  destroy(node, scene, ...args) {
+  destroy(node, scene, signalsContext, ...args) {
+    signalsContext?.unsubscribe(node);
   }
   afterDestroy(node, scope, feature, ...args) {
     const logger = scope.resolve(aLogger.A_Logger);
@@ -324,7 +326,8 @@ __decorateClass([
     scope: [AreNode_entity.AreNode]
   }),
   __decorateParam(0, aConcept.A_Inject(aConcept.A_Caller)),
-  __decorateParam(1, aConcept.A_Inject(AreScene_context.AreScene))
+  __decorateParam(1, aConcept.A_Inject(AreScene_context.AreScene)),
+  __decorateParam(2, aConcept.A_Inject(AreSignals_context.AreSignalsContext))
 ], exports.AreLifecycle.prototype, "destroy", 1);
 __decorateClass([
   aConcept.A_Feature.Extend({

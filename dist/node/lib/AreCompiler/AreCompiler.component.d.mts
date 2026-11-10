@@ -1,7 +1,12 @@
 import { A_Component, A_TYPES__Entity_Constructor } from '@adaas/a-concept';
 import { A_Logger } from '@adaas/a-utils/a-logger';
-import { g as AreNode, A as AreAttribute, l as AreScene } from '../../Are.context-nvCJk-uQ.mjs';
+import { g as AreNode, A as AreAttribute, l as AreScene } from '../../Are.context-CGuVNQ-q.mjs';
 import '@adaas/a-utils/a-signal';
+import '../AreComponent/Are.component.mjs';
+import '../AreComponent/Are.types.mjs';
+import '../AreComponent/Are.constants.mjs';
+import '../AreSignals/AreSignals.types.mjs';
+import '../AreSignals/AreSignals.meta.mjs';
 import '../AreEvent/AreEvent.context.mjs';
 import '@adaas/a-utils/a-execution';
 import '../AreStore/AreStore.types.mjs';
@@ -9,9 +14,6 @@ import '../AreStore/AreStore.constants.mjs';
 import '../AreScene/AreScene.constants.mjs';
 import '../AreAttribute/AreAttribute.types.mjs';
 import '../AreAttribute/AreAttribute.constants.mjs';
-import '../AreComponent/Are.component.mjs';
-import '../AreComponent/Are.types.mjs';
-import '../AreComponent/Are.constants.mjs';
 import '../AreNode/AreNode.constants.mjs';
 
 declare class AreCompiler extends A_Component {

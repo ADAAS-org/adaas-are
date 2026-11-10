@@ -57,44 +57,70 @@ npm install @adaas/a-concept @adaas/a-frame @adaas/a-utils
 
 ## Quick Start
 
-```typescript
-import { AreHTMLEngine, AreHTML } from '@adaas/are';
-import { A_Scope } from '@adaas/a-concept';
+ARE is rendered by `@adaas/are-html`; install both. A complete, tested app (UI + API + docker-compose) lives in
+`adaas-composer-new/starter/`.
 
-// Create a scope and boot the HTML engine
-const scope = new A_Scope();
-const engine = new AreHTMLEngine(scope);
-
-await engine.boot({ target: document.getElementById('app')! });
+```bash
+npm install @adaas/a-concept @adaas/a-utils @adaas/a-frame @adaas/are @adaas/are-html
 ```
 
-Define a component:
+Boot (browser):
 
 ```typescript
-import { Are, AreSignalsContext, AreInit } from '@adaas/are';
-import { A_Inject, A_Caller } from '@adaas/a-concept';
-import { A_SignalVector } from '@adaas/a-utils/a-signal';
+import { A_Concept } from '@adaas/a-concept';
+import { A_Config, ConfigReader } from '@adaas/a-utils/a-config';
+import { A_Logger } from '@adaas/a-utils/a-logger';
+import { A_SignalBus, A_SignalState } from '@adaas/a-utils/a-signal';
+import { A_Polyfill } from '@adaas/a-utils/a-polyfill';
+import { AreContainer, AreInit } from '@adaas/are';
+import { AreDirectiveFor, AreDirectiveIf, AreHTMLEngine, AreHTMLEngineContext, AreRoot } from '@adaas/are-html';
+import { MyButton } from './MyButton.component';
+
+const container = new AreContainer({
+    name: 'MyApp',
+    // the app's components + every directive its templates use + the engine
+    components: [MyButton, AreDirectiveIf, AreDirectiveFor, A_SignalBus, AreRoot, ConfigReader, AreHTMLEngine, A_Logger],
+    entities: [AreInit],
+    // every signal type dispatched must be listed in A_SignalState
+    fragments: [new A_SignalState([AreInit]), new AreHTMLEngineContext({ container: document }), new A_Config({ defaults: {} })],
+});
+const concept = new A_Concept({ name: 'my-app', components: [A_Logger, ConfigReader, A_Polyfill], containers: [container] });
+await concept.load();
+await concept.start();
+```
+
+```html
+<are-root id="app"><my-button></my-button></are-root>
+<script type="module" src="/app.js"></script>
+```
+
+A component (its tag is the kebab-cased class name: `MyButton` → `<my-button>`):
+
+```typescript
+import { A_Caller, A_Inject } from '@adaas/a-concept';
+import { Are, AreNode, AreStore } from '@adaas/are';
 
 export class MyButton extends Are {
 
     @Are.Template
-    template(@A_Inject(A_Caller) node: any) {
-        node.setHTML(`<button>Click me</button>`);
+    template(@A_Inject(A_Caller) node: AreNode) {
+        node.setContent(`<button type="button" @click="$press">{{label}} · {{count}}</button>`);
     }
 
-    @Are.onAfterInit
-    afterInit(@A_Inject(A_Caller) node: any, @A_Inject(AreSignalsContext) ctx?: AreSignalsContext) {
-        ctx?.subscribe(node);
+    @Are.Data
+    data(@A_Inject(AreStore) store: AreStore) {
+        store.set({ label: 'Click me', count: 0 });
     }
 
-    @Are.Signal
-    async onSignal(@A_Inject(A_Caller) node: any, @A_Inject(A_SignalVector) vector: A_SignalVector) {
-        if (vector.has(AreInit)) {
-            console.log('App initialized!');
-        }
+    @Are.EventHandler
+    press(@A_Inject(AreNode) node: AreNode, @A_Inject(AreStore) store: AreStore) {
+        store.set({ count: Number(store.get('count')) + 1 });
     }
 }
 ```
+
+Bundle with esbuild (`bundle: true`, `format: 'esm'`, `keepNames: true` — tags come from class names) and
+`experimentalDecorators` in tsconfig. Keep ONE copy of `@adaas/are` and `@adaas/a-concept` in the bundle.
 
 ---
 

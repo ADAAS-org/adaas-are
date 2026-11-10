@@ -1,7 +1,7 @@
 export { Are } from './lib/AreComponent/Are.component.js';
 export { AreContainer } from './lib/AreComponent/Are.container.js';
 export { AreFeatures, AreSignalFeatureKey } from './lib/AreComponent/Are.constants.js';
-export { A as AreAttribute, a as AreContext, b as AreDeclaration, c as AreInstruction, d as AreInstructionNewProps, e as AreInstructionSerialized, f as AreMutation, g as AreNode, h as AreNodeFeatureNames, i as AreNodeNewProps, j as AreNodeStatusNames, k as AreNode_Serialized, l as AreScene, m as AreSceneChanges, n as AreSceneStatusNames, o as AreScene_Serialized, p as AreStore, q as AreSyntaxCompiledExpression, r as AreSyntaxInitOptions, s as AreSyntaxTokenMatch, t as AreSyntaxTokenPayload, u as AreSyntaxTokenRules } from './Are.context-DH67PAQJ.js';
+export { A as AreAttribute, a as AreContext, b as AreDeclaration, c as AreInstruction, d as AreInstructionNewProps, e as AreInstructionSerialized, f as AreMutation, g as AreNode, h as AreNodeFeatureNames, i as AreNodeNewProps, j as AreNodeStatusNames, k as AreNode_Serialized, l as AreScene, m as AreSceneChanges, n as AreSceneStatusNames, o as AreScene_Serialized, p as AreSignalsContext, q as AreStore, r as AreSyntaxCompiledExpression, s as AreSyntaxInitOptions, t as AreSyntaxTokenMatch, u as AreSyntaxTokenPayload, v as AreSyntaxTokenRules } from './Are.context-BX9KwdNy.js';
 export { AreConditionOptions, AreContextInit, AreFeatureNames, ArePropDefinition } from './lib/AreComponent/Are.types.js';
 export { AreNodeFeatures, AreNodeStatuses } from './lib/AreNode/AreNode.constants.js';
 export { AreComponentResolver } from './lib/AreComponentResolver/AreComponentResolver.fragment.js';
@@ -32,7 +32,6 @@ export { AreWatcher } from './lib/AreWatcher/AreWatcher.component.js';
 export { AreSignal } from './lib/AreSignals/AreSignal.entity.js';
 export { AreSignals } from './lib/AreSignals/AreSignals.component.js';
 export { AreSignalsMeta } from './lib/AreSignals/AreSignals.meta.js';
-export { AreSignalsContext } from './lib/AreSignals/AreSignals.context.js';
 export { AreSignalsContextConfig } from './lib/AreSignals/AreSignals.types.js';
 export { AreInit } from './lib/AreSignals/entities/AreInit.signal.js';
 export { AreRoute } from './lib/AreSignals/entities/AreRoute.signal.js';
